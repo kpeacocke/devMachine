@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   test:
-    name: Run All Tests
+    name: Run Windows Integration Tests
     runs-on: windows-latest
     steps:
       - name: Checkout code
@@ -37,15 +37,6 @@ jobs:
         run: |
           Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser -MinimumVersion 5.0
 
-      - name: Run syntax validation tests
-        shell: pwsh
-        run: |
-          $config = New-PesterConfiguration
-          $config.Run.Path = './tests/syntax-validation.Tests.ps1'
-          $config.Run.Exit = $true
-          $config.Output.Verbosity = 'Detailed'
-          Invoke-Pester -Configuration $config
-
       - name: Run Windows Pester tests
         shell: pwsh
         run: |
@@ -55,50 +46,23 @@ jobs:
           $config.Output.Verbosity = 'Detailed'
           Invoke-Pester -Configuration $config
 
-      - name: Install shellcheck
-        run: |
-          choco install shellcheck -y
-
-      - name: Validate bash scripts
-        shell: pwsh
-        run: |
-          $bashScripts = Get-ChildItem -Path ./scripts/wsl -Filter *.sh -Recurse
-          $failed = $false
-          foreach ($script in $bashScripts) {
-            Write-Host "Checking $($script.FullName)..."
-            shellcheck $script.FullName
-            if ($LASTEXITCODE -ne 0) {
-              $failed = $true
-            }
-          }
-          if ($failed) {
-            throw "Bash syntax validation failed"
-          }
-
-  security-scan:
-    name: Security Scan
+  # Wait for syntax validation workflow to complete
+  wait-for-validation:
+    name: Wait for Syntax Validation
     runs-on: ubuntu-latest
+    needs: [test]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+      - name: Wait for syntax validation workflow
+        uses: lewagon/wait-on-check-action@v1.3.4
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'
+          ref: ${{ github.sha }}
+          check-name: 'Security Scan'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
 
   release:
     name: Create Release
-    needs: [test, security-scan]
+    needs: [test, wait-for-validation]
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
