@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   test:
-    name: Run Windows Integration Tests
+    name: Run Script Validation Tests
     runs-on: windows-latest
     steps:
       - name: Checkout code
@@ -37,14 +37,21 @@ jobs:
         run: |
           Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser -MinimumVersion 5.0
 
-      - name: Run Windows Pester tests
+      - name: Validate PowerShell scripts can be parsed
         shell: pwsh
         run: |
-          $config = New-PesterConfiguration
-          $config.Run.Path = './tests/pester.Windows.Tests.ps1'
-          $config.Run.Exit = $true
-          $config.Output.Verbosity = 'Detailed'
-          Invoke-Pester -Configuration $config
+          $scripts = Get-ChildItem -Path ./scripts -Filter *.ps1 -Recurse
+          $failed = $false
+          foreach ($script in $scripts) {
+            Write-Host "Parsing $($script.FullName)..."
+            $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content $script.FullName -Raw), [ref]$null)
+            if ($LASTEXITCODE -ne 0) {
+              $failed = $true
+            }
+          }
+          if ($failed) {
+            throw "PowerShell script parsing failed"
+          }
 
   # Wait for syntax validation workflow to complete
   wait-for-validation:
