@@ -26,16 +26,14 @@ All releases include SHA256 checksums for verification.
 
 ```powershell
 # Open PowerShell as Administrator, then:
-Set-ExecutionPolicy Bypass -Scope Process -Force
-irm https://github.com/kpeacocke/devMachine/releases/latest/download/devMachine-complete-v*.zip -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1"
+Set-ExecutionPolicy Bypass -Scope Process -Force; $release = (irm https://api.github.com/repos/kpeacocke/devMachine/releases/latest); $asset = $release.assets | Where-Object { $_.name -like '*complete*.zip' } | Select-Object -First 1; irm $asset.browser_download_url -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1"
 ```
 
 **For VMs (skip licensed apps, Dev Drive, and backup):**
 
 ```powershell
 # Open PowerShell as Administrator, then:
-Set-ExecutionPolicy Bypass -Scope Process -Force
-irm https://github.com/kpeacocke/devMachine/releases/latest/download/devMachine-complete-v*.zip -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1" -SkipLicensedApps -SkipDevDrive -SkipBackup
+Set-ExecutionPolicy Bypass -Scope Process -Force; $release = (irm https://api.github.com/repos/kpeacocke/devMachine/releases/latest); $asset = $release.assets | Where-Object { $_.name -like '*complete*.zip' } | Select-Object -First 1; irm $asset.browser_download_url -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1" -SkipLicensedApps -SkipDevDrive -SkipBackup
 ```
 
 ### Manual Download
