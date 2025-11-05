@@ -56,7 +56,16 @@
     [
       "@semantic-release/github",
       {
-        "assets": []
+        "assets": [
+          {
+            "path": "release-artifacts/*.zip",
+            "label": "Release Archives"
+          },
+          {
+            "path": "release-artifacts/checksums-*.txt",
+            "label": "SHA256 Checksums"
+          }
+        ]
       }
     ],
     [
