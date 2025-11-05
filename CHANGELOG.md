@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2](https://github.com/kpeacocke/devMachine/compare/v1.0.1...v1.0.2) (2025-11-05)
+
+
+### 📚 Documentation
+
+* **readme:** expand Quick Start with one-line install, VM example, manual download and setup phases ([e1547b7](https://github.com/kpeacocke/devMachine/commit/e1547b7afe427d9e79129a8d93213e8110e40ca9))
+
 ## [1.0.1](https://github.com/kpeacocke/devMachine/compare/v1.0.0...v1.0.1) (2025-11-05)
 
 ### 📚 Documentation
