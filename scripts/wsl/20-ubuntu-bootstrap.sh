@@ -13,6 +13,7 @@ sudo apt-get update -y && sudo apt-get install -y temurin-25-jdk
 # Node current via nvm
 if ! command -v nvm >/dev/null; then
   curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+  # shellcheck source=/dev/null
   . "$HOME/.nvm/nvm.sh"
 fi
 nvm install node
@@ -20,9 +21,12 @@ nvm alias default node
 
 # mise latest + Kotlin/Gradle
 curl https://mise.jdx.dev/install.sh | sh
+# shellcheck disable=SC2016
 grep -q 'mise activate bash' ~/.bashrc || echo 'eval "$(~/.local/share/mise/bin/mise activate bash)"' >> ~/.bashrc
+# shellcheck source=/dev/null
 . ~/.bashrc
 mise use -g kotlin@latest
+# shellcheck source=/dev/null
 mise use -g gradle@latest
 
 # R / PHP / Ruby / linters

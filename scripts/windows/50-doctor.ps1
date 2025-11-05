@@ -4,7 +4,7 @@ $ok  = "[✓]"
 $bad = "[✗]"
 $inf = "[i]"
 
-function Has-Command($n){ $null -ne (Get-Command $n -ErrorAction SilentlyContinue) }
+function Test-Command($n){ $null -ne (Get-Command $n -ErrorAction SilentlyContinue) }
 function Note($msg){ Write-Host "$inf $msg" -ForegroundColor Cyan }
 function Pass($msg){ Write-Host "$ok $msg" -ForegroundColor Green }
 function Fail($msg){ Write-Host "$bad $msg" -ForegroundColor Red }
@@ -20,7 +20,7 @@ try {
 } catch { Fail "WSL check error: $_" }
 
 # Docker CLI
-if (Has-Command "docker") {
+if (Test-Command "docker") {
   try { docker info -f '{{.ServerVersion}}' | Out-Null; Pass "Docker Desktop CLI reachable" } catch { Fail "Docker CLI not responding — start Docker Desktop" }
 } else { Fail "Docker not on PATH" }
 
@@ -31,11 +31,11 @@ $need = @(
   "aws","az","gcloud","pwsh","op"
 )
 foreach ($n in $need) {
-  if (Has-Command $n) { Pass "$n found" } else { Fail "$n missing" }
+  if (Test-Command $n) { Pass "$n found" } else { Fail "$n missing" }
 }
 
 # VS Code CLI
-if (Has-Command "code") { Pass "VS Code 'code' CLI available" } else { Fail "VS Code CLI not on PATH (open VS Code once, then retry)" }
+if (Test-Command "code") { Pass "VS Code 'code' CLI available" } else { Fail "VS Code CLI not on PATH (open VS Code once, then retry)" }
 
 # Defender settings
 try {

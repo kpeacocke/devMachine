@@ -5,7 +5,7 @@ Reboot recommended after it finishes.
 #>
 
 $ErrorActionPreference = 'Stop'
-function Has-Command($n){ $null -ne (Get-Command $n -ErrorAction SilentlyContinue) }
+function Test-Command($n){ $null -ne (Get-Command $n -ErrorAction SilentlyContinue) }
 
 Write-Host "== Create a system restore point (best-effort)"
 try { Checkpoint-Computer -Description "Pre-Optimize-Harden" -RestorePointType "MODIFY_SETTINGS" } catch { }

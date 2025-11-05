@@ -8,7 +8,7 @@ VS Code Insiders setup:
 #>
 
 param(
-  [switch]$MakeCodeAliasToInsiders = $true
+  [switch]$SkipCodeAlias = $false
 )
 
 $ErrorActionPreference = 'Stop'
@@ -28,6 +28,7 @@ $settingsPath = Join-Path $UserDir "settings.json"
 $settings = @{
   "workbench.startupEditor" = "none";
   "window.zoomLevel"        = 0;
+  # cspell:ignore Consolas
   "editor.fontFamily"       = "JetBrainsMono NF, Cascadia Code, Consolas, 'Courier New', monospace";
   "editor.fontLigatures"    = true;
   "editor.renderWhitespace" = "selection";
@@ -74,7 +75,7 @@ $exts = @(
 )
 foreach ($e in $exts) { try { code-insiders --install-extension $e --force | Out-Null } catch {} }
 
-if ($MakeCodeAliasToInsiders) {
+if (-not $SkipCodeAlias) {
   Write-Host "== Point 'code' CLI to 'code-insiders'"
   $bin = "$env:UserProfile\.local\bin"
   New-Item -ItemType Directory -Force -Path $bin | Out-Null

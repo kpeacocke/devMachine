@@ -6,7 +6,10 @@ Python 3.13, Node CURRENT, Go, Rustup, .NET 9 SDK, Java Temurin (rolling GA), Ma
 Terraform, Packer, AWS/Azure/GCloud CLIs, mise (Kotlin+Gradle latest), VS Code extensions.
 #>
 $ErrorActionPreference = 'Stop'
-function Has-Command($n){ $null -ne (Get-Command $n -ErrorAction SilentlyContinue) }
+function Test-CommandExists {
+    param([string]$n)
+    $null -ne (Get-Command $n -ErrorAction SilentlyContinue)
+}
 
 Write-Host "`n📦 Core"
 winget install 7zip.7zip JanDeDobbeleer.OhMyPosh --silent --accept-package-agreements --accept-source-agreements
@@ -61,8 +64,8 @@ winget install HashiCorp.Terraform HashiCorp.Packer Amazon.AWSCLI Microsoft.Azur
 
 # TFLint (winget + fallback)
 function Install-TFLint {
-  if (Has-Command "tflint") { return }
-  try { winget install Terraform-Linters.tflint --silent --accept-source-agreements --accept-package-agreements; if (Has-Command "tflint"){return} } catch {}
+  if (Test-CommandExists "tflint") { return }
+  try { winget install Terraform-Linters.tflint --silent --accept-source-agreements --accept-package-agreements; if (Test-CommandExists "tflint"){return} } catch {}
   try {
     $rel = Invoke-RestMethod https://api.github.com/repos/terraform-linters/tflint/releases/latest
     $asset = $rel.assets | Where-Object { $_.name -match 'windows_amd64.zip' } | Select-Object -First 1

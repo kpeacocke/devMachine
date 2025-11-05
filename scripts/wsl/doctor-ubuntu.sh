@@ -15,14 +15,22 @@ done
 
 if need R; then
   ok "R found"
-  R -q -e "library(languageserver);library(lintr);library(styler)" >/dev/null 2>&1 && ok "R packages: languageserver/lintr/styler" || bad "R packages missing"
+  if R -q -e "library(languageserver);library(lintr);library(styler)" >/dev/null 2>&1; then
+    ok "R packages: languageserver/lintr/styler"
+  else
+    bad "R packages missing"
+  fi
 else bad "R missing"; fi
 
 if need php; then ok "PHP found"; else bad "PHP missing"; fi
 if need composer; then
   ok "Composer found"
   PATHS="$HOME/.config/composer/vendor/bin"
-  [[ ":$PATH:" == *":$PATHS:"* ]] && ok "Composer global bin on PATH" || bad "Composer global bin NOT on PATH"
+  if [[ ":$PATH:" == *":$PATHS:"* ]]; then
+    ok "Composer global bin on PATH"
+  else
+    bad "Composer global bin NOT on PATH"
+  fi
   for t in phpcs phpstan psalm php-cs-fixer; do
     if command -v "$t" >/dev/null 2>&1; then ok "$t found"; else bad "$t missing"; fi
   done
@@ -44,9 +52,7 @@ else bad "docker missing"; fi
 
 if need tflint; then ok "tflint found"; else bad "tflint missing"; fi
 
-for l in shellcheck; do
-  if need "$l"; then ok "$l found"; else bad "$l missing"; fi
-done
+if need shellcheck; then ok "shellcheck found"; else bad "shellcheck missing"; fi
 
 echo
 ok "Doctor check finished"

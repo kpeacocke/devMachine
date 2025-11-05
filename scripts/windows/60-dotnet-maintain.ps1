@@ -9,7 +9,7 @@ Policy:
 param([switch]$ScheduleWeekly)
 
 $ErrorActionPreference = 'Stop'
-function Has-Command($n){ $null -ne (Get-Command $n -ErrorAction SilentlyContinue) }
+function Test-Command($n){ $null -ne (Get-Command $n -ErrorAction SilentlyContinue) }
 
 Write-Host "☕ Ensuring latest .NET SDK..."
 try {
@@ -19,7 +19,7 @@ try {
   winget upgrade Microsoft.DotNet.SDK.9 --silent --accept-package-agreements --accept-source-agreements | Out-Null
 }
 
-if (-not (Has-Command "dotnet")) { throw ".NET SDK not on PATH" }
+if (-not (Test-Command "dotnet")) { throw ".NET SDK not on PATH" }
 
 # Inventory SDKs
 $sdkList = & dotnet --list-sdks | ForEach-Object {
@@ -31,10 +31,9 @@ if ($sdkList.Count -gt 0) {
 }
 
 # Keep newest 2 feature bands; remove older SDKs (not runtimes)
-$keep = $sdkList | Select-Object -First 2
 $remove = $sdkList | Select-Object -Skip 2
 
-function Try-UninstallSdk([version]$v) {
+function Remove-OldSdk([version]$v) {
   try {
     # Best-effort remove via winget family id (not perfect but keeps script simple)
     winget uninstall --exact --id "Microsoft.DotNet.SDK.$($v.Major)" --silent 2>$null | Out-Null
@@ -43,7 +42,7 @@ function Try-UninstallSdk([version]$v) {
 
 foreach ($v in $remove) {
   Write-Host "🧹 Removing older SDK: $v"
-  Try-UninstallSdk $v
+  Remove-OldSdk $v
 }
 
 Write-Host "🔧 Updating workloads..."
