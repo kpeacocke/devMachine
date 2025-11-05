@@ -20,13 +20,41 @@ All releases include SHA256 checksums for verification.
 
 ## 🚀 Quick Start (Automated Setup)
 
-**New machine? Run this ONE command:**
+### One-Line Install (Latest Release)
+
+**Download and run the complete setup automatically:**
 
 ```powershell
 # Open PowerShell as Administrator, then:
 Set-ExecutionPolicy Bypass -Scope Process -Force
+irm https://github.com/kpeacocke/devMachine/releases/latest/download/devMachine-complete-v*.zip -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1"
+```
+
+**For VMs (skip licensed apps, Dev Drive, and backup):**
+
+```powershell
+# Open PowerShell as Administrator, then:
+Set-ExecutionPolicy Bypass -Scope Process -Force
+irm https://github.com/kpeacocke/devMachine/releases/latest/download/devMachine-complete-v*.zip -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1" -SkipLicensedApps -SkipDevDrive -SkipBackup
+```
+
+### Manual Download
+
+Or download from [Releases](https://github.com/kpeacocke/devMachine/releases):
+
+* **Windows Scripts Only** (`devMachine-windows-scripts-vX.X.X.zip`) - Surface Pro setup scripts
+* **WSL Scripts Only** (`devMachine-wsl-scripts-vX.X.X.zip`) - Ubuntu/WSL configuration
+* **Complete Package** (`devMachine-complete-vX.X.X.zip`) - Everything including tests and docs
+
+All releases include SHA256 checksums for verification.
+
+After download, extract and run:
+
+```powershell
 .\setup-machine.ps1
 ```
+
+### Setup Phases
 
 This orchestrator will:
 
