@@ -174,14 +174,16 @@ jobs:
           node-version: '20'
 
       - name: Install semantic-release
+        shell: pwsh
         run: |
-          npm install -g semantic-release@23 \
-            @semantic-release/changelog@6 \
-            @semantic-release/git@10 \
-            @semantic-release/github@10 \
+          npm install -g semantic-release@23 `
+            @semantic-release/changelog@6 `
+            @semantic-release/git@10 `
+            @semantic-release/github@10 `
             conventional-changelog-conventionalcommits@7
 
       - name: Configure Git
+        shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -189,29 +191,35 @@ jobs:
       - name: Run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
         run: npx semantic-release
 
       - name: Fix CHANGELOG formatting
+        shell: pwsh
         run: |
           # Check if CHANGELOG was updated
-          if git diff HEAD~1 HEAD --name-only | grep -q "CHANGELOG.md"; then
-            echo "Fixing CHANGELOG.md formatting..."
+          $changed = git diff HEAD~1 HEAD --name-only
+          if ($changed -match "CHANGELOG.md") {
+            Write-Host "Fixing CHANGELOG.md formatting..."
 
             # Remove multiple consecutive blank lines (keep only 1)
-            sed -i.bak '/^$/N;/^\n$/D' CHANGELOG.md
+            $content = Get-Content CHANGELOG.md -Raw
+            $fixed = $content -replace "(`r?`n){3,}", "`r`n`r`n"
+            Set-Content -Path CHANGELOG.md -Value $fixed -NoNewline
 
             # Check if changes were made
-            if ! git diff --quiet CHANGELOG.md; then
+            $diff = git diff CHANGELOG.md
+            if ($diff) {
               git add CHANGELOG.md
               git commit -m "chore(changelog): fix markdown formatting [skip ci]"
               git push origin HEAD:main
-              echo "✓ CHANGELOG.md formatting fixed"
-            else
-              echo "✓ CHANGELOG.md formatting is already correct"
-            fi
-          else
-            echo "CHANGELOG.md was not updated in this release"
-          fi
+              Write-Host "✓ CHANGELOG.md formatting fixed"
+            } else {
+              Write-Host "✓ CHANGELOG.md formatting is already correct"
+            }
+          } else {
+            Write-Host "CHANGELOG.md was not updated in this release"
+          }
 
       - name: Get latest tag
         id: get_tag
