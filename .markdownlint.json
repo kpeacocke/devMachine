@@ -1,4 +1,7 @@
 {
+  "MD004": {
+    "style": "asterisk"
+  },
   "MD024": {
     "siblings_only": true
   },

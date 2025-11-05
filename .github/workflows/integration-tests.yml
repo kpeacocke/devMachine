@@ -172,7 +172,8 @@ jobs:
     - name: Check Download Sources
       run: |
         # Verify that downloads come from trusted sources
-        untrusted_patterns=("http://" "bit.ly" "tinyurl" "dl.dropbox")
+        # Exclude XML namespace declarations (xmlns)
+        untrusted_patterns=("bit.ly" "tinyurl" "dl.dropbox")
         
         for pattern in "${untrusted_patterns[@]}"; do
           if grep -r "$pattern" --include="*.ps1" --include="*.sh" .; then
@@ -180,5 +181,11 @@ jobs:
             exit 1
           fi
         done
+        
+        # Check for http:// downloads (but exclude XML namespaces)
+        if grep -r "http://" --include="*.ps1" --include="*.sh" . | grep -v "xmlns" | grep -v "xsi:schemaLocation"; then
+          echo "❌ Found http:// download sources (should use https://)"
+          exit 1
+        fi
         
         echo "✅ All download sources appear trusted"
