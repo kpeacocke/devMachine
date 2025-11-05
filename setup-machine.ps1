@@ -18,6 +18,9 @@
 .PARAMETER SkipOptionalGoodies
     Skip optional dev tools (Sysinternals, mkcert, k8s tools, etc.)
 
+.PARAMETER SkipDevDrive
+    Skip Dev Drive cache relocation (for VMs or systems without ReFS support)
+
 .PARAMETER SkipInsiders
     Skip Windows/Office/VSCode Insider channel setup
 
@@ -44,6 +47,7 @@ param(
     [switch]$SkipBackup,
     [switch]$SkipLicensedApps,
     [switch]$SkipOptionalGoodies,
+    [switch]$SkipDevDrive,
     [switch]$SkipInsiders,
     [switch]$ScheduleDotNetMaintenance,
     [switch]$SetUltimatePerformance,
@@ -206,9 +210,11 @@ Invoke-Script -Path (Join-Path $WindowsScripts "32-powerplan-auto-toggle.ps1") `
 # PHASE 6: DEV DRIVE CACHE RELOCATION
 # ============================================================================
 
-Write-Step "PHASE 6: Dev Drive Cache Setup"
-Invoke-Script -Path (Join-Path $WindowsScripts "40-devdrive-caches.ps1") `
-    -Description "Move npm/cargo/go/maven/docker to Dev Drive"
+if (-not $SkipDevDrive) {
+    Write-Step "PHASE 6: Dev Drive Cache Setup"
+    Invoke-Script -Path (Join-Path $WindowsScripts "40-devdrive-caches.ps1") `
+        -Description "Move npm/cargo/go/maven/docker to Dev Drive"
+}
 
 # ============================================================================
 # PHASE 7: OPTIONAL GOODIES

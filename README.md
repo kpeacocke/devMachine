@@ -1,6 +1,6 @@
 # Surface Pro (ARM64) Dev Bootstrap — **Latest Everything**
 
-This repo contains a clean set of scripts to build, harden, and maintain your **Windows on ARM (Snapdragon)** dev machine and WSL.
+This repo contains a clean set of scripts to build, harden, and maintain your **Windows on ARM (Snapdragon)** machine.
 
 [![Release](https://img.shields.io/github/v/release/kpeacocke/devMachine)](https://github.com/kpeacocke/devMachine/releases)
 [![Tests](https://github.com/kpeacocke/devMachine/actions/workflows/syntax-validation.yml/badge.svg)](https://github.com/kpeacocke/devMachine/actions/workflows/syntax-validation.yml)
@@ -45,15 +45,22 @@ This orchestrator will:
 # Skip optional components
 .\setup-machine.ps1 -SkipBackup -SkipOptionalGoodies -SkipInsiders
 
+# For VMs (skip licensed apps and Dev Drive optimizations)
+.\setup-machine.ps1 -SkipLicensedApps -SkipDevDrive -SkipBackup
+
 # Enable .NET weekly maintenance task
 .\setup-machine.ps1 -ScheduleDotNetMaintenance
 
 # Immediately activate Ultimate Performance power plan
 .\setup-machine.ps1 -SetUltimatePerformance
 
-# Custom Dev Drive path
+# Custom Dev Drive path (if not skipping Dev Drive)
 .\setup-machine.ps1 -DevDrivePath "E:\dev\caches"
 ```
+
+> **Note for VMs**: Use `-SkipDevDrive` to skip Dev Drive cache relocation, which requires
+> ReFS support and may not work in all VM environments. Combine with `-SkipLicensedApps` and
+> `-SkipBackup` for a clean VM setup.
 
 ---
 
