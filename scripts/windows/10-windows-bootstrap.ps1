@@ -11,12 +11,29 @@ function Test-CommandExists {
     $null -ne (Get-Command $n -ErrorAction SilentlyContinue)
 }
 
+Write-Host "`n🐧 WSL Foundation"
+# Install WSL with no distribution first, then explicitly install Ubuntu
+try {
+  wsl --install --no-distribution
+} catch {
+  # Fallback: enable features manually
+  dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+  dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+}
+# Ensure WSL 2 is the default
+wsl --set-default-version 2
+
 Write-Host "`n📦 Core"
 winget install 7zip.7zip JanDeDobbeleer.OhMyPosh --silent --accept-package-agreements --accept-source-agreements
 
 Write-Host "`n📝 Editor & Containers"
-winget install Microsoft.VisualStudioCode Docker.DockerDesktop Canonical.Ubuntu `
+winget install Microsoft.VisualStudioCode Docker.DockerDesktop `
   --silent --accept-package-agreements --accept-source-agreements
+
+Write-Host "`n🐧 Ubuntu for WSL"
+winget install Canonical.Ubuntu --silent --accept-package-agreements --accept-source-agreements
+# Set Ubuntu as WSL 2 explicitly
+wsl --set-version Ubuntu 2
 
 Write-Host "`n🐙 Git toolchain"
 winget install Git.Git Git.GitLFS GitHub.cli Microsoft.GitCredentialManagerCore `

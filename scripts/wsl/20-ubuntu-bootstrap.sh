@@ -29,6 +29,22 @@ mise use -g kotlin@latest
 # shellcheck source=/dev/null
 mise use -g gradle@latest
 
+# pyenv for Python version management
+echo "🐍 pyenv for Python version management"
+if ! command -v pyenv >/dev/null; then
+  curl https://pyenv.run | bash
+  {
+    # shellcheck disable=SC2016
+    echo 'export PYENV_ROOT="$HOME/.pyenv"'
+    # shellcheck disable=SC2016
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"'
+    # shellcheck disable=SC2016
+    echo 'eval "$(pyenv init -)"'
+  } >> ~/.bashrc
+  # shellcheck source=/dev/null
+  . ~/.bashrc
+fi
+
 # R / PHP / Ruby / linters
 sudo apt-get install -y r-base r-base-dev php php-cli php-xml php-mbstring php-curl php-zip php-gd php-intl ruby-full shellcheck docker.io
 R -q -e "install.packages(c('languageserver','lintr','styler'), repos='https://cloud.r-project.org')" || true

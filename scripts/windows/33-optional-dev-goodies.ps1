@@ -26,12 +26,29 @@ if ($installK8s) {
 }
 
 Write-Host "🧪 Security hygiene via pipx/go"
-try { pipx install pre-commit --force; pipx install semgrep --force } catch {}
+try {
+  pipx install pre-commit --force
+  pipx install semgrep --force
+  pipx install detect-secrets --force
+  pipx install bandit --force
+} catch {}
 if (Get-Command go -ErrorAction SilentlyContinue) {
   go install github.com/gitleaks/gitleaks/v8@latest
   $gobin = "$env:USERPROFILE\go\bin"
   if ($env:PATH -notlike "*$gobin*") { [Environment]::SetEnvironmentVariable('Path', $env:Path + ";$gobin", 'User') }
 }
+
+Write-Host "🔒 Additional Security Scanning"
+winget install Snyk.Snyk aquasecurity.trivy `
+  --silent --accept-source-agreements --accept-package-agreements
+
+Write-Host "🧪 Testing & CI/CD tools"
+winget install nektos.act --silent --accept-source-agreements --accept-package-agreements
+try {
+  npm install -g newman
+  pipx install pytest-cov --force
+  pipx install tox --force
+} catch { Write-Warning "Some npm/pipx tools failed to install" }
 
 Write-Host "📦 Winget hygiene (export + source refresh)"
 $export = Join-Path $env:USERPROFILE "Desktop\winget-installed.json"

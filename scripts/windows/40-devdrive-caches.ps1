@@ -49,4 +49,33 @@ $settings | Out-File -Encoding utf8 "$mvndir\settings.xml"
 [Environment]::SetEnvironmentVariable("COMPOSER_HOME","$DevCacheRoot\composer","User")
 [Environment]::SetEnvironmentVariable("COMPOSER_CACHE_DIR","$DevCacheRoot\composer\cache","User")
 
-Write-Host "✅ Cache locations set to $DevCacheRoot. Open a NEW terminal to pick up PATH and env vars."
+Write-Host "🐳 Docker: move data-root to Dev Drive (save ~20-50GB on C:)"
+$dockerConfigDir = "$env:ProgramData\Docker\config"
+$dockerConfig = Join-Path $dockerConfigDir "daemon.json"
+$dockerData = Join-Path $DevCacheRoot "docker"
+New-Item -Force -ItemType Directory -Path $dockerData | Out-Null
+New-Item -Force -ItemType Directory -Path $dockerConfigDir | Out-Null
+
+# Create or update daemon.json
+$daemonSettings = @{
+  "data-root" = $dockerData
+  "storage-driver" = "windowsfilter"
+  "dns" = @("8.8.8.8", "1.1.1.1")
+}
+
+if (Test-Path $dockerConfig) {
+  try {
+    $existing = Get-Content $dockerConfig -Raw | ConvertFrom-Json
+    $existing.'data-root' = $dockerData
+    $existing | ConvertTo-Json -Depth 10 | Set-Content $dockerConfig -Encoding utf8
+  } catch {
+    $daemonSettings | ConvertTo-Json -Depth 10 | Set-Content $dockerConfig -Encoding utf8
+  }
+} else {
+  $daemonSettings | ConvertTo-Json -Depth 10 | Set-Content $dockerConfig -Encoding utf8
+}
+
+Write-Host "→ Docker data-root set to $dockerData"
+Write-Host "   Restart Docker Desktop to apply changes"
+
+Write-Host "`n✅ Cache locations set to $DevCacheRoot. Open a NEW terminal to pick up PATH and env vars."

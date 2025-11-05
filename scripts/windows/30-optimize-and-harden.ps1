@@ -15,6 +15,10 @@ Write-Host "== Enable NTFS long paths & Developer Mode"
 reg add HKLM\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1 /f | Out-Null
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" /t REG_DWORD /f /v "AllowDevelopmentWithoutDevLicense" /d 1 | Out-Null
 
+Write-Host "== UAC: Always notify (max security)"
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 2 /f | Out-Null
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v PromptOnSecureDesktop /t REG_DWORD /d 1 /f | Out-Null
+
 Write-Host "== Create/update .wslconfig (resource caps for battery/thermals)"
 $wslCfg = @"
 [wsl2]
@@ -23,6 +27,12 @@ processors=6
 swap=4GB
 localhostForwarding=true
 networkingMode=mirrored
+pageReporting=true
+autoProxy=true
+
+[experimental]
+sparseVhd=true
+autoMemoryReclaim=gradual
 "@
 $wslPath = Join-Path $env:UserProfile ".wslconfig"
 $wslCfg | Out-File -FilePath $wslPath -Encoding utf8
@@ -70,6 +80,16 @@ New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System\
 New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System\Audit" -Name "ProcessCreationIncludeCmdLine_Enabled" -PropertyType DWord -Value 1 -Force | Out-Null
 auditpol /set /subcategory:"Process Creation" /success:enable /failure:enable | Out-Null
 
+Write-Host "== Enhanced audit policies"
+auditpol /set /subcategory:"Logon" /success:enable /failure:enable | Out-Null
+auditpol /set /subcategory:"Account Lockout" /success:enable /failure:enable | Out-Null
+auditpol /set /subcategory:"File Share" /success:enable /failure:enable | Out-Null
+auditpol /set /subcategory:"Other Object Access Events" /success:enable /failure:enable | Out-Null
+
+Write-Host "== Increase Security log size (500MB Security, 100MB System)"
+wevtutil sl Security /ms:524288000 | Out-Null
+wevtutil sl System /ms:104857600 | Out-Null
+
 Write-Host "== LSA protection (RunAsPPL)"
 New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Force | Out-Null
 New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "RunAsPPL" -PropertyType DWord -Value 1 -Force | Out-Null
@@ -79,6 +99,10 @@ New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard" -Force | Out
 New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard" -Name "EnableVirtualizationBasedSecurity" -PropertyType DWord -Value 1 -Force | Out-Null
 New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" -Force | Out-Null
 New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" -Name "Enabled" -PropertyType DWord -Value 1 -Force | Out-Null
+
+Write-Host "== Enable Credential Guard (with UEFI lock)"
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard" -Name "RequirePlatformSecurityFeatures" -PropertyType DWord -Value 3 -Force | Out-Null
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "LsaCfgFlags" -PropertyType DWord -Value 1 -Force | Out-Null
 
 Write-Host "== Disable SMBv1"
 Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -ErrorAction SilentlyContinue | Out-Null
