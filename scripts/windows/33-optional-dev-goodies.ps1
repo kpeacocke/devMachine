@@ -42,6 +42,20 @@ Write-Host "🔒 Additional Security Scanning"
 winget install Snyk.Snyk aquasecurity.trivy `
   --silent --accept-source-agreements --accept-package-agreements
 
+Write-Host "🌐 Network monitoring: GlassWire"
+try {
+  winget install GlassWire.GlassWire --silent --accept-source-agreements --accept-package-agreements
+} catch {
+  Write-Warning "GlassWire installation via winget failed. Please install manually from https://www.glasswire.com/"
+}
+
+Write-Host "🛡️ Malware protection: Malwarebytes"
+try {
+  winget install Malwarebytes.Malwarebytes --silent --accept-source-agreements --accept-package-agreements
+} catch {
+  Write-Warning "Malwarebytes installation via winget failed. Please install manually from https://www.malwarebytes.com/"
+}
+
 Write-Host "🧪 Testing & CI/CD tools"
 winget install nektos.act --silent --accept-source-agreements --accept-package-agreements
 try {

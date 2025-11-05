@@ -62,6 +62,42 @@ Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True -DefaultInbo
 Write-Host "== Defender core settings"
 Set-MpPreference -PUAProtection Enabled -MAPSReporting Advanced -SubmitSamplesConsent SendSafeSamples -EnableNetworkProtection Enabled
 
+Write-Host "== Defender exclusions for dev performance"
+# Exclude common dev folders and build artifacts to avoid scan overhead
+$exclusions = @(
+  "$env:USERPROFILE\.cargo"
+  "$env:USERPROFILE\.rustup"
+  "$env:USERPROFILE\go"
+  "$env:USERPROFILE\.gradle"
+  "$env:USERPROFILE\.m2"
+  "$env:USERPROFILE\.nuget"
+  "$env:USERPROFILE\.dotnet"
+  "$env:USERPROFILE\AppData\Local\pip"
+  "$env:USERPROFILE\AppData\Local\pipx"
+  "$env:USERPROFILE\AppData\Roaming\npm"
+  "D:\dev\caches" # Dev Drive caches
+)
+# Process exclusions
+foreach ($path in $exclusions) {
+  if (Test-Path $path) {
+    try {
+      Add-MpPreference -ExclusionPath $path
+      Write-Host "  → Excluded: $path"
+    } catch { Write-Warning "Failed to exclude $path" }
+  }
+}
+# Exclude common temp/build folders by pattern (applies globally)
+try {
+  Add-MpPreference -ExclusionPath "*\node_modules"
+  Add-MpPreference -ExclusionPath "*\.git"
+  Add-MpPreference -ExclusionPath "*\target" # Rust/Maven
+  Add-MpPreference -ExclusionPath "*\build" # Generic build output
+  Add-MpPreference -ExclusionPath "*\dist"  # Generic dist output
+  Add-MpPreference -ExclusionPath "*\.venv" # Python virtual envs
+  Add-MpPreference -ExclusionPath "*\venv"
+  Write-Host "  → Excluded common build/temp folders (node_modules, .git, target, build, dist, .venv)"
+} catch { Write-Warning "Some folder exclusions failed" }
+
 Write-Host "== Defender Attack Surface Reduction (ASR) — Audit mode first"
 $ASR = @{
   "56a863a9-875e-4185-98a7-b882c64b5ce5" = "AuditMode" # vulnerable driver block
