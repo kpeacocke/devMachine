@@ -193,9 +193,8 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path release-artifacts
 
-          # Get current version for naming (will be actual version after release)
-          $packageJson = Get-Content package.json -Raw | ConvertFrom-Json -ErrorAction SilentlyContinue
-          $version = if ($packageJson.version) { "v$($packageJson.version)" } else { "vNext" }
+          # Use generic naming - semantic-release will rename when uploading
+          $version = "latest"
 
           # Create Windows scripts archive
           Compress-Archive -Path `
