@@ -33,9 +33,12 @@ jobs:
       run: |
         $config = New-PesterConfiguration
         $config.Run.Path = '.\tests\syntax-validation.Tests.ps1'
-        $config.Run.Exit = $true
         $config.Output.Verbosity = 'Detailed'
-        Invoke-Pester -Configuration $config
+        $result = Invoke-Pester -Configuration $config -PassThru
+        
+        if ($result.FailedCount -gt 0) {
+          throw "$($result.FailedCount) test(s) failed"
+        }
         
   bash-syntax:
     runs-on: ubuntu-latest

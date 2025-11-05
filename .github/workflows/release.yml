@@ -23,61 +23,10 @@ permissions:
   security-events: write
 
 jobs:
-  test:
-    name: Run Script Validation Tests
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install Pester
-        shell: pwsh
-        run: |
-          Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser -MinimumVersion 5.0
-
-      - name: Validate PowerShell scripts can be parsed
-        shell: pwsh
-        run: |
-          $scripts = Get-ChildItem -Path ./scripts -Filter *.ps1 -Recurse
-          $failed = $false
-          $errors = @()
-          
-          foreach ($script in $scripts) {
-            Write-Host "Parsing $($script.FullName)..."
-            try {
-              $parseErrors = $null
-              $null = [System.Management.Automation.PSParser]::Tokenize(
-                (Get-Content $script.FullName -Raw), 
-                [ref]$parseErrors
-              )
-              
-              if ($parseErrors.Count -gt 0) {
-                $failed = $true
-                $errors += "$($script.Name) has parse errors:"
-                foreach ($err in $parseErrors) {
-                  $errors += "  Line $($err.Token.StartLine): $($err.Message)"
-                }
-              }
-            } catch {
-              $failed = $true
-              $errors += "$($script.Name) failed: $_"
-            }
-          }
-          
-          if ($failed) {
-            $errors | ForEach-Object { Write-Host $_ }
-            throw "PowerShell script parsing failed"
-          }
-          
-          Write-Host "All scripts parsed successfully!"
-
   # Wait for syntax validation workflow to complete
   wait-for-validation:
     name: Wait for Syntax Validation
     runs-on: ubuntu-latest
-    needs: [test]
     steps:
       - name: Wait for syntax validation workflow
         uses: lewagon/wait-on-check-action@v1.3.4
@@ -89,7 +38,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: [test, wait-for-validation]
+    needs: [wait-for-validation]
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
