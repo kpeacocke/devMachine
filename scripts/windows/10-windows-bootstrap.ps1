@@ -11,17 +11,34 @@ function Test-CommandExists {
     $null -ne (Get-Command $n -ErrorAction SilentlyContinue)
 }
 
-Write-Host "🐧 WSL Foundation"
-# Install WSL with no distribution first, then explicitly install Ubuntu
+Write-Host "`n🐧 WSL Foundation"
+# Check if running in a VM (nested virtualization often unsupported)
+$isVM = $false
 try {
-  wsl --install --no-distribution
-} catch {
-  # Fallback: enable features manually
-  dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
-  dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+  $computerSystem = Get-WmiObject -Class Win32_ComputerSystem
+  if ($computerSystem.Model -match "Virtual|VMware|Parallels|VirtualBox|QEMU|Hyper-V") {
+    $isVM = $true
+    Write-Host "  ⚠️  VM detected ($($computerSystem.Model)) - WSL may not work with nested virtualization" -ForegroundColor Yellow
+    $installWSL = Read-Host "  Install WSL anyway? (Y/N) [Recommended: N for VMs]"
+    if ($installWSL -ne 'Y') {
+      Write-Host "  → Skipping WSL installation" -ForegroundColor Yellow
+      $skipWSL = $true
+    }
+  }
+} catch { }
+
+if (-not $skipWSL) {
+  # Install WSL with no distribution first, then explicitly install Ubuntu
+  try {
+    wsl --install --no-distribution
+  } catch {
+    # Fallback: enable features manually
+    dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+    dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+  }
+  # Ensure WSL 2 is the default
+  wsl --set-default-version 2
 }
-# Ensure WSL 2 is the default
-wsl --set-default-version 2
 
 Write-Host "📦 Core"
 winget install 7zip.7zip --source winget --silent --accept-package-agreements --accept-source-agreements
@@ -38,10 +55,16 @@ Write-Host "📝 Editor & Containers"
 winget install Microsoft.VisualStudioCode --source winget --silent --accept-package-agreements --accept-source-agreements
 winget install Docker.DockerDesktop --source winget --silent --accept-package-agreements --accept-source-agreements
 
-Write-Host "🐧 Ubuntu for WSL"
-winget install Canonical.Ubuntu --source winget --silent --accept-package-agreements --accept-source-agreements
-# Set Ubuntu as WSL 2 explicitly
-wsl --set-version Ubuntu 2
+Write-Host "`n🐧 Ubuntu for WSL"
+if (-not $skipWSL) {
+  # Install Ubuntu 24.04 LTS (latest)
+  winget install Canonical.Ubuntu.2404 --source winget --silent --accept-package-agreements --accept-source-agreements
+  # Set WSL 2 as default
+  wsl --set-default-version 2
+  Write-Host "  Note: Launch 'Ubuntu 24.04 LTS' from Start Menu to complete first-time setup" -ForegroundColor Yellow
+} else {
+  Write-Host "  → Skipped (WSL not installed)" -ForegroundColor Yellow
+}
 
 Write-Host "🐙 Git toolchain"
 winget install Git.Git --source winget --silent --accept-package-agreements --accept-source-agreements
@@ -70,11 +93,8 @@ winget install Microsoft.DotNet.SDK.9 --source winget --silent --accept-package-
 # Java: rolling Temurin (latest GA, auto-upgrades to next GA)
 winget install EclipseAdoptium.Temurin.JDK --source winget `
   --silent --accept-package-agreements --accept-source-agreements
-# Build tools
-winget install Apache.Maven --source winget --silent --accept-package-agreements --accept-source-agreements
-winget install Gradle.Gradle --source winget --silent --accept-package-agreements --accept-source-agreements
+# Build tools (CMake via winget, Maven/Gradle via mise below)
 winget install Kitware.CMake --source winget --silent --accept-package-agreements --accept-source-agreements
-winget install GnuWin32.Make --source winget --silent --accept-package-agreements --accept-source-agreements
 
 Write-Host "☁️ Cloud & IaC"
 winget install HashiCorp.Terraform --source winget --silent --accept-package-agreements --accept-source-agreements
@@ -102,14 +122,27 @@ function Install-TFLint {
 }
 Install-TFLint
 
-Write-Host "[SETUP] mise (universal toolchain manager)"
-winget install jdx.mise --silent --accept-package-agreements --accept-source-agreements
+Write-Host "`n🔧 mise (universal toolchain manager)"
+Write-Host "  Installing mise..."
+winget install jdx.mise --source winget --silent --accept-package-agreements --accept-source-agreements
+
+# Configure mise in PowerShell profile
 if (-not (Test-Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force | Out-Null }
 if (-not (Get-Content $PROFILE | Select-String -SimpleMatch 'mise activate powershell')) {
   Add-Content $PROFILE 'if (Get-Command mise -ErrorAction SilentlyContinue) { eval "$(mise activate powershell)" }'
 }
-# Keep Kotlin/Gradle latest via mise
-try { mise use -g kotlin@latest; mise use -g gradle@latest } catch {}
+
+# Install development tools via mise (better version management than winget)
+Write-Host "  Installing JVM tools via mise (Kotlin, Gradle, Maven)..."
+try {
+  $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+  mise use -g kotlin@latest 2>$null
+  mise use -g gradle@latest 2>$null
+  mise use -g maven@latest 2>$null
+  Write-Host "  [OK] Kotlin, Gradle, Maven installed via mise" -ForegroundColor Green
+} catch {
+  Write-Warning "  mise tool installation will complete on next shell restart"
+}
 
 Write-Host "🧩 VS Code extensions (abbrev)"
 foreach ($e in @(

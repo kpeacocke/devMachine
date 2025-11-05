@@ -22,9 +22,7 @@ $Q_AC = @"
 <QueryList>
   <Query Id="0" Path="System">
     <Select Path="System">
-      *[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and (EventID=105)]]
-      and
-      *[EventData[Data[@Name='AcOnline']='1']]
+      *[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and (EventID=105)] and EventData[Data[@Name='AcOnline']='1']]
     </Select>
   </Query>
 </QueryList>
@@ -34,9 +32,7 @@ $Q_DC = @"
 <QueryList>
   <Query Id="0" Path="System">
     <Select Path="System">
-      *[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and (EventID=105)]]
-      and
-      *[EventData[Data[@Name='AcOnline']='0']]
+      *[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and (EventID=105)] and EventData[Data[@Name='AcOnline']='0']]
     </Select>
   </Query>
 </QueryList>

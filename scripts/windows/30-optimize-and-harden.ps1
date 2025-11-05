@@ -50,11 +50,6 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 32 /t REG_DWORD /d 1 /f | Out-Null
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 33 /t REG_DWORD /d 30 /f | Out-Null
 
-Write-Host "== Fonts"
-try {
-  winget install Microsoft.CascadiaCode NerdFonts.JetBrainsMono --silent --accept-source-agreements --accept-package-agreements
-} catch { }
-
 # SECURITY BASELINE
 Write-Host "== Firewall: ON for all profiles; inbound block"
 Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True -DefaultInboundAction Block -DefaultOutboundAction Allow
@@ -139,18 +134,35 @@ wevtutil sl Security /ms:524288000 | Out-Null
 wevtutil sl System /ms:104857600 | Out-Null
 
 Write-Host "== LSA protection (RunAsPPL)"
-New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Force | Out-Null
-New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "RunAsPPL" -PropertyType DWord -Value 1 -Force | Out-Null
+try {
+  $lsaPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa"
+  if (-not (Test-Path $lsaPath)) { New-Item -Path $lsaPath -Force | Out-Null }
+  Set-ItemProperty -Path $lsaPath -Name "RunAsPPL" -Value 1 -Type DWord -Force -ErrorAction Stop
+} catch {
+  Write-Warning "LSA protection setting skipped (may require UEFI configuration): $_"
+}
 
 Write-Host "== Core Isolation (HVCI) — enable if supported"
-New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard" -Force | Out-Null
-New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard" -Name "EnableVirtualizationBasedSecurity" -PropertyType DWord -Value 1 -Force | Out-Null
-New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" -Force | Out-Null
-New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" -Name "Enabled" -PropertyType DWord -Value 1 -Force | Out-Null
+try {
+  $dgPath = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard"
+  if (-not (Test-Path $dgPath)) { New-Item -Path $dgPath -Force | Out-Null }
+  Set-ItemProperty -Path $dgPath -Name "EnableVirtualizationBasedSecurity" -Value 1 -Type DWord -Force
+
+  $hvciPath = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"
+  if (-not (Test-Path $hvciPath)) { New-Item -Path $hvciPath -Force | Out-Null }
+  Set-ItemProperty -Path $hvciPath -Name "Enabled" -Value 1 -Type DWord -Force
+} catch {
+  Write-Warning "HVCI settings skipped (hardware may not support): $_"
+}
 
 Write-Host "== Enable Credential Guard (with UEFI lock)"
-New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard" -Name "RequirePlatformSecurityFeatures" -PropertyType DWord -Value 3 -Force | Out-Null
-New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "LsaCfgFlags" -PropertyType DWord -Value 1 -Force | Out-Null
+try {
+  $dgPath = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard"
+  Set-ItemProperty -Path $dgPath -Name "RequirePlatformSecurityFeatures" -Value 3 -Type DWord -Force
+  Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "LsaCfgFlags" -Value 1 -Type DWord -Force
+} catch {
+  Write-Warning "Credential Guard settings skipped: $_"
+}
 
 Write-Host "== Disable SMBv1"
 Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -ErrorAction SilentlyContinue | Out-Null
