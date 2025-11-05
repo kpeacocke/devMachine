@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1](https://github.com/kpeacocke/devMachine/compare/v1.0.0...v1.0.1) (2025-11-05)
+
+
+### 📚 Documentation
+
+* normalize line wrapping in CODE_OF_CONDUCT.md and tidy CHANGELOG spacing ([7b68639](https://github.com/kpeacocke/devMachine/commit/7b6863950b6b6bb0c29fc91d09edea42c1fa6793))
+* normalize list markers to asterisks and standardize fenced code blocks across repository docs ([a062349](https://github.com/kpeacocke/devMachine/commit/a0623499118c4ff714170a23feb2f45d2152fae0))
+
 ## 1.0.0 (2025-11-05)
 
 ### 🚀 Features
