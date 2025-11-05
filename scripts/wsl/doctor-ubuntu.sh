@@ -20,9 +20,15 @@ if need R; then
   else
     bad "R packages missing"
   fi
-else bad "R missing"; fi
+else
+  bad "R missing"
+fi
 
-if need php; then ok "PHP found"; else bad "PHP missing"; fi
+if need php; then
+  ok "PHP found"
+else
+  bad "PHP missing"
+fi
 if need composer; then
   ok "Composer found"
   PATHS="$HOME/.config/composer/vendor/bin"

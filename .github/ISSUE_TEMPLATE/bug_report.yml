@@ -1,0 +1,157 @@
+name: Bug Report
+description: Report a bug or issue with the setup scripts
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out this form as completely as possible.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify you've completed these steps
+      options:
+        - label: I searched existing issues to avoid duplicates
+          required: true
+        - label: I tested this on a clean VM or fresh system
+          required: false
+        - label: I'm running the latest version of the scripts
+          required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: What type of system are you running on?
+      options:
+        - Surface Pro (ARM64/Snapdragon)
+        - Surface Pro (x64/Intel)
+        - VM (Parallels on Mac)
+        - VM (Hyper-V)
+        - VM (VMware)
+        - Other Windows 11 ARM device
+        - Other Windows 11 x64 device
+      default: 0
+    validations:
+      required: true
+
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows Version
+      description: "Run `winver` or `Get-ComputerInfo | Select WindowsProductName, WindowsVersion`"
+      placeholder: "Windows 11 Pro 23H2 (Build 22631.xxxx)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: script
+    attributes:
+      label: Which script is affected?
+      description: Select the script that's causing issues
+      options:
+        - setup-machine.ps1 (main orchestrator)
+        - 00-pwsh-first.ps1 (PowerShell setup)
+        - 10-windows-bootstrap.ps1 (core tools)
+        - 11-licensed-apps.ps1 (commercial software)
+        - 30-optimize-and-harden.ps1 (security hardening)
+        - 31-performance-tuning.ps1 (performance)
+        - 32-powerplan-auto-toggle.ps1 (power management)
+        - 33-optional-dev-goodies.ps1 (optional tools)
+        - 40-devdrive-caches.ps1 (Dev Drive setup)
+        - 50-doctor.ps1 (health check)
+        - 60-dotnet-maintain.ps1 (.NET maintenance)
+        - 70-insiders-optin.ps1 (Insider channels)
+        - 80-backup-setup.ps1 (backup configuration)
+        - WSL/Ubuntu scripts
+        - Tests
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+      placeholder: The script should install VS Code and configure it properly...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include full error messages.
+      placeholder: |
+        The script failed with:
+        Error: Unable to install Microsoft.VisualStudioCode
+        winget install failed with exit code 1
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Run `.\setup-machine.ps1`
+        2. Wait for Phase 2 to complete
+        3. Error occurs during VS Code installation
+        4. Script exits with error
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and Output
+      description: |
+        Include relevant logs, error messages, or screenshots.
+        For PowerShell errors, include the full error output.
+        For WSL issues, include Ubuntu terminal output.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: system-info
+    attributes:
+      label: Additional System Information
+      description: |
+        Any additional system information that might be relevant:
+        - Storage space available
+        - Network restrictions (corporate firewall, etc.)
+        - Antivirus software (other than Windows Defender)
+        - Previous setup attempts
+      placeholder: |
+        - 256GB storage, ~100GB free
+        - Corporate network with proxy
+        - Running Norton Antivirus
+        - First time running these scripts
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: workaround
+    attributes:
+      label: Workaround
+      description: Have you found any workarounds?
+      options:
+        - label: I found a workaround (will describe in comments)
+        - label: No workaround found
+        - label: Issue is blocking further setup
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or information that might help
+    validations:
+      required: false

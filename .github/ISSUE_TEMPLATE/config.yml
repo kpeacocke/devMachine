@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 General Discussion
+    url: https://github.com/kpeacocke/devMachine/discussions
+    about: Ask questions, share ideas, or discuss the project
+  - name: 🔒 Security Issue
+    url: https://github.com/kpeacocke/devMachine/security/advisories/new
+    about: Report security vulnerabilities (private reporting)
+  - name: 📖 Documentation
+    url: https://github.com/kpeacocke/devMachine/blob/main/README.md
+    about: Check the comprehensive README for setup instructions and troubleshooting

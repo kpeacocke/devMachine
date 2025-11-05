@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type (major, minor, patch)'
+        required: false
+        type: choice
+        options:
+          - auto
+          - major
+          - minor
+          - patch
+        default: auto
+
+permissions:
+  contents: write
+  pull-requests: write
+  security-events: write
+
+jobs:
+  test:
+    name: Run All Tests
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PowerShell 7
+        uses: actions/setup-powershell@v1
+
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
+
+      - name: Run syntax validation tests
+        shell: pwsh
+        run: |
+          Invoke-Pester -Path ./tests/syntax-validation.Tests.ps1 -Output Detailed
+
+      - name: Run Windows Pester tests
+        shell: pwsh
+        run: |
+          Invoke-Pester -Path ./tests/pester.Windows.Tests.ps1 -Output Detailed
+
+      - name: Install shellcheck
+        run: |
+          choco install shellcheck -y
+
+      - name: Validate bash scripts
+        shell: pwsh
+        run: |
+          $bashScripts = Get-ChildItem -Path ./scripts/wsl -Filter *.sh -Recurse
+          $failed = $false
+          foreach ($script in $bashScripts) {
+            Write-Host "Checking $($script.FullName)..."
+            shellcheck $script.FullName
+            if ($LASTEXITCODE -ne 0) {
+              $failed = $true
+            }
+          }
+          if ($failed) {
+            throw "Bash syntax validation failed"
+          }
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  release:
+    name: Create Release
+    needs: [test, security-scan]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install semantic-release
+        run: |
+          npm install -g semantic-release@23 \
+            @semantic-release/changelog@6 \
+            @semantic-release/git@10 \
+            @semantic-release/github@10 \
+            conventional-changelog-conventionalcommits@7
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No release created"
+            echo "created=false" >> $GITHUB_OUTPUT
+          else
+            echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+            echo "version=${LATEST_TAG#v}" >> $GITHUB_OUTPUT
+            echo "created=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout latest tag
+        if: steps.get_tag.outputs.created == 'true'
+        run: |
+          git fetch --tags
+          git checkout ${{ steps.get_tag.outputs.tag }}
+
+      - name: Create release archives
+        if: steps.get_tag.outputs.created == 'true'
+        run: |
+          mkdir -p release-artifacts
+          TAG=${{ steps.get_tag.outputs.tag }}
+          
+          # Create Windows scripts archive
+          zip -r release-artifacts/devMachine-windows-scripts-${TAG}.zip \
+            scripts/windows/*.ps1 \
+            setup-machine.ps1 \
+            README.md \
+            LICENSE
+          
+          # Create WSL scripts archive
+          zip -r release-artifacts/devMachine-wsl-scripts-${TAG}.zip \
+            scripts/wsl/*.sh \
+            README.md \
+            LICENSE
+          
+          # Create complete archive
+          zip -r release-artifacts/devMachine-complete-${TAG}.zip \
+            scripts/ \
+            tests/ \
+            setup-machine.ps1 \
+            README.md \
+            LICENSE \
+            SECURITY.md \
+            CONTRIBUTING.md \
+            CODE_OF_CONDUCT.md \
+            CHANGELOG.md
+
+      - name: Generate checksums
+        if: steps.get_tag.outputs.created == 'true'
+        run: |
+          cd release-artifacts
+          sha256sum *.zip > checksums-${{ steps.get_tag.outputs.tag }}.txt
+
+      - name: Upload release assets
+        if: steps.get_tag.outputs.created == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=${{ steps.get_tag.outputs.tag }}
+          gh release upload $TAG release-artifacts/*.zip release-artifacts/checksums-*.txt
+
+      - name: Upload artifacts
+        if: steps.get_tag.outputs.created == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ steps.get_tag.outputs.tag }}
+          path: release-artifacts/
+          retention-days: 90

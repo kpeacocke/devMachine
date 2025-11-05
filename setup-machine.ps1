@@ -8,7 +8,12 @@
     and optional components.
 
 .PARAMETER SkipBackup
-    Skip backup configuration (Backblaze, File History)
+    Skip backup configuration (File History, System Protection)
+
+.PARAMETER SkipLicensedApps
+    Skip commercial/licensed applications (1Password, Office, GitKraken, Beyond Compare, 
+    Scrivener, Obsidian, Backblaze, Malwarebytes, GlassWire). 
+    Use this for VMs or when you don't have licenses.
 
 .PARAMETER SkipOptionalGoodies
     Skip optional dev tools (Sysinternals, mkcert, k8s tools, etc.)
@@ -37,6 +42,7 @@
 [CmdletBinding()]
 param(
     [switch]$SkipBackup,
+    [switch]$SkipLicensedApps,
     [switch]$SkipOptionalGoodies,
     [switch]$SkipInsiders,
     [switch]$ScheduleDotNetMaintenance,
@@ -51,9 +57,9 @@ $WSLScripts = Join-Path $ScriptRoot "scripts\wsl"
 
 function Write-Step {
     param([string]$Message)
-    Write-Host "`n╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║ $($Message.PadRight(60)) ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "`n================================================================" -ForegroundColor Cyan
+    Write-Host " $Message" -ForegroundColor Cyan
+    Write-Host "================================================================" -ForegroundColor Cyan
 }
 
 function Invoke-Script {
@@ -95,14 +101,14 @@ function Test-AdminPrivileges {
 
 Write-Host @"
 
-╔═══════════════════════════════════════════════════════════════════════╗
-║                                                                       ║
-║     Surface Pro Dev Machine - Complete Setup Orchestrator            ║
-║                                                                       ║
-║     This will configure your Surface Pro as a fully-featured         ║
-║     development machine with security hardening and optimization     ║
-║                                                                       ║
-╚═══════════════════════════════════════════════════════════════════════╝
+========================================================================
+
+     Surface Pro Dev Machine - Complete Setup Orchestrator
+
+     This will configure your Surface Pro as a fully-featured
+     development machine with security hardening and optimization
+
+========================================================================
 
 "@ -ForegroundColor Cyan
 
@@ -127,7 +133,7 @@ if ($confirm -ne 'Y') {
 # PHASE 1: POWERSHELL & TERMINAL FOUNDATION
 # ============================================================================
 
-Write-Step "PHASE 1: PowerShell 7 & Windows Terminal"
+Write-Step "PHASE 1: PowerShell 7 and Windows Terminal"
 Invoke-Script -Path (Join-Path $WindowsScripts "00-pwsh-first.ps1") `
     -Description "Install PowerShell 7 and configure Windows Terminal"
 
@@ -144,10 +150,31 @@ Invoke-Script -Path (Join-Path $WindowsScripts "10-windows-bootstrap.ps1") `
     -Description "Install VS Code, Docker, WSL, Git, runtimes, cloud CLIs"
 
 # ============================================================================
+# PHASE 2.5: LICENSED/COMMERCIAL APPS (OPTIONAL)
+# ============================================================================
+
+if (-not $SkipLicensedApps) {
+    Write-Host "`n💰 Commercial/Licensed Applications" -ForegroundColor Yellow
+    Write-Host "   These require paid licenses or subscriptions" -ForegroundColor Yellow
+    Write-Host "   Estimated cost: ~$315-505 first year, ~$205-395/year after`n" -ForegroundColor Yellow
+    $installLicensed = Read-Host "Install licensed apps? (Y/N) [Recommended: N for VMs]"
+    
+    if ($installLicensed -eq 'Y') {
+        Write-Step "PHASE 2.5: Licensed Applications"
+        Invoke-Script -Path (Join-Path $WindowsScripts "11-licensed-apps.ps1") `
+            -Description "Install 1Password, Office, GitKraken, Beyond Compare, etc."
+    } else {
+        Write-Host "   ⏭️  Skipped licensed apps installation" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "`n⏭️  Skipping licensed apps (use -SkipLicensedApps:`$false to enable)" -ForegroundColor Yellow
+}
+
+# ============================================================================
 # PHASE 3: OPTIMIZE & HARDEN
 # ============================================================================
 
-Write-Step "PHASE 3: Security Hardening & Optimization"
+Write-Step "PHASE 3: Security Hardening and Optimization"
 Invoke-Script -Path (Join-Path $WindowsScripts "30-optimize-and-harden.ps1") `
     -Description "Firewall, Defender, BitLocker, Credential Guard, WSL config"
 
@@ -231,7 +258,7 @@ if (-not $SkipInsiders) {
             -Description "Windows Canary, Office Beta, VS Code Insiders"
         
         Invoke-Script -Path (Join-Path $WindowsScripts "72-vscode-insiders-setup.ps1") `
-            -Description "VS Code Insiders profile & extensions"
+            -Description "VS Code Insiders profile and extensions"
     }
 }
 
@@ -297,14 +324,14 @@ try {
 Write-Step "PHASE 12: Final Configuration"
 
 Write-Host "`n📋 Post-Setup Checklist:" -ForegroundColor Cyan
-Write-Host "  ☐ Configure Malwarebytes exclusions (see README Post-Setup section)" -ForegroundColor Yellow
-Write-Host "  ☐ Configure GlassWire firewall rules (see README Post-Setup section)" -ForegroundColor Yellow
-Write-Host "  ☐ Sign into Backblaze and configure exclusions (see README)" -ForegroundColor Yellow
-Write-Host "  ☐ Restart Docker Desktop (Settings → data-root change)" -ForegroundColor Yellow
-Write-Host "  ☐ Open 1Password and enable SSH agent (see README)" -ForegroundColor Yellow
-Write-Host "  ☐ Configure VS Code settings sync" -ForegroundColor Yellow
-Write-Host "  ☐ Add SSH keys to ~/.ssh/ and GitHub" -ForegroundColor Yellow
-Write-Host "  ☐ Configure git identity (see README Post-Setup section)" -ForegroundColor Yellow
+Write-Host "  [ ] Configure Malwarebytes exclusions (see README Post-Setup section)" -ForegroundColor Yellow
+Write-Host "  [ ] Configure GlassWire firewall rules (see README Post-Setup section)" -ForegroundColor Yellow
+Write-Host "  [ ] Sign into Backblaze and configure exclusions (see README)" -ForegroundColor Yellow
+Write-Host "  [ ] Restart Docker Desktop (Settings -> data-root change)" -ForegroundColor Yellow
+Write-Host "  [ ] Open 1Password and enable SSH agent (see README)" -ForegroundColor Yellow
+Write-Host "  [ ] Configure VS Code settings sync" -ForegroundColor Yellow
+Write-Host "  [ ] Add SSH keys to ~/.ssh/ and GitHub" -ForegroundColor Yellow
+Write-Host "  [ ] Configure git identity (see README Post-Setup section)" -ForegroundColor Yellow
 
 Write-Host "`n🧪 Run verification tests:" -ForegroundColor Cyan
 Write-Host "  Windows: pwsh -File .\tests\pester.Windows.Tests.ps1" -ForegroundColor White
@@ -326,8 +353,8 @@ if ($reboot -eq 'Y') {
     Write-Host "`n⚠️  Remember to reboot before running production workloads!" -ForegroundColor Yellow
 }
 
-Write-Host "`n╔═══════════════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║                                                                       ║" -ForegroundColor Green
-Write-Host "║     🎉 Setup Complete! Your Surface Pro is ready for development     ║" -ForegroundColor Green
-Write-Host "║                                                                       ║" -ForegroundColor Green
-Write-Host "╚═══════════════════════════════════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "`n========================================================================" -ForegroundColor Green
+Write-Host "" -ForegroundColor Green
+Write-Host "     Setup Complete! Your Surface Pro is ready for development" -ForegroundColor Green
+Write-Host "" -ForegroundColor Green
+Write-Host "========================================================================" -ForegroundColor Green

@@ -13,13 +13,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-Write-Host "📦 Installing Backblaze Personal Backup"
-try {
-  winget install Backblaze.Backblaze --silent --accept-source-agreements --accept-package-agreements
-  Write-Host "✅ Backblaze installed. Open it to sign in and configure."
-} catch {
-  Write-Warning "Backblaze install failed: $_. Install manually from https://www.backblaze.com/download.html"
-}
+Write-Host "💡 Note: Backblaze installation moved to 11-licensed-apps.ps1" -ForegroundColor Yellow
+Write-Host "   Run that script first if you want Backblaze cloud backup\n" -ForegroundColor Yellow
 
 if (-not $SkipFileHistory) {
   Write-Host "`n🗂️ Configuring Windows File History"

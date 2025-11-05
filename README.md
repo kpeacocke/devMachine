@@ -2,6 +2,22 @@
 
 This repo contains a clean set of scripts to build, harden, and maintain your **Windows on ARM (Snapdragon)** dev machine and WSL.
 
+[![Release](https://img.shields.io/github/v/release/kpeacocke/devMachine)](https://github.com/kpeacocke/devMachine/releases)
+[![Tests](https://github.com/kpeacocke/devMachine/actions/workflows/syntax-validation.yml/badge.svg)](https://github.com/kpeacocke/devMachine/actions/workflows/syntax-validation.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
+[![Semantic Versioning](https://img.shields.io/badge/semver-2.0.0-blue)](https://semver.org/)
+
+## 📦 Download
+
+**Latest Release**: Download pre-packaged scripts from [Releases](https://github.com/kpeacocke/devMachine/releases)
+
+- **Windows Scripts Only** (`devMachine-windows-scripts-vX.X.X.zip`) - Surface Pro setup scripts
+- **WSL Scripts Only** (`devMachine-wsl-scripts-vX.X.X.zip`) - Ubuntu/WSL configuration
+- **Complete Package** (`devMachine-complete-vX.X.X.zip`) - Everything including tests and docs
+
+All releases include SHA256 checksums for verification.
+
 ## 🚀 Quick Start (Automated Setup)
 
 **New machine? Run this ONE command:**
@@ -59,49 +75,55 @@ If you prefer to run scripts individually:
    scripts/windows/10-windows-bootstrap.ps1
    ```
 
-3. **Optimize + Harden** (safe defaults)  
+3. **Licensed apps** (optional - skip for VMs)  
+
+   ```powershell
+   scripts/windows/11-licensed-apps.ps1
+   ```
+
+4. **Optimize + Harden** (safe defaults)  
 
    ```powershell
    scripts/windows/30-optimize-and-harden.ps1
    ```
 
-4. **Performance tuning** (Ultimate plan, storage sense, indexing)  
+5. **Performance tuning** (Ultimate plan, storage sense, indexing)  
 
    ```powershell
    scripts/windows/31-performance-tuning.ps1 -SetUltimateNow
    ```
 
-5. **Auto power plan toggle** (AC→Ultimate, Battery→Balanced)  
+6. **Auto power plan toggle** (AC→Ultimate, Battery→Balanced)  
 
    ```powershell
    scripts/windows/32-powerplan-auto-toggle.ps1
    ```
 
-6. **Move caches to Dev Drive** (saves 20-50GB on C:)
+7. **Move caches to Dev Drive** (saves 20-50GB on C:)
 
    ```powershell
    scripts/windows/40-devdrive-caches.ps1
    ```
 
-7. **Optional dev goodies** (Sysinternals, mkcert, security tools, k8s)
+8. **Optional dev goodies** (Sysinternals, mkcert, security tools, k8s)
 
    ```powershell
    scripts/windows/33-optional-dev-goodies.ps1
    ```
 
-8. **Backup setup** (Backblaze, File History, System Protection)
+9. **Backup setup** (File History, System Protection)
 
    ```powershell
    scripts/windows/80-backup-setup.ps1
    ```
 
-9. **.NET maintainer** (one-off or weekly)  
+10. **.NET maintainer** (one-off or weekly)  
 
-   ```powershell
-   scripts/windows/60-dotnet-maintain.ps1 -ScheduleWeekly
-   ```
+    ```powershell
+    scripts/windows/60-dotnet-maintain.ps1 -ScheduleWeekly
+    ```
 
-10. **Doctor check**  
+11. **Doctor check**  
 
     ```powershell
     scripts/windows/50-doctor.ps1 -VerboseOut
@@ -404,3 +426,45 @@ Get-Command <tool-name>
 ```
 
 Happy building!
+
+---
+
+## 💰 License Costs
+
+Some tools require paid licenses. These are split into a separate script (`11-licensed-apps.ps1`)
+that you can skip when setting up VMs or if you prefer free alternatives.
+
+### Required Payment
+
+| Tool | Type | Cost | Notes |
+|------|------|------|-------|
+| **1Password** | Password Manager | ~$36-96/year | Essential for SSH agent in this setup |
+| **Backblaze** | Cloud Backup | ~$99/year | Unlimited backup |
+| **Beyond Compare 4** | Diff/Merge Tool | ~$60 one-time | 30-day trial available |
+| **Scrivener 3** | Writing Software | ~$50-60 one-time | For long-form writing |
+| **Microsoft 365** | Office Suite | ~$70-100/year | Productivity apps |
+
+### Freemium (Free Tier Available)
+
+| Tool | Free Tier | Paid Tier | Notes |
+|------|-----------|-----------|-------|
+| **GitKraken** | Public repos | ~$60-90/year for private | Free version may be sufficient |
+| **Malwarebytes** | Manual scans | ~$40/year for real-time | Free tier works for weekly scans |
+| **GlassWire** | Basic monitoring | ~$50-100 one-time for pro | Free version sufficient for most |
+| **Obsidian** | Personal use | ~$50/year commercial | Free for personal |
+
+### Free Alternatives
+
+- **1Password** → Bitwarden (open-source, free)
+- **Beyond Compare** → WinMerge (free), Meld (free)
+- **GitKraken** → GitHub Desktop (free), Fork (free for evaluation)
+- **Backblaze** → Google Drive, OneDrive (included with Microsoft 365)
+- **Office** → LibreOffice (free), Google Docs (free)
+
+**Total Cost Estimate:**
+
+- **First Year**: ~$315-505 (including one-time purchases)
+- **Annual**: ~$205-395/year (subscriptions only)
+- **VM/Free Setup**: $0 (use alternatives)
+
+**Skip licensed apps**: `.\setup-machine.ps1 -SkipLicensedApps`

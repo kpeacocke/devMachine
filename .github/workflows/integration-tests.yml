@@ -1,0 +1,184 @@
+name: 'Integration Tests'
+
+on:
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of integration test'
+        required: true
+        default: 'basic'
+        type: choice
+        options:
+        - basic
+        - full
+        - licensed-apps
+
+jobs:
+  test-windows:
+    runs-on: windows-latest
+    name: Windows Integration Test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PowerShell 7
+      shell: pwsh
+      run: |
+        Write-Host "PowerShell version: $($PSVersionTable.PSVersion)"
+        Write-Host "Windows version: $(Get-ComputerInfo | Select-Object -ExpandProperty WindowsProductName)"
+        
+    - name: Install Pester
+      shell: pwsh
+      run: |
+        Install-Module -Name Pester -Force -Scope CurrentUser -SkipPublisherCheck
+        
+    - name: Run Windows Environment Tests
+      shell: pwsh
+      run: |
+        # Run basic environment tests that don't require admin
+        Invoke-Pester -Path ".\tests\pester.Windows.Tests.ps1" -Tag "basic" -Output Detailed
+        
+    - name: Test Script Syntax
+      shell: pwsh
+      run: |
+        Get-ChildItem -Path ".\scripts\windows" -Filter "*.ps1" | ForEach-Object {
+          Write-Host "Testing syntax: $($_.Name)"
+          $content = Get-Content -Path $_.FullName -Raw
+          try {
+            [scriptblock]::Create($content) | Out-Null
+            Write-Host "✅ $($_.Name) syntax valid" -ForegroundColor Green
+          } catch {
+            Write-Error "❌ $($_.Name) syntax error: $_"
+            exit 1
+          }
+        }
+        
+    - name: Test Setup Script Parameters
+      shell: pwsh
+      run: |
+        # Test that setup script accepts all documented parameters
+        $setupScript = ".\setup-machine.ps1"
+        $content = Get-Content -Path $setupScript -Raw
+        
+        # Verify key parameters exist
+        if ($content -notmatch '\[switch\]\$SkipLicensedApps') {
+          throw "Missing SkipLicensedApps parameter"
+        }
+        if ($content -notmatch '\[switch\]\$SkipOptionalGoodies') {
+          throw "Missing SkipOptionalGoodies parameter"
+        }
+        if ($content -notmatch '\[switch\]\$SkipBackup') {
+          throw "Missing SkipBackup parameter"
+        }
+        
+        Write-Host "✅ Setup script parameters validated"
+
+  test-ubuntu:
+    runs-on: ubuntu-latest
+    name: Ubuntu/WSL Script Tests
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Test Ubuntu Script Syntax
+      run: |
+        find ./scripts/wsl -name "*.sh" -type f | while read -r script; do
+          echo "Testing syntax: $(basename "$script")"
+          if bash -n "$script"; then
+            echo "✅ $(basename "$script") syntax valid"
+          else
+            echo "❌ $(basename "$script") syntax error"
+            exit 1
+          fi
+        done
+        
+    - name: Test Ubuntu Scripts Have Required Tools
+      run: |
+        # Test that scripts check for required tools
+        grep -l "command -v" ./scripts/wsl/*.sh || {
+          echo "Warning: Some scripts may not check for required commands"
+        }
+        
+        # Test that scripts have proper error handling
+        grep -L "set -e" ./scripts/wsl/*.sh && {
+          echo "Warning: Some scripts missing 'set -e' error handling"
+        } || echo "✅ All scripts have error handling"
+
+  documentation-check:
+    runs-on: ubuntu-latest
+    name: Documentation Validation
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check README.md
+      run: |
+        # Verify README has required sections
+        sections=("Quick Start" "Manual Setup" "Tests" "License Costs" "Security")
+        
+        for section in "${sections[@]}"; do
+          if grep -q "$section" README.md; then
+            echo "✅ Found section: $section"
+          else
+            echo "❌ Missing section: $section"
+            exit 1
+          fi
+        done
+        
+    - name: Check License Costs are Up to Date
+      run: |
+        # Check that README mentions costs for known paid tools
+        paid_tools=("1Password" "Backblaze" "Beyond Compare" "GitKraken" "Malwarebytes")
+        
+        for tool in "${paid_tools[@]}"; do
+          if grep -q "$tool" README.md; then
+            echo "✅ $tool mentioned in README"
+          else
+            echo "❌ $tool missing from README"
+            exit 1
+          fi
+        done
+        
+    - name: Validate Markdown
+      uses: DavidAnson/markdownlint-cli2-action@v11
+      with:
+        globs: '**/*.md'
+
+  security-validation:
+    runs-on: ubuntu-latest
+    name: Security Validation
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check for Hardcoded Secrets
+      run: |
+        # Check for potential hardcoded secrets/passwords
+        if grep -r -i "password\s*=" --include="*.ps1" --include="*.sh" .; then
+          echo "❌ Found potential hardcoded passwords"
+          exit 1
+        fi
+        
+        if grep -r -i "api[_-]key" --include="*.ps1" --include="*.sh" .; then
+          echo "❌ Found potential API keys"
+          exit 1
+        fi
+        
+        echo "✅ No hardcoded secrets found"
+        
+    - name: Check Download Sources
+      run: |
+        # Verify that downloads come from trusted sources
+        untrusted_patterns=("http://" "bit.ly" "tinyurl" "dl.dropbox")
+        
+        for pattern in "${untrusted_patterns[@]}"; do
+          if grep -r "$pattern" --include="*.ps1" --include="*.sh" .; then
+            echo "❌ Found potentially untrusted download source: $pattern"
+            exit 1
+          fi
+        done
+        
+        echo "✅ All download sources appear trusted"

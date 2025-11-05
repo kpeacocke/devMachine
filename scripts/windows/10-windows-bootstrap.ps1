@@ -40,25 +40,12 @@ winget install Git.Git Git.GitLFS GitHub.cli Microsoft.GitCredentialManagerCore 
   --silent --accept-package-agreements --accept-source-agreements
 try { Install-Module posh-git -Scope AllUsers -Force -Confirm:$false } catch {}
 
-Write-Host "`n🔐 1Password"
-winget install AgileBits.1Password 1Password.CLI `
-  --silent --accept-package-agreements --accept-source-agreements
-
 Write-Host "`n🔤 Developer Fonts"
 winget install Microsoft.CascadiaCode NerdFonts.JetBrainsMono `
   --silent --accept-package-agreements --accept-source-agreements
 
-Write-Host "`n🧠 Productivity"
-winget install Axosoft.GitKraken ScooterSoftware.BeyondCompare4 LiteratureAndLatte.Scrivener3 Obsidian.Obsidian `
-  --silent --accept-package-agreements --accept-source-agreements
-
-Write-Host "`n📄 Microsoft 365 (Office)"
-$officeInstalled = (winget list | Select-String -SimpleMatch "Microsoft 365") -or (winget list | Select-String -SimpleMatch "Microsoft Office")
-if (-not $officeInstalled) {
-  foreach ($id in @("Microsoft.Office","Microsoft.Office.Desktop")) {
-    try { winget install $id --silent --accept-source-agreements --accept-package-agreements; break } catch {}
-  }
-}
+Write-Host "`n💡 Note: Licensed apps (1Password, Office, GitKraken, etc.) moved to 11-licensed-apps.ps1"
+Write-Host "   Run .\scripts\windows\11-licensed-apps.ps1 separately if needed" -ForegroundColor Yellow
 
 Write-Host "`n🌐 Runtimes (latest channels)"
 # Python latest (3.13 line)

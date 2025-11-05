@@ -135,20 +135,35 @@ Describe "Windows Dev Environment" {
 
   It "Backblaze is installed" {
     # Backblaze may not have CLI in PATH, check winget instead
+    # NOTE: This is optional (in 11-licensed-apps.ps1), so don't fail if missing
     $installed = winget list --id Backblaze.Backblaze 2>&1
-    $installed | Should -Match "Backblaze"
+    if ($installed -match "Backblaze") {
+      $true | Should -Be $true
+    } else {
+      Set-ItResult -Skipped -Because "Backblaze is optional (licensed app)"
+    }
   }
 
   It "GlassWire is installed" {
     # GlassWire is a GUI/network monitor; check winget for presence
+    # NOTE: This is optional (in 11-licensed-apps.ps1), so don't fail if missing
     $gw = winget list --name GlassWire 2>&1
-    $gw | Should -Match "GlassWire"
+    if ($gw -match "GlassWire") {
+      $true | Should -Be $true
+    } else {
+      Set-ItResult -Skipped -Because "GlassWire is optional (licensed app)"
+    }
   }
 
   It "Malwarebytes is installed" {
     # Malwarebytes anti-malware; check winget for presence
+    # NOTE: This is optional (in 11-licensed-apps.ps1), so don't fail if missing
     $mb = winget list --name Malwarebytes 2>&1
-    $mb | Should -Match "Malwarebytes"
+    if ($mb -match "Malwarebytes") {
+      $true | Should -Be $true
+    } else {
+      Set-ItResult -Skipped -Because "Malwarebytes is optional (licensed app)"
+    }
   }
 
   It "System Protection is enabled on C:" {
@@ -173,13 +188,15 @@ Describe "Windows Dev Environment" {
   }
 
   It "Scheduled task for winget upgrades exists" {
-    schtasks /Query /TN "Dev-Winget-Weekly-Upgrade" /FO LIST 2>$null
+    $result = schtasks /Query /TN "Dev-Winget-Weekly-Upgrade" /FO LIST 2>$null
     $LASTEXITCODE | Should -Be 0
+    $result | Should -Not -BeNullOrEmpty
   }
 
   It "Scheduled task for .NET maintenance exists" {
-    schtasks /Query /TN "Dev-DotNet-Weekly-Maintenance" /FO LIST 2>$null
+    $result = schtasks /Query /TN "Dev-DotNet-Weekly-Maintenance" /FO LIST 2>$null
     $LASTEXITCODE | Should -Be 0
+    $result | Should -Not -BeNullOrEmpty
   }
 }
 

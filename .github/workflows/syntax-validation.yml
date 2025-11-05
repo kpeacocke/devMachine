@@ -1,0 +1,70 @@
+name: 'Syntax Validation'
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  powershell-syntax:
+    runs-on: windows-latest
+    name: PowerShell Syntax Validation
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PowerShell 7
+      shell: pwsh
+      run: |
+        Write-Host "PowerShell version: $($PSVersionTable.PSVersion)"
+        
+    - name: Install Pester
+      shell: pwsh
+      run: |
+        Install-Module -Name Pester -Force -Scope CurrentUser -SkipPublisherCheck
+        
+    - name: Run Syntax Validation Tests
+      shell: pwsh
+      run: |
+        Invoke-Pester -Path ".\tests\syntax-validation.Tests.ps1" -Output Detailed
+        
+  bash-syntax:
+    runs-on: ubuntu-latest
+    name: Bash Syntax Validation
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install shellcheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y shellcheck
+        
+    - name: Run shellcheck on bash scripts
+      run: |
+        find . -name "*.sh" -type f | xargs shellcheck
+        
+    - name: Validate bash syntax
+      run: |
+        find . -name "*.sh" -type f -exec bash -n {} \;
+
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scan
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'

@@ -1,0 +1,205 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement! Please help us understand your use case.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify you've completed these steps
+      options:
+        - label: I searched existing issues and discussions
+          required: true
+        - label: This feature aligns with Surface Pro development workflows
+          required: true
+        - label: I considered if this should be optional vs. required
+          required: false
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What type of feature is this?
+      options:
+        - Development Tool (IDE, editor, compiler, etc.)
+        - Security Enhancement
+        - Performance Optimization
+        - Cloud/DevOps Tool
+        - Database/Data Tool
+        - Testing/Quality Assurance
+        - Documentation/Knowledge Management
+        - System Configuration
+        - Backup/Sync Tool
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Description
+      description: What problem does this feature solve? What's missing from current setup?
+      placeholder: |
+        As a Surface Pro developer, I need...
+        Currently, I have to manually...
+        This would help with...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: What would you like to see added or changed?
+      placeholder: |
+        Add installation of [Tool Name]
+        Include configuration for [Feature]
+        Create new script for [Purpose]
+        Modify existing script to [Action]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tool-type
+    attributes:
+      label: Tool License Type (if applicable)
+      description: If you're requesting a specific tool, what's its licensing?
+      options:
+        - Free/Open Source
+        - Freemium (free tier available)
+        - Commercial/Paid License Required
+        - Unknown
+        - Not applicable (configuration change)
+      default: 0
+
+  - type: input
+    id: tool-cost
+    attributes:
+      label: Estimated Cost (if paid)
+      description: If this is a paid tool, what's the approximate cost?
+      placeholder: "$50 one-time, $100/year, etc."
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What alternatives did you consider? Why is this the best option?
+      placeholder: |
+        Considered:
+        - Tool A: but it lacks feature X
+        - Tool B: but it's too expensive
+        - Manual setup: but it's time-consuming
+        
+        Proposed tool is better because...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority/Impact
+      description: How important is this feature to your workflow?
+      options:
+        - Critical (blocks development work)
+        - High (significantly improves workflow)
+        - Medium (nice to have improvement)
+        - Low (minor convenience)
+      default: 2
+
+  - type: checkboxes
+    id: implementation
+    attributes:
+      label: Implementation Considerations
+      options:
+        - label: Should be included in main setup by default
+        - label: Should be optional (in optional-goodies script)
+        - label: Should be in licensed-apps script
+        - label: Requires new separate script
+        - label: Should prompt user during setup
+        - label: Requires specific order/dependencies
+
+  - type: textarea
+    id: usage-scenario
+    attributes:
+      label: Usage Scenario
+      description: Describe how this would be used in a typical Surface Pro development workflow
+      placeholder: |
+        Daily workflow:
+        1. Developer opens project
+        2. Needs to [specific action]
+        3. Currently has to [manual process]
+        4. With this tool: [improved process]
+        
+        Benefits:
+        - Saves X minutes per day
+        - Reduces errors in [process]
+        - Enables [new capability]
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Target Audience
+      description: Who would benefit from this feature?
+      options:
+        - All Surface Pro developers
+        - Web developers specifically
+        - Mobile app developers
+        - Data scientists/ML engineers
+        - DevOps/Infrastructure engineers
+        - Game developers
+        - Enterprise developers
+        - Students/learners
+        - Specific niche (explain in comments)
+      multiple: true
+
+  - type: textarea
+    id: technical-details
+    attributes:
+      label: Technical Implementation Details
+      description: |
+        Any specific technical requirements or implementation notes?
+        Include installation commands, configuration needs, etc.
+      render: shell
+      placeholder: |
+        Installation:
+        winget install Publisher.ToolName
+        
+        Configuration needed:
+        - Set environment variable X
+        - Create config file at Y
+        - Add to PATH
+        
+        Dependencies:
+        - Requires .NET 8+
+        - Needs specific Windows version
+        - Works with specific other tools
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Links, documentation, screenshots, or other helpful information
+      placeholder: |
+        Official website: https://...
+        Documentation: https://...
+        Similar tools in other setups: ...
+        Community discussion: ...
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you willing to help implement this?
+      options:
+        - label: I can help test this feature
+        - label: I can help write the implementation
+        - label: I can help with documentation
+        - label: I can provide ongoing feedback
