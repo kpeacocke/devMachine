@@ -42,16 +42,36 @@ jobs:
         run: |
           $scripts = Get-ChildItem -Path ./scripts -Filter *.ps1 -Recurse
           $failed = $false
+          $errors = @()
+          
           foreach ($script in $scripts) {
             Write-Host "Parsing $($script.FullName)..."
-            $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content $script.FullName -Raw), [ref]$null)
-            if ($LASTEXITCODE -ne 0) {
+            try {
+              $parseErrors = $null
+              $null = [System.Management.Automation.PSParser]::Tokenize(
+                (Get-Content $script.FullName -Raw), 
+                [ref]$parseErrors
+              )
+              
+              if ($parseErrors.Count -gt 0) {
+                $failed = $true
+                $errors += "$($script.Name) has parse errors:"
+                foreach ($err in $parseErrors) {
+                  $errors += "  Line $($err.Token.StartLine): $($err.Message)"
+                }
+              }
+            } catch {
               $failed = $true
+              $errors += "$($script.Name) failed: $_"
             }
           }
+          
           if ($failed) {
+            $errors | ForEach-Object { Write-Host $_ }
             throw "PowerShell script parsing failed"
           }
+          
+          Write-Host "All scripts parsed successfully!"
 
   # Wait for syntax validation workflow to complete
   wait-for-validation:

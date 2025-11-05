@@ -47,7 +47,7 @@ Describe "PowerShell Script Syntax Validation" {
 
 Describe "Bash Script Syntax Validation" {
     
-    $scripts = Get-ChildItem -Path $ScriptRoot -Recurse -Filter "*.sh" | 
+    $scripts = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.sh" | 
         Where-Object { $_.FullName -notlike "*\node_modules\*" }
     
     It "Found Bash scripts to validate" {
@@ -72,7 +72,7 @@ Describe "Bash Script Syntax Validation" {
 
 Describe "Setup Orchestrator Script" {
     
-    $setupScript = Join-Path $ScriptRoot "setup-machine.ps1"
+    $setupScript = Join-Path $RepoRoot "setup-machine.ps1"
     
     It "setup-machine.ps1 exists" {
         Test-Path $setupScript | Should -BeTrue
