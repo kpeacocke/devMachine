@@ -14,20 +14,20 @@ jobs:
   powershell-syntax:
     runs-on: windows-latest
     name: PowerShell Syntax Validation
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup PowerShell 7
       shell: pwsh
       run: |
         Write-Host "PowerShell version: $($PSVersionTable.PSVersion)"
-        
+
     - name: Install Pester
       shell: pwsh
       run: |
         Install-Module -Name Pester -Force -Scope CurrentUser -SkipPublisherCheck -MinimumVersion 5.0
-        
+
     - name: Run Syntax Validation Tests
       shell: pwsh
       run: |
@@ -35,29 +35,40 @@ jobs:
         $config.Run.Path = '.\tests\syntax-validation.Tests.ps1'
         $config.Run.PassThru = $true
         $config.Output.Verbosity = 'Detailed'
-        
+        $config.Should.ErrorAction = 'Continue'
+
         $result = Invoke-Pester -Configuration $config
-        
+
+        Write-Host "`nTest Results:"
+        Write-Host "  Passed: $($result.PassedCount)"
+        Write-Host "  Failed: $($result.FailedCount)"
+        Write-Host "  Skipped: $($result.SkippedCount)"
+
         if ($result.FailedCount -gt 0) {
+          Write-Host "`nFailed Tests:" -ForegroundColor Red
+          foreach ($test in $result.Failed) {
+            Write-Host "  - $($test.ExpandedName)" -ForegroundColor Red
+            Write-Host "    $($test.ErrorRecord)" -ForegroundColor Yellow
+          }
           throw "$($result.FailedCount) test(s) failed"
         }
-        
+
   bash-syntax:
     runs-on: ubuntu-latest
     name: Bash Syntax Validation
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Install shellcheck
       run: |
         sudo apt-get update
         sudo apt-get install -y shellcheck
-        
+
     - name: Run shellcheck on bash scripts
       run: |
         find . -name "*.sh" -type f | xargs shellcheck
-        
+
     - name: Validate bash syntax
       run: |
         find . -name "*.sh" -type f -exec bash -n {} \;
@@ -65,10 +76,10 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     name: Security Scan
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
@@ -76,7 +87,7 @@ jobs:
         scan-ref: '.'
         format: 'sarif'
         output: 'trivy-results.sarif'
-        
+
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
       with:
@@ -85,10 +96,10 @@ jobs:
   markdown-validation:
     runs-on: ubuntu-latest
     name: Markdown Validation
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Validate Markdown files
       uses: DavidAnson/markdownlint-cli2-action@v16
       with:

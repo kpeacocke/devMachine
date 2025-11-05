@@ -1,26 +1,33 @@
 # Syntax validation tests for all PowerShell scripts
 # Run with: pwsh -NoProfile -File .\tests\syntax-validation.Tests.ps1
 
-$ErrorActionPreference = 'Stop'
-Import-Module Pester -MinimumVersion 5.0 -ErrorAction Stop
+BeforeAll {
+    $ErrorActionPreference = 'Stop'
 
-# Get the repository root (parent of tests directory)
-$RepoRoot = if ($PSScriptRoot) {
-    Split-Path -Parent $PSScriptRoot
-} else {
-    Split-Path -Parent (Get-Location)
+    # Get the repository root (parent of tests directory)
+    $script:RepoRoot = if ($PSScriptRoot) {
+        Split-Path -Parent $PSScriptRoot
+    } else {
+        Split-Path -Parent (Get-Location)
+    }
+
+    Write-Host "Repository Root: $script:RepoRoot" -ForegroundColor Cyan
 }
 
 Describe "PowerShell Script Syntax Validation" {
 
-    $scripts = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.ps1" |
-        Where-Object {
-            $_.FullName -notlike "*node_modules*" -and
-            $_.FullName -notlike "*.git*"
-        }
+    BeforeAll {
+        $script:scripts = Get-ChildItem -Path $script:RepoRoot -Recurse -Filter "*.ps1" -ErrorAction Stop |
+            Where-Object {
+                $_.FullName -notlike "*node_modules*" -and
+                $_.FullName -notlike "*.git*"
+            }
+
+        Write-Host "Found $($script:scripts.Count) PowerShell scripts" -ForegroundColor Cyan
+    }
 
     It "Found PowerShell scripts to validate" {
-        $scripts.Count | Should -BeGreaterThan 0
+        $script:scripts.Count | Should -BeGreaterThan 0
     }
 
     foreach ($script in $scripts) {
@@ -50,14 +57,18 @@ Describe "PowerShell Script Syntax Validation" {
 
 Describe "Bash Script Syntax Validation" {
 
-    $scripts = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.sh" |
-        Where-Object { $_.FullName -notlike "*node_modules*" }
+    BeforeAll {
+        $script:bashScripts = Get-ChildItem -Path $script:RepoRoot -Recurse -Filter "*.sh" -ErrorAction Stop |
+            Where-Object { $_.FullName -notlike "*node_modules*" }
 
-    It "Found Bash scripts to validate" {
-        $scripts.Count | Should -BeGreaterThan 0
+        Write-Host "Found $($script:bashScripts.Count) Bash scripts" -ForegroundColor Cyan
     }
 
-    foreach ($script in $scripts) {
+    It "Found Bash scripts to validate" {
+        $script:bashScripts.Count | Should -BeGreaterThan 0
+    }
+
+    foreach ($script in $bashScripts) {
         It "$($script.Name) has valid bash syntax (via WSL)" {
             if (Get-Command wsl -ErrorAction SilentlyContinue) {
                 $wslPath = $script.FullName -replace '\\', '/' -replace '^([A-Z]):', { '/mnt/' + $_.Groups[1].Value.ToLower() }
@@ -75,33 +86,36 @@ Describe "Bash Script Syntax Validation" {
 
 Describe "Setup Orchestrator Script" {
 
-    $setupScript = Join-Path $RepoRoot "setup-machine.ps1"
+    BeforeAll {
+        $script:setupScript = Join-Path $script:RepoRoot "setup-machine.ps1"
+        Write-Host "Setup script path: $script:setupScript" -ForegroundColor Cyan
+    }
 
     It "setup-machine.ps1 exists" {
-        Test-Path $setupScript | Should -BeTrue
+        Test-Path $script:setupScript | Should -BeTrue
     }
 
     It "setup-machine.ps1 has valid syntax" {
-        { [scriptblock]::Create((Get-Content -Path $setupScript -Raw)) } |
+        { [scriptblock]::Create((Get-Content -Path $script:setupScript -Raw)) } |
             Should -Not -Throw
     }
 
     It "setup-machine.ps1 defines required parameters" {
-        $content = Get-Content -Path $setupScript -Raw
+        $content = Get-Content -Path $script:setupScript -Raw
         $content | Should -Match '\[switch\]\$SkipBackup'
         $content | Should -Match '\[switch\]\$SkipLicensedApps'
         $content | Should -Match '\[switch\]\$SkipOptionalGoodies'
     }
 
     It "setup-machine.ps1 has no Unicode box-drawing characters" {
-        $content = Get-Content -Path $setupScript -Raw
+        $content = Get-Content -Path $script:setupScript -Raw
         # Check for common problematic Unicode chars using escape sequences
         $content | Should -Not -Match '[\u2554\u2557\u2551\u255A\u2550]'  # Box drawing
         $content | Should -Not -Match '[\u2610\u2611\u2713\u2717]'  # Checkboxes
     }
 
     It "setup-machine.ps1 properly escapes ampersands in strings" {
-        $content = Get-Content -Path $setupScript -Raw
+        $content = Get-Content -Path $script:setupScript -Raw
         # This is a basic check - ampersands in strings should not cause parser errors
         { [scriptblock]::Create($content) } | Should -Not -Throw
     }
