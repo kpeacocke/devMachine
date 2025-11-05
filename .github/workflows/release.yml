@@ -223,19 +223,22 @@ jobs:
 
       - name: Get latest tag
         id: get_tag
+        shell: pwsh
         run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -z "$LATEST_TAG" ]; then
-            echo "No release created"
-            echo "created=false" >> $GITHUB_OUTPUT
-          else
-            echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-            echo "version=${LATEST_TAG#v}" >> $GITHUB_OUTPUT
-            echo "created=true" >> $GITHUB_OUTPUT
-          fi
+          $LATEST_TAG = git describe --tags --abbrev=0 2>$null
+          if (-not $LATEST_TAG) {
+            Write-Host "No release created"
+            "created=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            Write-Host "tag=$LATEST_TAG" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            $version = $LATEST_TAG -replace '^v', ''
+            "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "created=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
 
       - name: Checkout latest tag
         if: steps.get_tag.outputs.created == 'true'
+        shell: pwsh
         run: |
           git fetch --tags
           git checkout ${{ steps.get_tag.outputs.tag }}
@@ -289,8 +292,9 @@ jobs:
         if: steps.get_tag.outputs.created == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
         run: |
-          TAG=${{ steps.get_tag.outputs.tag }}
+          $TAG = "${{ steps.get_tag.outputs.tag }}"
           gh release upload $TAG release-artifacts/*.zip release-artifacts/checksums-*.txt
 
       - name: Upload artifacts
