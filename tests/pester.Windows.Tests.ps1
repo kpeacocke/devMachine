@@ -1,6 +1,6 @@
 # Run with: pwsh -NoProfile -File .\tests\pester.Windows.Tests.ps1
 $ErrorActionPreference = 'Stop'
-Import-Module Pester -ErrorAction SilentlyContinue
+Import-Module Pester -MinimumVersion 5.0 -ErrorAction Stop
 
 Describe "Windows Dev Environment" {
   It "PowerShell 7 is default in Windows Terminal settings" {
@@ -200,5 +200,9 @@ Describe "Windows Dev Environment" {
   }
 }
 
-Invoke-Pester -EnableExit
+$config = New-PesterConfiguration
+$config.Run.Path = $PSCommandPath
+$config.Run.Exit = $true
+$config.Output.Verbosity = 'Detailed'
+Invoke-Pester -Configuration $config
 

@@ -2,7 +2,7 @@
 # Run with: pwsh -NoProfile -File .\tests\syntax-validation.Tests.ps1
 
 $ErrorActionPreference = 'Stop'
-Import-Module Pester -ErrorAction SilentlyContinue
+Import-Module Pester -MinimumVersion 5.0 -ErrorAction Stop
 
 $ScriptRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
@@ -99,4 +99,8 @@ Describe "Setup Orchestrator Script" {
     }
 }
 
-Invoke-Pester -EnableExit
+$config = New-PesterConfiguration
+$config.Run.Path = $PSCommandPath
+$config.Run.Exit = $true
+$config.Output.Verbosity = 'Detailed'
+Invoke-Pester -Configuration $config
