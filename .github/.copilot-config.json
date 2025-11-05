@@ -1,0 +1,110 @@
+{
+  "completions": {
+    "enabled": true,
+    "languages": {
+      "powershell": {
+        "enabled": true,
+        "priority": "high"
+      },
+      "shellscript": {
+        "enabled": true,
+        "priority": "high"
+      },
+      "markdown": {
+        "enabled": true,
+        "priority": "medium"
+      },
+      "yaml": {
+        "enabled": true,
+        "priority": "high"
+      },
+      "json": {
+        "enabled": true,
+        "priority": "medium"
+      }
+    }
+  },
+  "chat": {
+    "enabled": true,
+    "context": {
+      "workspace": true,
+      "files": [
+        "README.md",
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        ".github/copilot-instructions.md",
+        ".github/COMMIT_CONVENTION.md"
+      ],
+      "patterns": [
+        "scripts/**/*.ps1",
+        "scripts/**/*.sh",
+        "tests/**/*.ps1",
+        ".github/workflows/*.yml"
+      ]
+    }
+  },
+  "agents": {
+    "test": {
+      "enabled": true,
+      "description": "Generate and run Pester or bash tests",
+      "context": [
+        "tests/**/*.ps1",
+        "tests/**/*.sh"
+      ]
+    },
+    "doc": {
+      "enabled": true,
+      "description": "Update documentation and markdown files",
+      "context": [
+        "README.md",
+        "CONTRIBUTING.md",
+        "CHANGELOG.md",
+        ".github/**/*.md"
+      ]
+    },
+    "security": {
+      "enabled": true,
+      "description": "Security scanning and vulnerability remediation",
+      "context": [
+        ".github/instructions/snyk_rules.instructions.md",
+        "SECURITY.md"
+      ]
+    }
+  },
+  "instructions": {
+    "global": [
+      ".github/copilot-instructions.md"
+    ],
+    "byPath": {
+      "scripts/windows/**": [
+        ".github/instructions/powershell-standards.md"
+      ],
+      "scripts/wsl/**": [
+        ".github/instructions/bash-standards.md"
+      ],
+      "**/*.ps1": [
+        ".github/instructions/powershell-standards.md",
+        ".github/instructions/snyk_rules.instructions.md"
+      ],
+      "**/*.sh": [
+        ".github/instructions/bash-standards.md",
+        ".github/instructions/snyk_rules.instructions.md"
+      ],
+      "tests/**": [
+        ".github/instructions/testing-standards.md"
+      ],
+      ".github/workflows/**": [
+        ".github/instructions/workflow-standards.md"
+      ]
+    }
+  },
+  "excludePatterns": [
+    "node_modules/**",
+    ".git/**",
+    ".vscode/**",
+    "*.log",
+    "*.tmp",
+    "release-artifacts/**",
+    "coverage/**"
+  ]
+}
