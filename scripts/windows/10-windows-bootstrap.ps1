@@ -99,6 +99,7 @@ winget install Kitware.CMake --source winget --silent --accept-package-agreement
 Write-Host "☁️ Cloud & IaC"
 winget install HashiCorp.Terraform --source winget --silent --accept-package-agreements --accept-source-agreements
 winget install HashiCorp.Packer --source winget --silent --accept-package-agreements --accept-source-agreements
+winget install HashiCorp.Vagrant --source winget --silent --accept-package-agreements --accept-source-agreements
 winget install Amazon.AWSCLI --source winget --silent --accept-package-agreements --accept-source-agreements
 winget install Microsoft.AzureCLI --source winget --silent --accept-package-agreements --accept-source-agreements
 winget install Google.CloudSDK --source winget --silent --accept-package-agreements --accept-source-agreements
