@@ -23,6 +23,34 @@ permissions:
   security-events: write
 
 jobs:
+  check-syntax-validation:
+    name: Wait for Syntax Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for syntax validation to complete
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          check-name: 'PowerShell Syntax Validation'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+
+      - name: Check syntax validation status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const checks = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              check_name: 'PowerShell Syntax Validation'
+            });
+
+            const syntaxCheck = checks.data.check_runs[0];
+            if (!syntaxCheck || syntaxCheck.conclusion !== 'success') {
+              core.setFailed('Syntax validation must pass before releasing');
+            }
+
   check-integration-tests:
     name: Check Integration Tests Status
     runs-on: ubuntu-latest
@@ -38,17 +66,17 @@ jobs:
               per_page: 1,
               status: 'completed'
             });
-            
+
             if (runs.data.workflow_runs.length === 0) {
               core.setFailed('No completed integration test runs found. Run integration tests manually first.');
               return;
             }
-            
+
             const lastRun = runs.data.workflow_runs[0];
             console.log(`Last integration test run: ${lastRun.html_url}`);
             console.log(`Status: ${lastRun.conclusion}`);
             console.log(`Completed: ${lastRun.updated_at}`);
-            
+
             if (lastRun.conclusion !== 'success') {
               core.setFailed(`Last integration test run failed. Please fix and re-run integration tests before releasing.\nRun URL: ${lastRun.html_url}`);
             } else {
@@ -57,7 +85,7 @@ jobs:
 
   validate:
     name: Run Validation Checks
-    needs: [check-integration-tests]
+    needs: [check-syntax-validation, check-integration-tests]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -84,16 +112,16 @@ jobs:
           $scripts = Get-ChildItem -Path ./scripts -Filter *.ps1 -Recurse
           $failed = $false
           $errors = @()
-          
+
           foreach ($script in $scripts) {
             Write-Host "Validating $($script.Name)..."
             try {
               $parseErrors = $null
               $null = [System.Management.Automation.PSParser]::Tokenize(
-                (Get-Content $script.FullName -Raw), 
+                (Get-Content $script.FullName -Raw),
                 [ref]$parseErrors
               )
-              
+
               if ($parseErrors.Count -gt 0) {
                 $failed = $true
                 $errors += "$($script.Name) has parse errors:"
@@ -106,12 +134,12 @@ jobs:
               $errors += "$($script.Name) failed: $_"
             }
           }
-          
+
           if ($failed) {
             $errors | ForEach-Object { Write-Host $_ }
             throw "PowerShell script validation failed"
           }
-          
+
           Write-Host "✓ All scripts validated successfully"
 
       - name: Run Trivy security scan
@@ -187,20 +215,20 @@ jobs:
         run: |
           mkdir -p release-artifacts
           TAG=${{ steps.get_tag.outputs.tag }}
-          
+
           # Create Windows scripts archive
           zip -r release-artifacts/devMachine-windows-scripts-${TAG}.zip \
             scripts/windows/*.ps1 \
             setup-machine.ps1 \
             README.md \
             LICENSE
-          
+
           # Create WSL scripts archive
           zip -r release-artifacts/devMachine-wsl-scripts-${TAG}.zip \
             scripts/wsl/*.sh \
             README.md \
             LICENSE
-          
+
           # Create complete archive
           zip -r release-artifacts/devMachine-complete-${TAG}.zip \
             scripts/ \
