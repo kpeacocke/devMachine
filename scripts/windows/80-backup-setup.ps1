@@ -17,7 +17,7 @@ Write-Host "💡 Note: Backblaze installation moved to 11-licensed-apps.ps1" -Fo
 Write-Host "   Run that script first if you want Backblaze cloud backup\n" -ForegroundColor Yellow
 
 if (-not $SkipFileHistory) {
-  Write-Host "`n🗂️ Configuring Windows File History"
+  Write-Host "🗂️ Configuring Windows File History"
   if (Test-Path "$FileHistoryDrive\") {
     try {
       # Enable File History
@@ -37,7 +37,7 @@ if (-not $SkipFileHistory) {
   }
 }
 
-Write-Host "`n🔄 Enabling System Protection (Restore Points) for C:"
+Write-Host "🔄 Enabling System Protection (Restore Points) for C:"
 try {
   Enable-ComputerRestore -Drive "C:\"
   # Set max usage to 5% of disk (on 512GB = ~25GB)
@@ -48,10 +48,10 @@ try {
   Write-Warning "System Protection setup failed: $_"
 }
 
-Write-Host "`n💡 Backup recommendations:"
+Write-Host "💡 Backup recommendations:"
 Write-Host "  - Backblaze: Sign in and verify backup is running"
 Write-Host "  - File History: Verify in Settings → Backup"
 Write-Host "  - Dev Drive caches: Exclude from Backblaze (Settings → Exclusions)"
 Write-Host "  - Consider: Weekly backup schedule for critical projects"
 
-Write-Host "`n✅ Backup setup complete."
+Write-Host "✅ Backup setup complete."

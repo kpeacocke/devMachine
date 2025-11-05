@@ -4,22 +4,22 @@ Run:  PowerShell (Admin) → Set-ExecutionPolicy Bypass -Scope Process -Force; .
 #>
 $ErrorActionPreference = 'Stop'
 
-Write-Host "🔧 Installing latest PowerShell 7..."
+Write-Host "[SETUP] Installing latest PowerShell 7..."
 winget install Microsoft.PowerShell --silent --accept-source-agreements --accept-package-agreements
 
 # Refresh PATH in-session
-$env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
-             [Environment]::GetEnvironmentVariable("Path","User")
+$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' +
+             [Environment]::GetEnvironmentVariable('Path','User')
 
 # Ensure Windows Terminal is installed (as default terminal host)
-Write-Host "📦 Ensuring Windows Terminal is present..."
+Write-Host "[SETUP] Ensuring Windows Terminal is present..."
 try { winget install Microsoft.WindowsTerminal --silent --accept-source-agreements --accept-package-agreements } catch {}
 
 # Make Windows Terminal the default terminal application (Windows 11 setting)
 try {
   reg add "HKCU\Console\%%Startup" /v DelegationConsole /t REG_DWORD /d 1 /f | Out-Null
   reg add "HKCU\Console\%%Startup" /v DelegationTerminal /t REG_DWORD /d 1 /f | Out-Null
-  Write-Host "✅ Windows Terminal set as default terminal host"
+  Write-Host "[OK] Windows Terminal set as default terminal host"
 } catch { Write-Warning "Could not set Windows Terminal as default terminal host: $_" }
 
 # Set PowerShell 7 as default profile inside Windows Terminal settings.json
@@ -53,6 +53,6 @@ $json.defaultProfile = $pwshProf.guid
 
 # Save back
 ($json | ConvertTo-Json -Depth 10) | Out-File -Encoding utf8 $settingsPath
-Write-Host "✅ PowerShell 7 set as the default shell in Windows Terminal."
+Write-Host "[OK] PowerShell 7 set as the default shell in Windows Terminal."
 
-Write-Host "Done. Open a new Windows Terminal window — it should start in PowerShell 7."
+Write-Host "Done. Open a new Windows Terminal window - it should start in PowerShell 7."

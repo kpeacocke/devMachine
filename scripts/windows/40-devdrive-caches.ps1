@@ -78,4 +78,4 @@ if (Test-Path $dockerConfig) {
 Write-Host "→ Docker data-root set to $dockerData"
 Write-Host "   Restart Docker Desktop to apply changes"
 
-Write-Host "`n✅ Cache locations set to $DevCacheRoot. Open a NEW terminal to pick up PATH and env vars."
+Write-Host "✅ Cache locations set to $DevCacheRoot. Open a NEW terminal to pick up PATH and env vars."

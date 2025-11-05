@@ -104,12 +104,24 @@ $ASR = @{
   "9e6c4e1f-7d60-472f-ba1a-a39ef669e4b2" = "AuditMode" # LSASS credential theft
   "d4f940ab-401b-4efc-aadc-ad5f3c50688e" = "AuditMode" # Office child processes
 }
-$ids = $ASR.Keys -join ","
-$acts = ($ASR.Values | ForEach-Object { if ($_ -eq "Enabled") {1} elseif ($_ -eq "AuditMode") {2} else {0} }) -join ","
+$ids = $ASR.Keys
+$acts = $ASR.Values | ForEach-Object {
+  switch ($_) {
+    "Enabled" { 1 }
+    "AuditMode" { 2 }
+    default { 0 }
+  }
+}
 Add-MpPreference -AttackSurfaceReductionRules_Ids $ids -AttackSurfaceReductionRules_Actions $acts
 
-Write-Host "== SmartScreen + script scanning"
-Set-MpPreference -EnableScriptBlockLogging $true -EnableControlledFolderAccess Disabled -EnableTamperProtection $true 2>$null
+Write-Host "== SmartScreen + Controlled Folder Access"
+Set-MpPreference -EnableControlledFolderAccess Disabled 2>$null
+# Note: Controlled Folder Access is disabled to avoid blocking dev tools. Enable manually if needed.
+
+Write-Host "== PowerShell Script Block Logging (security auditing)"
+$regPath = "HKLM:\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging"
+if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
+Set-ItemProperty -Path $regPath -Name "EnableScriptBlockLogging" -Value 1 -Force
 
 Write-Host "== Audit Process Creation: include command line"
 New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System\Audit" -Force | Out-Null
@@ -176,4 +188,4 @@ if ($LASTEXITCODE -ne 0) {
   schtasks /Create /SC WEEKLY /D MON /TN $taskName /TR "powershell.exe -ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Hidden -Command winget upgrade --all --include-unknown --silent" /ST 03:00 /RL HIGHEST /F | Out-Null
 }
 
-Write-Host "`n✅ Optimize & Harden complete. Reboot to finalize LSA/DeviceGuard changes."
+Write-Host "✅ Optimize & Harden complete. Reboot to finalize LSA/DeviceGuard changes."

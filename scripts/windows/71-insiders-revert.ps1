@@ -18,12 +18,12 @@ New-ItemProperty -Path $sel -Name 'UIBranch'      -Type String -Value 'ReleasePr
 New-ItemProperty -Path $app -Name 'BranchName'    -Type String -Value 'ReleasePreview' -Force | Out-Null
 New-ItemProperty -Path $app -Name 'Ring'          -Type String -Value 'External' -Force | Out-Null
 
-Write-Host "`n🧩 Office: switching to Current channel."
+Write-Host "🧩 Office: switching to Current channel."
 $pol = 'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\officeupdate'
 New-Item -Path $pol -Force | Out-Null
 New-ItemProperty -Path $pol -Name 'updatebranch' -Type String -Value 'Current' -Force | Out-Null
 
-Write-Host "`n📝 VS Code: restoring 'code' to stable (if we created a shim)."
+Write-Host "📝 VS Code: restoring 'code' to stable (if we created a shim)."
 $bin = "$env:UserProfile\.local\bin"
 $shim = Join-Path $bin "code.cmd"
 if (Test-Path $shim) { Remove-Item $shim -Force }

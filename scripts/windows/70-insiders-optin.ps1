@@ -51,7 +51,7 @@ try {
 } catch { Write-Warning "Could not set AllowTelemetry=3 (Optional). Insider might not offer builds until set." }
 
 # 2) OFFICE INSIDER — BetaChannel
-Write-Host "`n🧩 Office: switching to BetaChannel (Insider Fast)"
+Write-Host "🧩 Office: switching to BetaChannel (Insider Fast)"
 $pol = 'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\officeupdate'
 New-Item -Path $pol -Force | Out-Null
 New-ItemProperty -Path $pol -Name 'updatebranch' -Type String -Value 'BetaChannel' -Force | Out-Null
@@ -67,7 +67,7 @@ if (Test-Path $odt) {
 }
 
 # 3) VS CODE INSIDERS
-Write-Host "`n📝 Installing VS Code Insiders"
+Write-Host "📝 Installing VS Code Insiders"
 winget install Microsoft.VisualStudioCode.Insiders --silent --accept-source-agreements --accept-package-agreements
 
 if ($MakeCodeCLIPointToInsiders) {
@@ -84,6 +84,6 @@ code-insiders %*" | Out-File -Encoding ascii $shim
   Write-Host "✅ 'code' now launches VS Code Insiders (open a new terminal to pick up PATH)."
 }
 
-Write-Host "`n🔁 Finally, check Windows Update for Insider builds."
+Write-Host "🔁 Finally, check Windows Update for Insider builds."
 Start-Process "ms-settings:windowsupdate"
 Write-Host "✅ Insider opt-in script finished."

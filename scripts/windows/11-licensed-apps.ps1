@@ -16,7 +16,7 @@ Skip this script when setting up VMs or if you don't need these tools.
 
 $ErrorActionPreference = 'Stop'
 
-Write-Host "`n💰 Installing Licensed/Commercial Applications" -ForegroundColor Yellow
+Write-Host "💰 Installing Licensed/Commercial Applications" -ForegroundColor Yellow
 Write-Host "   Note: You'll need valid licenses for full functionality`n" -ForegroundColor Yellow
 
 Write-Host "🔐 1Password (Password Manager + CLI)"
@@ -24,7 +24,7 @@ Write-Host "   License: ~$36-96/year | Trial: 30 days" -ForegroundColor Gray
 winget install AgileBits.1Password 1Password.CLI `
   --silent --accept-package-agreements --accept-source-agreements
 
-Write-Host "`n📄 Microsoft 365 (Office)"
+Write-Host "📄 Microsoft 365 (Office)"
 Write-Host "   License: ~$70-100/year | Trial: 30 days" -ForegroundColor Gray
 $officeInstalled = (winget list | Select-String -SimpleMatch "Microsoft 365") -or (winget list | Select-String -SimpleMatch "Microsoft Office")
 if (-not $officeInstalled) {
@@ -37,19 +37,19 @@ Write-Host "`n🌲 GitKraken (Git GUI)"
 Write-Host "   License: Free for public repos, ~$60-90/year for private | Trial: 7 days" -ForegroundColor Gray
 winget install Axosoft.GitKraken --silent --accept-package-agreements --accept-source-agreements
 
-Write-Host "`n📊 Beyond Compare 4 (File Comparison)"
+Write-Host "📊 Beyond Compare 4 (File Comparison)"
 Write-Host "   License: ~$60 one-time | Trial: 30 days" -ForegroundColor Gray
 winget install ScooterSoftware.BeyondCompare4 --silent --accept-package-agreements --accept-source-agreements
 
-Write-Host "`n📝 Scrivener 3 (Writing Software)"
+Write-Host "📝 Scrivener 3 (Writing Software)"
 Write-Host "   License: ~$50-60 one-time | Trial: 30 days" -ForegroundColor Gray
 winget install LiteratureAndLatte.Scrivener3 --silent --accept-package-agreements --accept-source-agreements
 
-Write-Host "`n🧠 Obsidian (Note-Taking)"
+Write-Host "🧠 Obsidian (Note-Taking)"
 Write-Host "   License: Free for personal use, ~$50/year for commercial" -ForegroundColor Gray
 winget install Obsidian.Obsidian --silent --accept-package-agreements --accept-source-agreements
 
-Write-Host "`n☁️ Backblaze (Cloud Backup)"
+Write-Host "☁️ Backblaze (Cloud Backup)"
 Write-Host "   License: ~$99/year for unlimited backup | Trial: 15 days" -ForegroundColor Gray
 try {
   winget install Backblaze.Backblaze --silent --accept-source-agreements --accept-package-agreements
@@ -57,7 +57,7 @@ try {
   Write-Warning "Backblaze install failed. Install manually from https://www.backblaze.com/download.html"
 }
 
-Write-Host "`n🛡️ Malwarebytes (Anti-Malware)"
+Write-Host "🛡️ Malwarebytes (Anti-Malware)"
 Write-Host "   License: Free for manual scans, ~$40/year for real-time protection | Trial: 14 days" -ForegroundColor Gray
 try {
   winget install Malwarebytes.Malwarebytes --silent --accept-source-agreements --accept-package-agreements
@@ -65,7 +65,7 @@ try {
   Write-Warning "Malwarebytes install failed. Install manually from https://www.malwarebytes.com/"
 }
 
-Write-Host "`n🌐 GlassWire (Network Monitor)"
+Write-Host "🌐 GlassWire (Network Monitor)"
 Write-Host "   License: Free basic version, ~$50-100 one-time for pro | Trial: 7 days" -ForegroundColor Gray
 try {
   winget install GlassWire.GlassWire --silent --accept-source-agreements --accept-package-agreements
@@ -73,14 +73,14 @@ try {
   Write-Warning "GlassWire install failed. Install manually from https://www.glasswire.com/"
 }
 
-Write-Host "`n💡 License Summary:" -ForegroundColor Cyan
+Write-Host "💡 License Summary:" -ForegroundColor Cyan
 Write-Host "   Annual Cost: ~$205-395/year (after one-time purchases)" -ForegroundColor Yellow
 Write-Host "   First Year:  ~$315-505 (including one-time tools)" -ForegroundColor Yellow
-Write-Host "`n   Free Alternatives Available:" -ForegroundColor Green
+Write-Host "   Free Alternatives Available:" -ForegroundColor Green
 Write-Host "   - 1Password → Bitwarden (free)" -ForegroundColor Gray
 Write-Host "   - Beyond Compare → WinMerge (free)" -ForegroundColor Gray
 Write-Host "   - GitKraken → GitHub Desktop, Fork (free)" -ForegroundColor Gray
 Write-Host "   - Backblaze → Google Drive, OneDrive (included with Microsoft 365)" -ForegroundColor Gray
 Write-Host "   - Office → LibreOffice, Google Docs (free)" -ForegroundColor Gray
 
-Write-Host "`n✅ Licensed applications installed. Remember to activate your licenses!" -ForegroundColor Green
+Write-Host "✅ Licensed applications installed. Remember to activate your licenses!" -ForegroundColor Green

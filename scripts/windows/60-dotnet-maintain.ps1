@@ -5,13 +5,19 @@ Policy:
   - Keep newest 2 SDK feature bands; uninstall older SDKs.
   - Preserve Runtimes (so existing apps still run).
   - Update workloads & NuGet caches.
+  - Update Visual Studio Build Tools and other dev runtimes.
 #>
 param([switch]$ScheduleWeekly)
 
 $ErrorActionPreference = 'Stop'
 function Test-Command($n){ $null -ne (Get-Command $n -ErrorAction SilentlyContinue) }
 
-Write-Host "☕ Ensuring latest .NET SDK..."
+Write-Host "🔧 Updating Visual Studio Build Tools..."
+try {
+  winget upgrade Microsoft.VisualStudio.2022.BuildTools --source winget --silent --accept-package-agreements --accept-source-agreements --include-unknown
+} catch { Write-Warning "Build Tools update check failed: $_" }
+
+Write-Host "`n☕ Ensuring latest .NET SDK..."
 try {
   winget install Microsoft.DotNet.SDK.9 --silent --accept-package-agreements --accept-source-agreements
 } catch {
@@ -51,16 +57,32 @@ try { dotnet workload update } catch { Write-Warning "workload update failed: $_
 Write-Host "🧽 Cleaning NuGet caches..."
 try { dotnet nuget locals all --clear } catch {}
 
-Write-Host "✅ .NET maintenance complete."
+Write-Host "`n🌐 Updating other runtimes..."
+# Update other development runtimes to stay current
+$runtimes = @(
+  "Python.Python.3.13",
+  "OpenJS.NodeJS",
+  "GoLang.Go",
+  "Rustlang.Rustup",
+  "EclipseAdoptium.Temurin.JDK"
+)
+foreach ($runtime in $runtimes) {
+  try {
+    Write-Host "  Checking $runtime..."
+    winget upgrade $runtime --source winget --silent --accept-package-agreements --accept-source-agreements --include-unknown | Out-Null
+  } catch { Write-Warning "  $runtime update check failed" }
+}
+
+Write-Host "`n✅ Development tools maintenance complete."
 
 if ($ScheduleWeekly) {
-  $taskName = "Dev-DotNet-Weekly-Maintenance"
+  $taskName = "Dev-Tools-Weekly-Maintenance"
   $cmd = "pwsh.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$PSScriptRoot\60-dotnet-maintain.ps1`""
   schtasks /Query /TN $taskName /FO LIST 2>$null | Out-Null
   if ($LASTEXITCODE -ne 0) {
     schtasks /Create /SC WEEKLY /D MON /ST 03:15 /RL HIGHEST /TN $taskName /TR "$cmd" /F | Out-Null
-    Write-Host "🗓️ Scheduled weekly .NET maintenance (Mon 03:15)."
+    Write-Host "🗓️ Scheduled weekly dev tools maintenance (Mon 03:15)."
   } else {
-    Write-Host "🗓️ Weekly .NET maintenance already scheduled."
+    Write-Host "🗓️ Weekly dev tools maintenance already scheduled."
   }
 }

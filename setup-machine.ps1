@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Surface Pro Dev Machine - Complete Setup Orchestrator
 
@@ -137,13 +137,28 @@ if ($confirm -ne 'Y') {
 # PHASE 1: POWERSHELL & TERMINAL FOUNDATION
 # ============================================================================
 
-Write-Step "PHASE 1: PowerShell 7 and Windows Terminal"
-Invoke-Script -Path (Join-Path $WindowsScripts "00-pwsh-first.ps1") `
-    -Description "Install PowerShell 7 and configure Windows Terminal"
+# Check if we're already running in PowerShell 7+
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Step "PHASE 1: PowerShell 7 and Windows Terminal"
+    Invoke-Script -Path (Join-Path $WindowsScripts "00-pwsh-first.ps1") `
+        -Description "Install PowerShell 7 and configure Windows Terminal"
 
-Write-Host "`n⚠️  IMPORTANT: Close this window and open a NEW Windows Terminal (Admin)" -ForegroundColor Yellow
-Write-Host "   Then re-run this script to continue.`n" -ForegroundColor Yellow
-$continue = Read-Host "Press Enter when you've opened a new PowerShell 7 terminal, or Ctrl+C to exit"
+    # Auto-relaunch in PowerShell 7
+    $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
+    if ($pwsh) {
+        Write-Host "`n[OK] Relaunching in PowerShell 7..." -ForegroundColor Green
+        $params = $PSBoundParameters.GetEnumerator() | ForEach-Object { "-$($_.Key)" }
+        $argList = @('-NoExit', '-File', $MyInvocation.MyCommand.Path) + $params
+        Start-Process -FilePath $pwsh.Source -ArgumentList $argList -Verb RunAs
+        exit 0
+    } else {
+        Write-Host "`n⚠️  PowerShell 7 installed but not in PATH yet" -ForegroundColor Yellow
+        Write-Host "   Close this window, open a NEW Windows Terminal (Admin), and re-run this script" -ForegroundColor Yellow
+        exit 0
+    }
+} else {
+    Write-Host "`n[OK] Running in PowerShell $($PSVersionTable.PSVersion)" -ForegroundColor Green
+}
 
 # ============================================================================
 # PHASE 2: CORE WINDOWS TOOLING
@@ -158,7 +173,7 @@ Invoke-Script -Path (Join-Path $WindowsScripts "10-windows-bootstrap.ps1") `
 # ============================================================================
 
 if (-not $SkipLicensedApps) {
-    Write-Host "`n💰 Commercial/Licensed Applications" -ForegroundColor Yellow
+    Write-Host "💰 Commercial/Licensed Applications" -ForegroundColor Yellow
     Write-Host "   These require paid licenses or subscriptions" -ForegroundColor Yellow
     Write-Host "   Estimated cost: ~$315-505 first year, ~$205-395/year after`n" -ForegroundColor Yellow
     $installLicensed = Read-Host "Install licensed apps? (Y/N) [Recommended: N for VMs]"
@@ -168,10 +183,10 @@ if (-not $SkipLicensedApps) {
         Invoke-Script -Path (Join-Path $WindowsScripts "11-licensed-apps.ps1") `
             -Description "Install 1Password, Office, GitKraken, Beyond Compare, etc."
     } else {
-        Write-Host "   ⏭️  Skipped licensed apps installation" -ForegroundColor Yellow
+        Write-Host "   ⭐  Skipped licensed apps installation" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "`n⏭️  Skipping licensed apps (use -SkipLicensedApps:`$false to enable)" -ForegroundColor Yellow
+    Write-Host "⭐  Skipping licensed apps (use -SkipLicensedApps:`$false to enable)" -ForegroundColor Yellow
 }
 
 # ============================================================================
@@ -254,7 +269,7 @@ if (-not $SkipBackup) {
 # ============================================================================
 
 if (-not $SkipInsiders) {
-    Write-Host "`n⚠️  Windows Insider Program Setup" -ForegroundColor Yellow
+    Write-Host "⚠️  Windows Insider Program Setup" -ForegroundColor Yellow
     Write-Host "   This will configure Canary/Dev channels for Windows, Office, and VS Code" -ForegroundColor Yellow
     $insider = Read-Host "   Enable Insider channels? (Y/N)"
     
@@ -272,7 +287,7 @@ if (-not $SkipInsiders) {
 # PHASE 11: WSL/UBUNTU SETUP
 # ============================================================================
 
-Write-Host "`n⚠️  WSL/Ubuntu Setup" -ForegroundColor Yellow
+Write-Host "⚠️  WSL/Ubuntu Setup" -ForegroundColor Yellow
 Write-Host "   The next steps will configure Ubuntu in WSL" -ForegroundColor Yellow
 Write-Host "   First, let's ensure Ubuntu is initialized..." -ForegroundColor Yellow
 
@@ -285,7 +300,7 @@ try {
         # Test if Ubuntu has been initialized
         wsl -d Ubuntu -e whoami 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "`n⚠️  Ubuntu needs first-time setup (create username/password)" -ForegroundColor Yellow
+            Write-Host "⚠️  Ubuntu needs first-time setup (create username/password)" -ForegroundColor Yellow
             Write-Host "   Opening Ubuntu... complete the setup, then close it and press Enter here`n" -ForegroundColor Yellow
             Start-Process wsl -ArgumentList "-d Ubuntu"
             Read-Host "Press Enter after Ubuntu setup is complete"
@@ -312,7 +327,7 @@ try {
         
         Write-Host "✅ Ubuntu setup complete" -ForegroundColor Green
         
-        Write-Host "`n⚠️  Shutting down WSL to apply .wslconfig changes..." -ForegroundColor Yellow
+        Write-Host "⚠️  Shutting down WSL to apply .wslconfig changes..." -ForegroundColor Yellow
         wsl --shutdown
         Write-Host "✅ WSL shutdown complete. It will restart automatically when needed." -ForegroundColor Green
     }
@@ -329,7 +344,7 @@ try {
 
 Write-Step "PHASE 12: Final Configuration"
 
-Write-Host "`n📋 Post-Setup Checklist:" -ForegroundColor Cyan
+Write-Host "📋 Post-Setup Checklist:" -ForegroundColor Cyan
 Write-Host "  [ ] Configure Malwarebytes exclusions (see README Post-Setup section)" -ForegroundColor Yellow
 Write-Host "  [ ] Configure GlassWire firewall rules (see README Post-Setup section)" -ForegroundColor Yellow
 Write-Host "  [ ] Sign into Backblaze and configure exclusions (see README)" -ForegroundColor Yellow
@@ -339,12 +354,12 @@ Write-Host "  [ ] Configure VS Code settings sync" -ForegroundColor Yellow
 Write-Host "  [ ] Add SSH keys to ~/.ssh/ and GitHub" -ForegroundColor Yellow
 Write-Host "  [ ] Configure git identity (see README Post-Setup section)" -ForegroundColor Yellow
 
-Write-Host "`n🧪 Run verification tests:" -ForegroundColor Cyan
+Write-Host "🧪 Run verification tests:" -ForegroundColor Cyan
 Write-Host "  Windows: pwsh -File .\tests\pester.Windows.Tests.ps1" -ForegroundColor White
 Write-Host "  Ubuntu:  wsl -d Ubuntu -e bash ./tests/ubuntu-smoke-test.sh" -ForegroundColor White
 Write-Host "  Doctor:  pwsh -File .\scripts\windows\50-doctor.ps1 -VerboseOut" -ForegroundColor White
 
-Write-Host "`n⚠️  REBOOT REQUIRED" -ForegroundColor Yellow
+Write-Host "⚠️  REBOOT REQUIRED" -ForegroundColor Yellow
 Write-Host "   Several security features require a reboot:" -ForegroundColor Yellow
 Write-Host "   - Credential Guard" -ForegroundColor Yellow
 Write-Host "   - LSA Protection (RunAsPPL)" -ForegroundColor Yellow
@@ -352,11 +367,11 @@ Write-Host "   - Core Isolation (HVCI)" -ForegroundColor Yellow
 
 $reboot = Read-Host "`nReboot now? (Y/N)"
 if ($reboot -eq 'Y') {
-    Write-Host "`n✅ Rebooting in 10 seconds..." -ForegroundColor Green
+    Write-Host "Rebooting in 10 seconds..." -ForegroundColor Green
     Start-Sleep -Seconds 10
     Restart-Computer -Force
 } else {
-    Write-Host "`n⚠️  Remember to reboot before running production workloads!" -ForegroundColor Yellow
+    Write-Host "Remember to reboot before running production workloads!" -ForegroundColor Yellow
 }
 
 Write-Host "`n========================================================================" -ForegroundColor Green
@@ -364,3 +379,5 @@ Write-Host "" -ForegroundColor Green
 Write-Host "     Setup Complete! Your Surface Pro is ready for development" -ForegroundColor Green
 Write-Host "" -ForegroundColor Green
 Write-Host "========================================================================" -ForegroundColor Green
+
+
