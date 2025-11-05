@@ -191,6 +191,28 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
+      - name: Fix CHANGELOG formatting
+        run: |
+          # Check if CHANGELOG was updated
+          if git diff HEAD~1 HEAD --name-only | grep -q "CHANGELOG.md"; then
+            echo "Fixing CHANGELOG.md formatting..."
+
+            # Remove multiple consecutive blank lines (keep only 1)
+            sed -i.bak '/^$/N;/^\n$/D' CHANGELOG.md
+
+            # Check if changes were made
+            if ! git diff --quiet CHANGELOG.md; then
+              git add CHANGELOG.md
+              git commit -m "chore(changelog): fix markdown formatting [skip ci]"
+              git push origin HEAD:main
+              echo "✓ CHANGELOG.md formatting fixed"
+            else
+              echo "✓ CHANGELOG.md formatting is already correct"
+            fi
+          else
+            echo "CHANGELOG.md was not updated in this release"
+          fi
+
       - name: Get latest tag
         id: get_tag
         run: |
