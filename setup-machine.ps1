@@ -97,7 +97,8 @@ function Invoke-Script {
         Write-Host "✅ $Description - COMPLETED" -ForegroundColor Green
     } catch {
         Write-Error "❌ $Description - FAILED: $_"
-        $continue = Read-Host "Continue with remaining steps? (Y/N)"
+        $continue = Read-Host "Continue with remaining steps? (Y/N) [Default: Y]"
+        if ([string]::IsNullOrWhiteSpace($continue)) { $continue = 'Y' }
         if ($continue -ne 'Y') { exit 1 }
     }
 }
@@ -135,7 +136,8 @@ Write-Host "✅ Running with Administrator privileges`n" -ForegroundColor Green
 Write-Host "⏱️  Estimated time: 45-90 minutes (depending on download speeds)" -ForegroundColor Yellow
 Write-Host "📦 This will install ~30GB of software and tools`n" -ForegroundColor Yellow
 
-$confirm = Read-Host "Ready to begin? (Y/N)"
+$confirm = Read-Host "Ready to begin? (Y/N) [Default: Y]"
+if ([string]::IsNullOrWhiteSpace($confirm)) { $confirm = 'Y' }
 if ($confirm -ne 'Y') {
     Write-Host "Setup cancelled." -ForegroundColor Yellow
     exit 0
@@ -184,7 +186,8 @@ if (-not $SkipLicensedApps) {
     Write-Host "💰 Commercial/Licensed Applications" -ForegroundColor Yellow
     Write-Host "   These require paid licenses or subscriptions" -ForegroundColor Yellow
     Write-Host "   Estimated cost: ~$315-505 first year, ~$205-395/year after`n" -ForegroundColor Yellow
-    $installLicensed = Read-Host "Install licensed apps? (Y/N) [Recommended: N for VMs]"
+    $installLicensed = Read-Host "Install licensed apps? (Y/N) [Default: N]"
+    if ([string]::IsNullOrWhiteSpace($installLicensed)) { $installLicensed = 'N' }
 
     if ($installLicensed -eq 'Y') {
         Write-Step "PHASE 2.5: Licensed Applications"
@@ -279,7 +282,8 @@ if (-not $SkipBackup) {
 if (-not $SkipInsiders) {
     Write-Host "⚠️  Windows Insider Program Setup" -ForegroundColor Yellow
     Write-Host "   This will configure Canary/Dev channels for Windows, Office, and VS Code" -ForegroundColor Yellow
-    $insider = Read-Host "   Enable Insider channels? (Y/N)"
+    $insider = Read-Host "   Enable Insider channels? (Y/N) [Default: N]"
+    if ([string]::IsNullOrWhiteSpace($insider)) { $insider = 'N' }
 
     if ($insider -eq 'Y') {
         Write-Step "PHASE 10: Insider Channels"
@@ -373,7 +377,8 @@ Write-Host "   - Credential Guard" -ForegroundColor Yellow
 Write-Host "   - LSA Protection (RunAsPPL)" -ForegroundColor Yellow
 Write-Host "   - Core Isolation (HVCI)" -ForegroundColor Yellow
 
-$reboot = Read-Host "`nReboot now? (Y/N)"
+$reboot = Read-Host "`nReboot now? (Y/N) [Default: N]"
+if ([string]::IsNullOrWhiteSpace($reboot)) { $reboot = 'N' }
 if ($reboot -eq 'Y') {
     Write-Host "Rebooting in 10 seconds..." -ForegroundColor Green
     Start-Sleep -Seconds 10

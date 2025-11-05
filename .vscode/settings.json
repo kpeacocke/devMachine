@@ -64,6 +64,7 @@
         "pwsh",
         "pyenv",
         "pylance",
+        "pytest",
         "Resolv",
         "rubocop",
         "rustc",
@@ -100,6 +101,7 @@
         "winver",
         "wsearch",
         "wslconfig",
-        "yzhang"
+        "yzhang",
+        "zricethezav"
     ]
 }

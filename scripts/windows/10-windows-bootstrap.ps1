@@ -11,15 +11,14 @@ function Test-CommandExists {
     $null -ne (Get-Command $n -ErrorAction SilentlyContinue)
 }
 
-Write-Host "`n🐧 WSL Foundation"
+Write-Host "🐧 WSL Foundation"
 # Check if running in a VM (nested virtualization often unsupported)
-$isVM = $false
 try {
   $computerSystem = Get-WmiObject -Class Win32_ComputerSystem
   if ($computerSystem.Model -match "Virtual|VMware|Parallels|VirtualBox|QEMU|Hyper-V") {
-    $isVM = $true
     Write-Host "  ⚠️  VM detected ($($computerSystem.Model)) - WSL may not work with nested virtualization" -ForegroundColor Yellow
-    $installWSL = Read-Host "  Install WSL anyway? (Y/N) [Recommended: N for VMs]"
+    $installWSL = Read-Host "  Install WSL anyway? (Y/N) [Default: N]"
+    if ([string]::IsNullOrWhiteSpace($installWSL)) { $installWSL = 'N' }
     if ($installWSL -ne 'Y') {
       Write-Host "  → Skipping WSL installation" -ForegroundColor Yellow
       $skipWSL = $true
@@ -90,8 +89,8 @@ winget install OpenJS.NodeJS --source winget -e --silent --accept-package-agreem
 winget install GoLang.Go --source winget --silent --accept-package-agreements --accept-source-agreements
 winget install Rustlang.Rustup --source winget --silent --accept-package-agreements --accept-source-agreements
 winget install Microsoft.DotNet.SDK.9 --source winget --silent --accept-package-agreements --accept-source-agreements
-# Java: rolling Temurin (latest GA, auto-upgrades to next GA)
-winget install EclipseAdoptium.Temurin.JDK --source winget `
+# Java: Temurin 25 (latest GA)
+winget install EclipseAdoptium.Temurin.25.JDK --source winget `
   --silent --accept-package-agreements --accept-source-agreements
 # Build tools (CMake via winget, Maven/Gradle via mise below)
 winget install Kitware.CMake --source winget --silent --accept-package-agreements --accept-source-agreements

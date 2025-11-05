@@ -17,26 +17,10 @@ $GUID_Balanced = '381b4222-f694-41f0-9685-ff5bb260df2e'  # built-in Balanced
 Write-Host "Ensuring Ultimate Performance plan exists…"
 try { powercfg -duplicatescheme $GUID_Ultimate | Out-Null } catch {}
 
-# XML queries for System log → Microsoft-Windows-Kernel-Power, Event ID 105, AcOnline 1/0
-$Q_AC = @"
-<QueryList>
-  <Query Id="0" Path="System">
-    <Select Path="System">
-      *[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and (EventID=105)] and EventData[Data[@Name='AcOnline']='1']]
-    </Select>
-  </Query>
-</QueryList>
-"@
-
-$Q_DC = @"
-<QueryList>
-  <Query Id="0" Path="System">
-    <Select Path="System">
-      *[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and (EventID=105)] and EventData[Data[@Name='AcOnline']='0']]
-    </Select>
-  </Query>
-</QueryList>
-"@
+# XPath queries for event triggers (simple format for schtasks /MO parameter)
+# System log → Microsoft-Windows-Kernel-Power, Event ID 105, AcOnline 1/0
+$Q_AC = "*[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and (EventID=105)] and EventData[Data[@Name='AcOnline']='1']]"
+$Q_DC = "*[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and (EventID=105)] and EventData[Data[@Name='AcOnline']='0']]"
 
 # Action commands
 $Cmd_AC = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "powercfg -setactive ' + $GUID_Ultimate + '"'
