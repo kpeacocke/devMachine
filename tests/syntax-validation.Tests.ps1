@@ -4,12 +4,17 @@
 $ErrorActionPreference = 'Stop'
 Import-Module Pester -MinimumVersion 5.0 -ErrorAction Stop
 
-$ScriptRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+# Get the repository root (parent of tests directory)
+$RepoRoot = if ($PSScriptRoot) {
+    Split-Path -Parent $PSScriptRoot
+} else {
+    Split-Path -Parent (Get-Location)
+}
 
 Describe "PowerShell Script Syntax Validation" {
     
-    $scripts = Get-ChildItem -Path $ScriptRoot -Recurse -Filter "*.ps1" | 
-        Where-Object { $_.FullName -notlike "*\node_modules\*" }
+    $scripts = Get-ChildItem -Path $RepoRoot -Recurse -Filter "*.ps1" | 
+        Where-Object { $_.FullName -notlike "*\node_modules\*" -and $_.FullName -notlike "*\.git\*" }
     
     It "Found PowerShell scripts to validate" {
         $scripts.Count | Should -BeGreaterThan 0
@@ -98,9 +103,3 @@ Describe "Setup Orchestrator Script" {
         { [scriptblock]::Create($content) } | Should -Not -Throw
     }
 }
-
-$config = New-PesterConfiguration
-$config.Run.Path = $PSCommandPath
-$config.Run.Exit = $true
-$config.Output.Verbosity = 'Detailed'
-Invoke-Pester -Configuration $config

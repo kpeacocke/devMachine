@@ -35,17 +35,25 @@ jobs:
       - name: Install Pester
         shell: pwsh
         run: |
-          Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
+          Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser -MinimumVersion 5.0
 
       - name: Run syntax validation tests
         shell: pwsh
         run: |
-          Invoke-Pester -Path ./tests/syntax-validation.Tests.ps1 -Output Detailed
+          $config = New-PesterConfiguration
+          $config.Run.Path = './tests/syntax-validation.Tests.ps1'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
 
       - name: Run Windows Pester tests
         shell: pwsh
         run: |
-          Invoke-Pester -Path ./tests/pester.Windows.Tests.ps1 -Output Detailed
+          $config = New-PesterConfiguration
+          $config.Run.Path = './tests/pester.Windows.Tests.ps1'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
 
       - name: Install shellcheck
         run: |

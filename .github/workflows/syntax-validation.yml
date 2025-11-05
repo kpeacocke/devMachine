@@ -26,12 +26,16 @@ jobs:
     - name: Install Pester
       shell: pwsh
       run: |
-        Install-Module -Name Pester -Force -Scope CurrentUser -SkipPublisherCheck
+        Install-Module -Name Pester -Force -Scope CurrentUser -SkipPublisherCheck -MinimumVersion 5.0
         
     - name: Run Syntax Validation Tests
       shell: pwsh
       run: |
-        Invoke-Pester -Path ".\tests\syntax-validation.Tests.ps1" -Output Detailed
+        $config = New-PesterConfiguration
+        $config.Run.Path = '.\tests\syntax-validation.Tests.ps1'
+        $config.Run.Exit = $true
+        $config.Output.Verbosity = 'Detailed'
+        Invoke-Pester -Configuration $config
         
   bash-syntax:
     runs-on: ubuntu-latest

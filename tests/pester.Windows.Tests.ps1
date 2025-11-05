@@ -200,9 +200,3 @@ Describe "Windows Dev Environment" {
   }
 }
 
-$config = New-PesterConfiguration
-$config.Run.Path = $PSCommandPath
-$config.Run.Exit = $true
-$config.Output.Verbosity = 'Detailed'
-Invoke-Pester -Configuration $config
-
