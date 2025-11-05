@@ -22,37 +22,37 @@ Write-Host "   Note: You'll need valid licenses for full functionality`n" -Foreg
 Write-Host "🔐 1Password (Password Manager + CLI)"
 Write-Host "   License: ~$36-96/year | Trial: 30 days" -ForegroundColor Gray
 winget install AgileBits.1Password 1Password.CLI `
-  --silent --accept-package-agreements --accept-source-agreements
+  --source winget --silent --accept-package-agreements --accept-source-agreements
 
 Write-Host "📄 Microsoft 365 (Office)"
 Write-Host "   License: ~$70-100/year | Trial: 30 days" -ForegroundColor Gray
 $officeInstalled = (winget list | Select-String -SimpleMatch "Microsoft 365") -or (winget list | Select-String -SimpleMatch "Microsoft Office")
 if (-not $officeInstalled) {
   foreach ($id in @("Microsoft.Office","Microsoft.Office.Desktop")) {
-    try { winget install $id --silent --accept-source-agreements --accept-package-agreements; break } catch {}
+    try { winget install $id --source winget --silent --accept-source-agreements --accept-package-agreements; break } catch {}
   }
 }
 
-Write-Host "`n🌲 GitKraken (Git GUI)"
+Write-Host "🌲 GitKraken (Git GUI)"
 Write-Host "   License: Free for public repos, ~$60-90/year for private | Trial: 7 days" -ForegroundColor Gray
-winget install Axosoft.GitKraken --silent --accept-package-agreements --accept-source-agreements
+winget install Axosoft.GitKraken --source winget --silent --accept-package-agreements --accept-source-agreements
 
 Write-Host "📊 Beyond Compare 4 (File Comparison)"
 Write-Host "   License: ~$60 one-time | Trial: 30 days" -ForegroundColor Gray
-winget install ScooterSoftware.BeyondCompare4 --silent --accept-package-agreements --accept-source-agreements
+winget install ScooterSoftware.BeyondCompare4 --source winget --silent --accept-package-agreements --accept-source-agreements
 
 Write-Host "📝 Scrivener 3 (Writing Software)"
 Write-Host "   License: ~$50-60 one-time | Trial: 30 days" -ForegroundColor Gray
-winget install LiteratureAndLatte.Scrivener3 --silent --accept-package-agreements --accept-source-agreements
+winget install LiteratureAndLatte.Scrivener3 --source winget --silent --accept-package-agreements --accept-source-agreements
 
 Write-Host "🧠 Obsidian (Note-Taking)"
 Write-Host "   License: Free for personal use, ~$50/year for commercial" -ForegroundColor Gray
-winget install Obsidian.Obsidian --silent --accept-package-agreements --accept-source-agreements
+winget install Obsidian.Obsidian --source winget --silent --accept-package-agreements --accept-source-agreements
 
 Write-Host "☁️ Backblaze (Cloud Backup)"
 Write-Host "   License: ~$99/year for unlimited backup | Trial: 15 days" -ForegroundColor Gray
 try {
-  winget install Backblaze.Backblaze --silent --accept-source-agreements --accept-package-agreements
+  winget install Backblaze.Backblaze --source winget --silent --accept-source-agreements --accept-package-agreements
 } catch {
   Write-Warning "Backblaze install failed. Install manually from https://www.backblaze.com/download.html"
 }
@@ -60,7 +60,7 @@ try {
 Write-Host "🛡️ Malwarebytes (Anti-Malware)"
 Write-Host "   License: Free for manual scans, ~$40/year for real-time protection | Trial: 14 days" -ForegroundColor Gray
 try {
-  winget install Malwarebytes.Malwarebytes --silent --accept-source-agreements --accept-package-agreements
+  winget install Malwarebytes.Malwarebytes --source winget --silent --accept-source-agreements --accept-package-agreements
 } catch {
   Write-Warning "Malwarebytes install failed. Install manually from https://www.malwarebytes.com/"
 }
@@ -68,7 +68,7 @@ try {
 Write-Host "🌐 GlassWire (Network Monitor)"
 Write-Host "   License: Free basic version, ~$50-100 one-time for pro | Trial: 7 days" -ForegroundColor Gray
 try {
-  winget install GlassWire.GlassWire --silent --accept-source-agreements --accept-package-agreements
+  winget install GlassWire.GlassWire --source winget --silent --accept-source-agreements --accept-package-agreements
 } catch {
   Write-Warning "GlassWire install failed. Install manually from https://www.glasswire.com/"
 }

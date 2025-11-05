@@ -57,14 +57,14 @@ try { dotnet workload update } catch { Write-Warning "workload update failed: $_
 Write-Host "🧽 Cleaning NuGet caches..."
 try { dotnet nuget locals all --clear } catch {}
 
-Write-Host "`n🌐 Updating other runtimes..."
+Write-Host "🌐 Updating other runtimes..."
 # Update other development runtimes to stay current
 $runtimes = @(
   "Python.Python.3.13",
   "OpenJS.NodeJS",
   "GoLang.Go",
   "Rustlang.Rustup",
-  "EclipseAdoptium.Temurin.JDK"
+  "EclipseAdoptium.Temurin.25.JDK"
 )
 foreach ($runtime in $runtimes) {
   try {
@@ -73,7 +73,7 @@ foreach ($runtime in $runtimes) {
   } catch { Write-Warning "  $runtime update check failed" }
 }
 
-Write-Host "`n✅ Development tools maintenance complete."
+Write-Host "✅ Development tools maintenance complete."
 
 if ($ScheduleWeekly) {
   $taskName = "Dev-Tools-Weekly-Maintenance"

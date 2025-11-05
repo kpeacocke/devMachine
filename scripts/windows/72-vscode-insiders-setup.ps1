@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Stop'
 
 Write-Host "== Ensure VS Code Insiders is installed"
 try {
-  winget install Microsoft.VisualStudioCode.Insiders --silent --accept-source-agreements --accept-package-agreements
+  winget install Microsoft.VisualStudioCode.Insiders --source winget --silent --accept-source-agreements --accept-package-agreements
 } catch {}
 
 # Profile directory (Insiders)

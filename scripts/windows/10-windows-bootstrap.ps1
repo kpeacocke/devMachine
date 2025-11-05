@@ -1,9 +1,9 @@
 <#
 Run AFTER 00-pwsh-first.ps1, in pwsh (Admin).
 Installs (latest channels where possible): VS Code, Docker Desktop, WSL Ubuntu, Git+LFS+GH+GCM,
-1Password (GUI+CLI), Obsidian, GitKraken, Beyond Compare, Scrivener, fonts,
-Python 3.13, Node CURRENT, Go, Rustup, .NET 9 SDK, Java Temurin (rolling GA), Maven, Gradle,
-Terraform, Packer, AWS/Azure/GCloud CLIs, mise (Kotlin+Gradle latest), VS Code extensions.
+fonts, Python 3.13, Node CURRENT, Go, Rustup, .NET 9 SDK, Java Temurin 25,
+Terraform, Packer, Vagrant, AWS/Azure/GCloud CLIs,
+mise (Kotlin, Gradle, Maven, ripgrep), VS Code extensions.
 #>
 $ErrorActionPreference = 'Stop'
 function Test-CommandExists {

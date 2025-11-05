@@ -68,7 +68,7 @@ if (Test-Path $odt) {
 
 # 3) VS CODE INSIDERS
 Write-Host "📝 Installing VS Code Insiders"
-winget install Microsoft.VisualStudioCode.Insiders --silent --accept-source-agreements --accept-package-agreements
+winget install Microsoft.VisualStudioCode.Insiders --source winget --silent --accept-source-agreements --accept-package-agreements
 
 if ($MakeCodeCLIPointToInsiders) {
   Write-Host "🔗 Pointing 'code' CLI to 'code-insiders'"
