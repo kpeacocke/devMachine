@@ -6,33 +6,33 @@ Thank you for your interest in contributing to this Surface Pro development mach
 
 ### 🐛 Bug Reports
 
-- Use the GitHub issue tracker
-- Include your Windows version and hardware details
-- Provide clear reproduction steps
-- Include error messages and logs
+* Use the GitHub issue tracker
+* Include your Windows version and hardware details
+* Provide clear reproduction steps
+* Include error messages and logs
 
 ### 💡 Feature Requests
 
-- Check existing issues first
-- Describe the use case and expected behavior
-- Consider if it fits the project scope (Surface Pro dev machines)
+* Check existing issues first
+* Describe the use case and expected behavior
+* Consider if it fits the project scope (Surface Pro dev machines)
 
 ### 🔧 Code Contributions
 
-- Fork the repository
-- Create a feature branch following naming convention: `feat/feature-name`, `fix/bug-name`
-- Follow [Conventional Commits](.github/COMMIT_CONVENTION.md) for all commit messages
-- Test your changes thoroughly
-- Submit a pull request
+* Fork the repository
+* Create a feature branch following naming convention: `feat/feature-name`, `fix/bug-name`
+* Follow [Conventional Commits](.github/COMMIT_CONVENTION.md) for all commit messages
+* Test your changes thoroughly
+* Submit a pull request
 
 ## Development Setup
 
 ### Prerequisites
 
-- Windows 11 on ARM (or VM with nested virtualization)
-- PowerShell 7+
-- WSL 2 with Ubuntu
-- Git
+* Windows 11 on ARM (or VM with nested virtualization)
+* PowerShell 7+
+* WSL 2 with Ubuntu
+* Git
 
 ### Commit Convention
 
@@ -42,13 +42,13 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) f
 
 **Common types**:
 
-- `feat`: New feature (MINOR version bump)
-- `fix`: Bug fix (PATCH version bump)
-- `docs`: Documentation changes (PATCH version bump)
-- `perf`: Performance improvement (PATCH version bump)
-- `refactor`: Code refactoring (PATCH version bump)
-- `test`: Adding tests (no version bump)
-- `ci`: CI/CD changes (no version bump)
+* `feat`: New feature (MINOR version bump)
+* `fix`: Bug fix (PATCH version bump)
+* `docs`: Documentation changes (PATCH version bump)
+* `perf`: Performance improvement (PATCH version bump)
+* `refactor`: Code refactoring (PATCH version bump)
+* `test`: Adding tests (no version bump)
+* `ci`: CI/CD changes (no version bump)
 
 **Examples**:
 
@@ -92,25 +92,25 @@ See [COMMIT_CONVENTION.md](.github/COMMIT_CONVENTION.md) for complete details.
 
 #### PowerShell
 
-- Follow PowerShell best practices
-- Use approved verbs (`Get-Verb`)
-- Include error handling (`try/catch`, `$ErrorActionPreference`)
-- Add parameter validation
-- Use consistent formatting
+* Follow PowerShell best practices
+* Use approved verbs (`Get-Verb`)
+* Include error handling (`try/catch`, `$ErrorActionPreference`)
+* Add parameter validation
+* Use consistent formatting
 
 #### Bash
 
-- Follow bash best practices
-- Use `set -euo pipefail` for error handling
-- Quote variables properly
-- Use shellcheck for linting
+* Follow bash best practices
+* Use `set -euo pipefail` for error handling
+* Quote variables properly
+* Use shellcheck for linting
 
 #### Documentation
 
-- Update README.md for new features
-- Include inline comments for complex logic
-- Update license cost information when adding paid tools
-- Document any breaking changes
+* Update README.md for new features
+* Include inline comments for complex logic
+* Update license cost information when adding paid tools
+* Document any breaking changes
 
 ## Pull Request Process
 
@@ -121,9 +121,9 @@ See [COMMIT_CONVENTION.md](.github/COMMIT_CONVENTION.md) for complete details.
    ```
 
 2. **Make Changes**
-   - Keep commits focused and atomic
-   - Write clear commit messages
-   - Test thoroughly
+   * Keep commits focused and atomic
+   * Write clear commit messages
+   * Test thoroughly
 
 3. **Run Tests**
 
@@ -136,14 +136,14 @@ See [COMMIT_CONVENTION.md](.github/COMMIT_CONVENTION.md) for complete details.
    ```
 
 4. **Update Documentation**
-   - Update README.md if needed
-   - Update license costs if adding paid software
-   - Add or update tests
+   * Update README.md if needed
+   * Update license costs if adding paid software
+   * Add or update tests
 
 5. **Submit Pull Request**
-   - Clear title and description
-   - Reference any related issues
-   - Include testing details
+   * Clear title and description
+   * Reference any related issues
+   * Include testing details
 
 ## Project Structure
 
@@ -171,44 +171,44 @@ devMachine/
 
 ### Security Considerations
 
-- All software should come from trusted sources
-- Avoid modifying security settings without justification
-- Test security changes thoroughly
-- Document any security implications
+* All software should come from trusted sources
+* Avoid modifying security settings without justification
+* Test security changes thoroughly
+* Document any security implications
 
 ### Performance Impact
 
-- Consider 512GB storage constraints
-- Prefer Dev Drive for caches when possible
-- Avoid unnecessary background services
-- Test on actual Surface Pro hardware when possible
+* Consider 512GB storage constraints
+* Prefer Dev Drive for caches when possible
+* Avoid unnecessary background services
+* Test on actual Surface Pro hardware when possible
 
 ## Code Review Criteria
 
 ### ✅ Good PR Checklist
 
-- [ ] Passes all syntax validation tests
-- [ ] Includes appropriate error handling
-- [ ] Updates documentation
-- [ ] Follows existing code patterns
-- [ ] Includes tests for new functionality
-- [ ] Considers storage/performance impact
+* [ ] Passes all syntax validation tests
+* [ ] Includes appropriate error handling
+* [ ] Updates documentation
+* [ ] Follows existing code patterns
+* [ ] Includes tests for new functionality
+* [ ] Considers storage/performance impact
 
 ### ❌ Common Issues
 
-- Hardcoded paths that won't work across systems
-- Missing error handling
-- Unicode characters in PowerShell strings
-- Unescaped ampersands in PowerShell strings
-- Adding software without justification
-- Breaking changes without documentation
+* Hardcoded paths that won't work across systems
+* Missing error handling
+* Unicode characters in PowerShell strings
+* Unescaped ampersands in PowerShell strings
+* Adding software without justification
+* Breaking changes without documentation
 
 ## Getting Help
 
-- **Questions**: Open a GitHub discussion
-- **Bugs**: Use the issue tracker
-- **Security Issues**: See SECURITY.md
-- **Feature Ideas**: Open an issue first to discuss
+* **Questions**: Open a GitHub discussion
+* **Bugs**: Use the issue tracker
+* **Security Issues**: See SECURITY.md
+* **Feature Ideas**: Open an issue first to discuss
 
 ## Recognition
 

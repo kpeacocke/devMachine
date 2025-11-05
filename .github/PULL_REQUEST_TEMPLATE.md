@@ -7,12 +7,12 @@ labels: []
 
 body:
 
-- type: markdown
+* type: markdown
     attributes:
       value: |
         Thanks for contributing! Please fill out this form to help us review your changes.
 
-- type: checkboxes
+* type: checkboxes
     id: checklist
     attributes:
       label: Pre-submission Checklist
@@ -28,7 +28,7 @@ body:
         - label: I have considered security implications
           required: true
 
-- type: dropdown
+* type: dropdown
     id: change-type
     attributes:
       label: Type of Change
@@ -45,7 +45,7 @@ body:
     validations:
       required: true
 
-- type: textarea
+* type: textarea
     id: description
     attributes:
       label: Description of Changes
@@ -60,14 +60,14 @@ body:
     validations:
       required: true
 
-- type: input
+* type: input
     id: related-issue
     attributes:
       label: Related Issue
       description: Link to related issue (if applicable)
       placeholder: "Fixes #123, Closes #456, Related to #789"
 
-- type: dropdown
+* type: dropdown
     id: testing
     attributes:
       label: Testing Performed
@@ -84,7 +84,7 @@ body:
     validations:
       required: true
 
-- type: textarea
+* type: textarea
     id: testing-details
     attributes:
       label: Testing Details
@@ -105,7 +105,7 @@ body:
         - Feature works as expected
         - No breaking changes observed
 
-- type: checkboxes
+* type: checkboxes
     id: breaking-changes
     attributes:
       label: Breaking Changes
@@ -117,7 +117,7 @@ body:
         - label: Changes default behavior
         - label: Removes existing functionality
 
-- type: textarea
+* type: textarea
     id: breaking-details
     attributes:
       label: Breaking Change Details
@@ -131,7 +131,7 @@ body:
         - Users should update calls from old-param to new-param
         - Install dependency A before running script Z
 
-- type: checkboxes
+* type: checkboxes
     id: scope
     attributes:
       label: Areas Affected
@@ -148,7 +148,7 @@ body:
         - label: Optional development tools
         - label: GitHub Actions/CI (if applicable)
 
-- type: textarea
+* type: textarea
     id: security-considerations
     attributes:
       label: Security Considerations
@@ -166,7 +166,7 @@ body:
         - Modifies registry key Y (improves security by...)
         - Downloads from new source Z (verified authentic by...)
 
-- type: textarea
+* type: textarea
     id: performance-impact
     attributes:
       label: Performance Impact
@@ -181,7 +181,7 @@ body:
         - Tool requires 200MB disk space
         - Moves cache to Dev Drive (saves space on C:)
 
-- type: textarea
+* type: textarea
     id: additional-notes
     attributes:
       label: Additional Notes
@@ -192,7 +192,7 @@ body:
         - May need follow-up PR for feature Y
         - Special thanks to @contributor for suggestion
 
-- type: checkboxes
+* type: checkboxes
     id: future-work
     attributes:
       label: Future Work

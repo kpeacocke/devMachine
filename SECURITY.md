@@ -16,26 +16,26 @@ If you discover a security vulnerability in this project, please report it by:
 
 ### What to include in your report
 
-- Description of the vulnerability
-- Steps to reproduce
-- Potential impact
-- Suggested fix (if any)
+* Description of the vulnerability
+* Steps to reproduce
+* Potential impact
+* Suggested fix (if any)
 
 ### What to expect
 
-- **Acknowledgment**: We will acknowledge receipt of your vulnerability report within 48 hours
-- **Assessment**: We will assess the vulnerability and determine its impact within 5 business days
-- **Fix Timeline**: Critical vulnerabilities will be addressed within 30 days, others within 90 days
-- **Disclosure**: We will coordinate with you on responsible disclosure
+* **Acknowledgment**: We will acknowledge receipt of your vulnerability report within 48 hours
+* **Assessment**: We will assess the vulnerability and determine its impact within 5 business days
+* **Fix Timeline**: Critical vulnerabilities will be addressed within 30 days, others within 90 days
+* **Disclosure**: We will coordinate with you on responsible disclosure
 
 ## Security Considerations
 
 This project contains scripts that:
 
-- Install and configure software with administrative privileges
-- Modify system security settings (Windows Defender, Firewall, BitLocker)
-- Handle SSH keys and authentication
-- Configure network and system access
+* Install and configure software with administrative privileges
+* Modify system security settings (Windows Defender, Firewall, BitLocker)
+* Handle SSH keys and authentication
+* Configure network and system access
 
 ### Before running these scripts
 
@@ -47,12 +47,12 @@ This project contains scripts that:
 
 ### Security Features Included
 
-- **Defense in depth**: Multiple security layers (Defender, Malwarebytes, GlassWire, firewall)
-- **Least privilege**: Scripts request only necessary permissions
-- **Audit logging**: Enhanced Windows audit policies
-- **Encryption**: BitLocker, Credential Guard, LSA Protection
-- **Network security**: Firewall rules, SSH key-only authentication
-- **Vulnerability scanning**: Snyk, Trivy, security linters
+* **Defense in depth**: Multiple security layers (Defender, Malwarebytes, GlassWire, firewall)
+* **Least privilege**: Scripts request only necessary permissions
+* **Audit logging**: Enhanced Windows audit policies
+* **Encryption**: BitLocker, Credential Guard, LSA Protection
+* **Network security**: Firewall rules, SSH key-only authentication
+* **Vulnerability scanning**: Snyk, Trivy, security linters
 
 ### Known Security Considerations
 
@@ -64,12 +64,14 @@ This project contains scripts that:
 
 ### Mitigation Strategies
 
-- All downloads use official package managers when possible
-- Registry changes are documented and reversible
-- Service changes improve security posture
-- Firewall rules follow security best practices
-- Scripts include error handling and validation
+* All downloads use official package managers when possible
+* Registry changes are documented and reversible
+* Service changes improve security posture
+* Firewall rules follow security best practices
+* Scripts include error handling and validation
 
 ## Disclaimer
 
-**Use at your own risk.** These scripts modify system configurations and install software. While designed for security and best practices, any automation carries inherent risks. Always test in a non-production environment first.
+**Use at your own risk.** These scripts modify system configurations and install software.
+While designed for security and best practices, any automation carries inherent risks.
+Always test in a non-production environment first.

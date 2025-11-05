@@ -50,13 +50,13 @@ These types do NOT trigger releases:
 
 Use scopes to specify what part of the project is affected:
 
-- `windows` - Windows scripts
-- `wsl` - WSL/Ubuntu scripts
-- `security` - Security features
-- `performance` - Performance optimizations
-- `docs` - Documentation
-- `tests` - Test files
-- `ci` - CI/CD workflows
+* `windows` - Windows scripts
+* `wsl` - WSL/Ubuntu scripts
+* `security` - Security features
+* `performance` - Performance optimizations
+* `docs` - Documentation
+* `tests` - Test files
+* `ci` - CI/CD workflows
 
 **Examples:**
 
@@ -71,17 +71,17 @@ docs(readme): add installation instructions
 
 ### Feature Addition (MINOR bump)
 
-```
+```git-commit
 feat(windows): add automatic Defender exclusions
 
-- Exclude Dev Drive caches from scanning
-- Exclude package manager folders
-- Improve build performance by 40%
+* Exclude Dev Drive caches from scanning
+* Exclude package manager folders
+* Improve build performance by 40%
 ```
 
 ### Bug Fix (PATCH bump)
 
-```
+```git-commit
 fix(windows): escape ampersands in PowerShell strings
 
 Fixes syntax errors when running setup-machine.ps1
@@ -89,7 +89,7 @@ Fixes syntax errors when running setup-machine.ps1
 
 ### Breaking Change (MAJOR bump)
 
-```
+```git-commit
 feat(windows)!: require PowerShell 7.4 or higher
 
 BREAKING CHANGE: PowerShell 5.1 is no longer supported.
@@ -98,13 +98,13 @@ Users must upgrade to PowerShell 7.4+ before running scripts.
 
 ### Documentation (PATCH bump)
 
-```
+```git-commit
 docs: add contribution guidelines and code of conduct
 ```
 
 ### Non-versioning Commit
 
-```
+```git-commit
 ci: add automated release workflow
 
 This change doesn't affect the scripts themselves,
@@ -116,9 +116,9 @@ so it won't trigger a new release.
 1. **Push commits** to `main` branch following the convention
 2. **GitHub Actions** analyzes commit messages
 3. **Semantic-release** determines version bump:
-   - `BREAKING CHANGE` or `!` → **v2.0.0** (MAJOR)
-   - `feat` → **v1.1.0** (MINOR)
-   - `fix`, `perf`, `docs`, `refactor`, `build` → **v1.0.1** (PATCH)
+   * `BREAKING CHANGE` or `!` → **v2.0.0** (MAJOR)
+   * `feat` → **v1.1.0** (MINOR)
+   * `fix`, `perf`, `docs`, `refactor`, `build` → **v1.0.1** (PATCH)
 4. **CHANGELOG.md** is automatically updated
 5. **GitHub Release** is created with release notes
 6. **Release artifacts** (ZIP files) are uploaded
@@ -127,7 +127,7 @@ so it won't trigger a new release.
 
 ### ✅ Good Commits
 
-```
+```text
 feat(windows): add licensed apps separation for VM setups
 fix(wsl): correct Ubuntu package installation order
 perf(windows): reduce storage usage by 33-77GB
@@ -137,7 +137,7 @@ refactor(windows): simplify backup configuration logic
 
 ### ❌ Bad Commits
 
-```
+```text
 updated stuff
 fix things
 WIP
@@ -156,12 +156,12 @@ Actions → Release → Run workflow → Select release type
 
 ## Version History
 
-- **MAJOR** (1.0.0 → 2.0.0): Breaking changes, removed features, incompatible API changes
-- **MINOR** (1.0.0 → 1.1.0): New features, backwards-compatible additions
-- **PATCH** (1.0.0 → 1.0.1): Bug fixes, documentation, performance improvements
+* **MAJOR** (1.0.0 → 2.0.0): Breaking changes, removed features, incompatible API changes
+* **MINOR** (1.0.0 → 1.1.0): New features, backwards-compatible additions
+* **PATCH** (1.0.0 → 1.0.1): Bug fixes, documentation, performance improvements
 
 ## Resources
 
-- [Conventional Commits Specification](https://www.conventionalcommits.org/)
-- [Semantic Versioning](https://semver.org/)
-- [Keep a Changelog](https://keepachangelog.com/)
+* [Conventional Commits Specification](https://www.conventionalcommits.org/)
+* [Semantic Versioning](https://semver.org/)
+* [Keep a Changelog](https://keepachangelog.com/)
