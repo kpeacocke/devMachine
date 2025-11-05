@@ -1,0 +1,138 @@
+# Auto detect text files and normalize line endings to LF in the repository
+* text=auto
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout
+*.md text
+*.txt text
+*.json text
+*.yml text
+*.yaml text
+*.xml text
+*.html text
+*.css text
+*.scss text
+*.js text
+*.ts text
+*.jsx text
+*.tsx text
+*.py text
+*.rb text
+*.java text
+*.c text
+*.cpp text
+*.h text
+*.hpp text
+*.go text
+*.rs text
+*.sh text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+
+# Windows scripts should always use CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+
+# Git configuration files
+.gitattributes text
+.gitignore text
+.gitconfig text
+.editorconfig text
+
+# GitHub files
+/.github/** text
+
+# Markdown files
+*.md text diff=markdown
+
+# Documentation
+*.markdown text diff=markdown
+*.mdown text diff=markdown
+*.mkd text diff=markdown
+*.mkdn text diff=markdown
+*.mdwn text diff=markdown
+*.mdtxt text diff=markdown
+*.mdtext text diff=markdown
+*.workbook text diff=markdown
+
+# Binary files (don't normalize, don't diff)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mov binary
+*.mp4 binary
+*.mp3 binary
+*.flv binary
+*.fla binary
+*.swf binary
+*.gz binary
+*.zip binary
+*.7z binary
+*.ttf binary
+*.eot binary
+*.woff binary
+*.woff2 binary
+*.pyc binary
+*.pdf binary
+*.ez binary
+*.bz2 binary
+*.swp binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.class binary
+*.jar binary
+*.war binary
+*.ear binary
+
+# Archives
+*.zip binary
+*.tar binary
+*.gz binary
+*.bz2 binary
+*.7z binary
+*.rar binary
+
+# Ignore files (do not treat as binary, but don't normalize either)
+*.lock binary
+package-lock.json binary linguist-generated=true
+yarn.lock binary linguist-generated=true
+pnpm-lock.yaml binary linguist-generated=true
+
+# Export-ignore (files not included in archives/exports)
+.gitattributes export-ignore
+.gitignore export-ignore
+.editorconfig export-ignore
+.github export-ignore
+tests export-ignore
+*.Tests.ps1 export-ignore
+.vscode export-ignore
+.idea export-ignore
+
+# Diff settings for specific file types
+*.cs diff=csharp
+*.java diff=java
+*.html diff=html
+*.css diff=css
+*.ps1 diff=powershell
+*.py diff=python
+*.rb diff=ruby
+*.go diff=golang
+
+# Linguist overrides (for GitHub language statistics)
+*.md linguist-detectable=true
+*.ps1 linguist-language=PowerShell
+*.sh linguist-language=Shell
+docs/** linguist-documentation=true
+examples/** linguist-documentation=true
+tests/** linguist-vendored=false
+
+# Merge strategies
+*.json merge=union
+CHANGELOG.md merge=union
