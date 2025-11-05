@@ -95,9 +95,9 @@ Describe "Setup Orchestrator Script" {
 
     It "setup-machine.ps1 has no Unicode box-drawing characters" {
         $content = Get-Content -Path $setupScript -Raw
-        # Check for common problematic Unicode chars
-        $content | Should -Not -Match '[╔╗║╚═]'
-        $content | Should -Not -Match '[☐☑✓✗]'
+        # Check for common problematic Unicode chars using escape sequences
+        $content | Should -Not -Match '[\u2554\u2557\u2551\u255A\u2550]'  # Box drawing
+        $content | Should -Not -Match '[\u2610\u2611\u2713\u2717]'  # Checkboxes
     }
 
     It "setup-machine.ps1 properly escapes ampersands in strings" {
