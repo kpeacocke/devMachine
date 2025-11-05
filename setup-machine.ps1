@@ -15,6 +15,10 @@
     Scrivener, Obsidian, Backblaze, Malwarebytes, GlassWire).
     Use this for VMs or when you don't have licenses.
 
+.PARAMETER SkipCommunicationsMedia
+    Skip communications and media applications (Teams, WhatsApp, Signal, Slack, Discord,
+    VLC, HandBrake, K-Lite Mega Codec Pack)
+
 .PARAMETER SkipOptionalGoodies
     Skip optional dev tools (Sysinternals, mkcert, k8s tools, etc.)
 
@@ -53,6 +57,7 @@
 param(
     [switch]$SkipBackup,
     [switch]$SkipLicensedApps,
+    [switch]$SkipCommunicationsMedia,
     [switch]$SkipOptionalGoodies,
     [switch]$SkipDevDrive,
     [switch]$SkipInsiders,
@@ -201,6 +206,27 @@ if (-not $SkipLicensedApps) {
 }
 
 # ============================================================================
+# PHASE 2.6: COMMUNICATIONS & MEDIA (OPTIONAL)
+# ============================================================================
+
+if (-not $SkipCommunicationsMedia) {
+    Write-Host "`n💬 Browsers, Communications & Media" -ForegroundColor Yellow
+    Write-Host "   Chrome, Firefox, Teams, WhatsApp, Signal, Slack, Discord, VLC, HandBrake, K-Lite Mega`n" -ForegroundColor Yellow
+    $installComms = Read-Host "Install browsers, communications & media apps? (Y/N) [Default: N]"
+    if ([string]::IsNullOrWhiteSpace($installComms)) { $installComms = 'N' }
+
+    if ($installComms -eq 'Y') {
+        Write-Step "PHASE 2.6: Browsers, Communications & Media"
+        Invoke-Script -Path (Join-Path $WindowsScripts "12-communications-media.ps1") `
+            -Description "Install Chrome, Firefox, Teams, WhatsApp, Signal, Slack, Discord, VLC, HandBrake, K-Lite"
+    } else {
+        Write-Host "   ⭐  Skipped browsers/communications/media installation" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "⭐  Skipping browsers/communications/media (use -SkipCommunicationsMedia:`$false to enable)" -ForegroundColor Yellow
+}
+
+# ============================================================================
 # PHASE 3: OPTIMIZE & HARDEN
 # ============================================================================
 
@@ -250,6 +276,24 @@ if (-not $SkipOptionalGoodies) {
     Write-Step "PHASE 7: Optional Dev Tools"
     Invoke-Script -Path (Join-Path $WindowsScripts "33-optional-dev-goodies.ps1") `
         -Description "Sysinternals, mkcert, ripgrep, security tools, k8s CLIs"
+}
+
+# ============================================================================
+# PHASE 7.5: LINTERS & FORMATTERS
+# ============================================================================
+
+Write-Step "PHASE 7.5: Linters & Formatters"
+Write-Host "📋 Code Quality Tools" -ForegroundColor Yellow
+Write-Host "   Comprehensive linting and formatting for all languages" -ForegroundColor Yellow
+Write-Host "   (PSScriptAnalyzer, ruff, eslint, prettier, shellcheck, hadolint, etc.)`n" -ForegroundColor Yellow
+$installLinters = Read-Host "Install linters and formatters? (Y/N) [Default: Y]"
+if ([string]::IsNullOrWhiteSpace($installLinters)) { $installLinters = 'Y' }
+
+if ($installLinters -eq 'Y') {
+    Invoke-Script -Path (Join-Path $WindowsScripts "13-linters-formatters.ps1") `
+        -Description "Install comprehensive linting/formatting tools"
+} else {
+    Write-Host "   ⭐  Skipped linters/formatters installation" -ForegroundColor Yellow
 }
 
 # ============================================================================

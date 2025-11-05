@@ -1,7 +1,7 @@
 <#
 Run AFTER 00-pwsh-first.ps1, in pwsh (Admin).
 Installs (latest channels where possible): VS Code, Docker Desktop, WSL Ubuntu, Git+LFS+GH+GCM,
-fonts, Python 3.13, Node CURRENT, Go, Rustup, .NET 9 SDK, Java Temurin 25,
+fonts, Python 3.13 (with pipx), Node CURRENT, Go, Rustup, .NET 9 SDK, Java Temurin 25,
 Terraform, Packer, Vagrant, AWS/Azure/GCloud CLIs,
 mise (Kotlin, Gradle, Maven, ripgrep), VS Code extensions.
 #>
@@ -14,9 +14,9 @@ function Test-CommandExists {
 Write-Host "🐧 WSL Foundation"
 # Check if running in a VM (nested virtualization often unsupported)
 try {
-  $computerSystem = Get-WmiObject -Class Win32_ComputerSystem
-  if ($computerSystem.Model -match "Virtual|VMware|Parallels|VirtualBox|QEMU|Hyper-V") {
-    Write-Host "  ⚠️  VM detected ($($computerSystem.Model)) - WSL may not work with nested virtualization" -ForegroundColor Yellow
+  $vmInfo = Get-WmiObject -Class Win32_ComputerSystem
+  if ($vmInfo.Model -match "Virtual|VMware|Parallels|VirtualBox|QEMU|Hyper-V") {
+    Write-Host "  ⚠️  VM detected ($($vmInfo.Model)) - WSL may not work with nested virtualization" -ForegroundColor Yellow
     $installWSL = Read-Host "  Install WSL anyway? (Y/N) [Default: N]"
     if ([string]::IsNullOrWhiteSpace($installWSL)) { $installWSL = 'N' }
     if ($installWSL -ne 'Y') {
@@ -83,6 +83,16 @@ Write-Host "   Run .\scripts\windows\11-licensed-apps.ps1 separately if needed" 
 Write-Host "🌐 Runtimes (latest channels)"
 # Python latest (3.13 line)
 winget install Python.Python.3.13 --source winget --silent --accept-package-agreements --accept-source-agreements
+
+# Install pipx for isolated Python tool management
+Write-Host "  Installing pipx for Python CLI tools..."
+try {
+  python -m pip install --user pipx
+  python -m pipx ensurepath
+} catch {
+  Write-Warning "pipx installation failed - will retry after environment refresh"
+}
+
 # Node current (not LTS)
 winget install OpenJS.NodeJS --source winget -e --silent --accept-package-agreements --accept-source-agreements
 # Go + Rust + .NET (latest SDK channels)
@@ -148,9 +158,13 @@ Write-Host "🧩 VS Code extensions (abbrev)"
 foreach ($e in @(
   "EditorConfig.EditorConfig","streetsidesoftware.code-spell-checker","streetsidesoftware.code-spell-checker-australian-english",
   "eamodio.gitlens","ms-azuretools.vscode-docker","ms-vscode-remote.remote-wsl",
-  "ms-python.python","ms-python.vscode-pylance","rust-lang.rust-analyzer","golang.Go",
-  "ms-dotnettools.csharp","vscjava.vscode-java-pack","dbaeumer.vscode-eslint","esbenp.prettier-vscode",
-  "redhat.vscode-yaml","ms-vscode.powershell","yzhang.markdown-all-in-one","HashiCorp.terraform"
+  "ms-python.python","ms-python.vscode-pylance","charliermarsh.ruff",
+  "rust-lang.rust-analyzer","golang.Go",
+  "ms-dotnettools.csharp","vscjava.vscode-java-pack",
+  "dbaeumer.vscode-eslint","esbenp.prettier-vscode",
+  "redhat.vscode-yaml","DavidAnson.vscode-markdownlint",
+  "timonwong.shellcheck","exiasr.hadolint",
+  "ms-vscode.powershell","yzhang.markdown-all-in-one","HashiCorp.terraform"
 )) { try { code --install-extension $e --force | Out-Null } catch {} }
 
 Write-Host "✅ Windows bootstrap complete."

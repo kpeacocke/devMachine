@@ -31,14 +31,10 @@ if ($installK8s) {
     --source winget --silent --accept-source-agreements --accept-package-agreements
 }
 
-Write-Host "[SECURITY] Installing security hygiene tools via pipx/go..."
-try {
-  pipx install pre-commit --force
-  pipx install semgrep --force
-  pipx install detect-secrets --force
-  pipx install bandit --force
-} catch {}
+Write-Host "[SECURITY] Installing security hygiene tools..."
+Write-Host "  Note: pre-commit, semgrep, detect-secrets, bandit moved to 13-linters-formatters.ps1" -ForegroundColor Yellow
 if (Get-Command go -ErrorAction SilentlyContinue) {
+  Write-Host "  Installing gitleaks..."
   go install github.com/zricethezav/gitleaks/v8@latest
   $gobin = "$env:USERPROFILE\go\bin"
   if ($env:PATH -notlike "*$gobin*") { [Environment]::SetEnvironmentVariable('Path', $env:Path + ";$gobin", 'User') }
@@ -54,9 +50,8 @@ Write-Host "[CI/CD] Installing testing and CI/CD tools..."
 winget install nektos.act --source winget --silent --accept-source-agreements --accept-package-agreements
 try {
   npm install -g newman
-  pipx install pytest-cov --force
-  pipx install tox --force
-} catch { Write-Warning "Some npm/pipx tools failed to install" }
+  Write-Host "  Note: pytest, pytest-cov, tox moved to 13-linters-formatters.ps1" -ForegroundColor Yellow
+} catch { Write-Warning "newman installation failed" }
 
 Write-Host "[WINGET] Exporting installed packages and refreshing sources..."
 $export = Join-Path $env:USERPROFILE "Desktop\winget-installed.json"
