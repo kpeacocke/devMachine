@@ -2,9 +2,24 @@
 DNS Security & Advanced Firewall Configuration
 Configures DNS over HTTPS (DoH) and creates firewall rules for development tools.
 #>
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'  # Changed to Continue to handle existing configurations gracefully
+
+# Load unattended mode override if available
+if ($env:DEVMACHINE_UNATTENDED -eq "true" -and $env:DEVMACHINE_OVERRIDE_PATH -and (Test-Path $env:DEVMACHINE_OVERRIDE_PATH)) {
+    . $env:DEVMACHINE_OVERRIDE_PATH
+}
 
 Write-Host "[DNS] Configuring DNS over HTTPS (DoH)..."
+
+# Check if DNS over HTTPS is already configured
+$existingDohServers = Get-DnsClientDohServerAddress -ErrorAction SilentlyContinue
+if ($existingDohServers) {
+    Write-Host "  Existing DNS over HTTPS configuration found:" -ForegroundColor Yellow
+    $existingDohServers | ForEach-Object {
+        Write-Host "    $($_.ServerAddress) -> $($_.DohTemplate)" -ForegroundColor Gray
+    }
+    Write-Host "  Existing configuration will be replaced if you proceed." -ForegroundColor Yellow
+}
 
 # Prompt for DNS provider
 Write-Host "Select DNS over HTTPS provider:"
@@ -19,32 +34,65 @@ if ([string]::IsNullOrWhiteSpace($dnsChoice)) { $dnsChoice = '1' }
 switch ($dnsChoice) {
     '1' {
         Write-Host "  Configuring Cloudflare DNS over HTTPS..."
-        # Set DNS servers
-        Get-NetAdapter | Where-Object Status -eq 'Up' | ForEach-Object {
-            Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ServerAddresses ("1.1.1.1","1.0.0.1")
+        try {
+            # Set DNS servers
+            Get-NetAdapter | Where-Object Status -eq 'Up' | ForEach-Object {
+                Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ServerAddresses ("1.1.1.1","1.0.0.1")
+            }
+            # Check if DoH servers already exist, remove if needed
+            $existingDoh = Get-DnsClientDohServerAddress -ErrorAction SilentlyContinue | Where-Object { $_.ServerAddress -in @('1.1.1.1', '1.0.0.1') }
+            if ($existingDoh) {
+                Write-Host "  Removing existing Cloudflare DoH configuration..." -ForegroundColor Yellow
+                $existingDoh | Remove-DnsClientDohServerAddress -ErrorAction SilentlyContinue
+            }
+            # Enable DoH for Cloudflare
+            Add-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
+            Add-DnsClientDohServerAddress -ServerAddress '1.0.0.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
+            Write-Host "  ✅ Cloudflare DNS over HTTPS configured" -ForegroundColor Green
+        } catch {
+            Write-Warning "DNS configuration partially failed: $_"
+            Write-Host "  → DNS servers may already be configured" -ForegroundColor Yellow
         }
-        # Enable DoH for Cloudflare
-        Add-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
-        Add-DnsClientDohServerAddress -ServerAddress '1.0.0.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
-        Write-Host "  ✅ Cloudflare DNS over HTTPS configured" -ForegroundColor Green
     }
     '2' {
         Write-Host "  Configuring Google DNS over HTTPS..."
-        Get-NetAdapter | Where-Object Status -eq 'Up' | ForEach-Object {
-            Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ServerAddresses ("8.8.8.8","8.8.4.4")
+        try {
+            Get-NetAdapter | Where-Object Status -eq 'Up' | ForEach-Object {
+                Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ServerAddresses ("8.8.8.8","8.8.4.4")
+            }
+            # Check if DoH servers already exist, remove if needed
+            $existingDoh = Get-DnsClientDohServerAddress -ErrorAction SilentlyContinue | Where-Object { $_.ServerAddress -in @('8.8.8.8', '8.8.4.4') }
+            if ($existingDoh) {
+                Write-Host "  Removing existing Google DoH configuration..." -ForegroundColor Yellow
+                $existingDoh | Remove-DnsClientDohServerAddress -ErrorAction SilentlyContinue
+            }
+            Add-DnsClientDohServerAddress -ServerAddress '8.8.8.8' -DohTemplate 'https://dns.google/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
+            Add-DnsClientDohServerAddress -ServerAddress '8.8.4.4' -DohTemplate 'https://dns.google/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
+            Write-Host "  ✅ Google DNS over HTTPS configured" -ForegroundColor Green
+        } catch {
+            Write-Warning "DNS configuration partially failed: $_"
+            Write-Host "  → DNS servers may already be configured" -ForegroundColor Yellow
         }
-        Add-DnsClientDohServerAddress -ServerAddress '8.8.8.8' -DohTemplate 'https://dns.google/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
-        Add-DnsClientDohServerAddress -ServerAddress '8.8.4.4' -DohTemplate 'https://dns.google/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
-        Write-Host "  ✅ Google DNS over HTTPS configured" -ForegroundColor Green
     }
     '3' {
         Write-Host "  Configuring Quad9 DNS over HTTPS..."
-        Get-NetAdapter | Where-Object Status -eq 'Up' | ForEach-Object {
-            Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ServerAddresses ("9.9.9.9","149.112.112.112")
+        try {
+            Get-NetAdapter | Where-Object Status -eq 'Up' | ForEach-Object {
+                Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ServerAddresses ("9.9.9.9","149.112.112.112")
+            }
+            # Check if DoH servers already exist, remove if needed
+            $existingDoh = Get-DnsClientDohServerAddress -ErrorAction SilentlyContinue | Where-Object { $_.ServerAddress -in @('9.9.9.9', '149.112.112.112') }
+            if ($existingDoh) {
+                Write-Host "  Removing existing Quad9 DoH configuration..." -ForegroundColor Yellow
+                $existingDoh | Remove-DnsClientDohServerAddress -ErrorAction SilentlyContinue
+            }
+            Add-DnsClientDohServerAddress -ServerAddress '9.9.9.9' -DohTemplate 'https://dns.quad9.net/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
+            Add-DnsClientDohServerAddress -ServerAddress '149.112.112.112' -DohTemplate 'https://dns.quad9.net/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
+            Write-Host "  ✅ Quad9 DNS over HTTPS configured" -ForegroundColor Green
+        } catch {
+            Write-Warning "DNS configuration partially failed: $_"
+            Write-Host "  → DNS servers may already be configured" -ForegroundColor Yellow
         }
-        Add-DnsClientDohServerAddress -ServerAddress '9.9.9.9' -DohTemplate 'https://dns.quad9.net/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
-        Add-DnsClientDohServerAddress -ServerAddress '149.112.112.112' -DohTemplate 'https://dns.quad9.net/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
-        Write-Host "  ✅ Quad9 DNS over HTTPS configured" -ForegroundColor Green
     }
     default {
         Write-Host "  → Skipped DNS configuration" -ForegroundColor Yellow

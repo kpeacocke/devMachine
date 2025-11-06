@@ -37,12 +37,18 @@
 .PARAMETER DevDrivePath
     Path to Dev Drive for caches (default: D:\dev\caches)
 
-.EXAMPLE
-    .\setup-machine.ps1
-    Run full setup with defaults
+.PARAMETER SkipPrompts
+    Skip all interactive prompts and use default answers (for unattended installation)
+
+.PARAMETER AutoYes
+    Alias for SkipPrompts. Automatically answer "Y" to all prompts (-y)
 
 .PARAMETER SkipWSL
     Skip WSL/Ubuntu installation (use for VMs where nested virtualization isn't supported)
+
+.EXAMPLE
+    .\setup-machine.ps1
+    Run full setup with defaults
 
 .EXAMPLE
     .\setup-machine.ps1 -SkipInsiders -ScheduleDotNetMaintenance
@@ -51,6 +57,14 @@
 .EXAMPLE
     .\setup-machine.ps1 -SkipLicensedApps -SkipDevDrive -SkipBackup -SkipWSL
     Minimal VM setup: no licensed apps, dev drive, backup, or WSL
+
+.EXAMPLE
+    .\setup-machine.ps1 -y
+    Unattended installation - automatically answers "Y" to all prompts
+
+.EXAMPLE
+    .\setup-machine.ps1 -SkipPrompts -SkipLicensedApps
+    Unattended installation without licensed apps
 #>
 
 [CmdletBinding()]
@@ -64,6 +78,9 @@ param(
     [switch]$SkipWSL,
     [switch]$ScheduleDotNetMaintenance,
     [switch]$SetUltimatePerformance,
+    [switch]$SkipPrompts,
+    [Alias("y")]
+    [switch]$AutoYes,
     [string]$DevDrivePath = "D:\dev\caches"
 )
 
@@ -71,6 +88,51 @@ $ErrorActionPreference = 'Stop'
 $ScriptRoot = $PSScriptRoot
 $WindowsScripts = Join-Path $ScriptRoot "scripts\windows"
 $WSLScripts = Join-Path $ScriptRoot "scripts\wsl"
+
+# Set up unattended mode
+$UnattendedMode = $SkipPrompts -or $AutoYes
+if ($UnattendedMode) {
+    Write-Host "🤖 UNATTENDED MODE: All prompts will be automatically answered with 'Y'" -ForegroundColor Cyan
+    # Set global environment variable that child scripts can check
+    $env:DEVMACHINE_UNATTENDED = "true"
+    [Environment]::SetEnvironmentVariable("DEVMACHINE_UNATTENDED", "true", "Process")
+
+    # Create a PowerShell function override for Read-Host that child scripts can use
+    $readHostOverride = @'
+function Read-Host {
+    param(
+        [Parameter(Position=0)]
+        [string]$Prompt,
+        [switch]$AsSecureString
+    )
+
+    if ($env:DEVMACHINE_UNATTENDED -eq "true" -and -not $AsSecureString) {
+        # Extract default value from prompt if it exists
+        if ($Prompt -match '\[Default:\s*([^\]]+)\]') {
+            $defaultValue = $matches[1].Trim()
+            Write-Host "$Prompt" -NoNewline
+            Write-Host " $defaultValue" -ForegroundColor Yellow -NoNewline
+            Write-Host " (auto-answered)" -ForegroundColor Gray
+            return $defaultValue
+        } else {
+            # Default to 'Y' for yes/no prompts
+            Write-Host "$Prompt" -NoNewline
+            Write-Host " Y" -ForegroundColor Yellow -NoNewline
+            Write-Host " (auto-answered)" -ForegroundColor Gray
+            return 'Y'
+        }
+    } else {
+        # Call original Read-Host for secure strings or when not in unattended mode
+        Microsoft.PowerShell.Utility\Read-Host @PSBoundParameters
+    }
+}
+'@
+
+    # Save the override to a temp file that child processes can dot-source
+    $overridePath = Join-Path $env:TEMP "devmachine-unattended.ps1"
+    $readHostOverride | Out-File -FilePath $overridePath -Encoding UTF8
+    $env:DEVMACHINE_OVERRIDE_PATH = $overridePath
+}
 
 function Write-Step {
     param([string]$Message)
@@ -102,8 +164,13 @@ function Invoke-Script {
         Write-Host "✅ $Description - COMPLETED" -ForegroundColor Green
     } catch {
         Write-Error "❌ $Description - FAILED: $_"
-        $continue = Read-Host "Continue with remaining steps? (Y/N) [Default: Y]"
-        if ([string]::IsNullOrWhiteSpace($continue)) { $continue = 'Y' }
+        if ($UnattendedMode) {
+            Write-Host "🤖 Unattended mode: Continuing with remaining steps..." -ForegroundColor Yellow
+            $continue = 'Y'
+        } else {
+            $continue = Read-Host "Continue with remaining steps? (Y/N) [Default: Y]"
+            if ([string]::IsNullOrWhiteSpace($continue)) { $continue = 'Y' }
+        }
         if ($continue -ne 'Y') { exit 1 }
     }
 }
@@ -141,11 +208,16 @@ Write-Host "✅ Running with Administrator privileges`n" -ForegroundColor Green
 Write-Host "⏱️  Estimated time: 45-90 minutes (depending on download speeds)" -ForegroundColor Yellow
 Write-Host "📦 This will install ~30GB of software and tools`n" -ForegroundColor Yellow
 
-$confirm = Read-Host "Ready to begin? (Y/N) [Default: Y]"
-if ([string]::IsNullOrWhiteSpace($confirm)) { $confirm = 'Y' }
-if ($confirm -ne 'Y') {
-    Write-Host "Setup cancelled." -ForegroundColor Yellow
-    exit 0
+if ($UnattendedMode) {
+    Write-Host "🚀 Proceeding automatically in unattended mode..." -ForegroundColor Green
+    $confirm = 'Y'
+} else {
+    $confirm = Read-Host "Ready to begin? (Y/N) [Default: Y]"
+    if ([string]::IsNullOrWhiteSpace($confirm)) { $confirm = 'Y' }
+    if ($confirm -ne 'Y') {
+        Write-Host "Setup cancelled." -ForegroundColor Yellow
+        exit 0
+    }
 }
 
 # ============================================================================
@@ -162,7 +234,15 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
     $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
     if ($pwsh) {
         Write-Host "`n[OK] Relaunching in PowerShell 7..." -ForegroundColor Green
-        $params = $PSBoundParameters.GetEnumerator() | ForEach-Object { "-$($_.Key)" }
+        $params = @()
+        $PSBoundParameters.GetEnumerator() | ForEach-Object {
+            if ($_.Value -is [switch] -and $_.Value) {
+                $params += "-$($_.Key)"
+            } elseif ($_.Value -is [string] -and -not [string]::IsNullOrEmpty($_.Value)) {
+                $params += "-$($_.Key)"
+                $params += $_.Value
+            }
+        }
         $argList = @('-NoExit', '-File', $MyInvocation.MyCommand.Path) + $params
         Start-Process -FilePath $pwsh.Source -ArgumentList $argList -Verb RunAs
         exit 0
@@ -533,8 +613,14 @@ if (-not $SkipBackup) {
 if (-not $SkipInsiders) {
     Write-Host "⚠️  Windows Insider Program Setup" -ForegroundColor Yellow
     Write-Host "   This will configure Canary/Dev channels for Windows, Office, and VS Code" -ForegroundColor Yellow
-    $insider = Read-Host "   Enable Insider channels? (Y/N) [Default: N]"
-    if ([string]::IsNullOrWhiteSpace($insider)) { $insider = 'N' }
+
+    if ($UnattendedMode) {
+        Write-Host "🤖 Unattended mode: Skipping Insider channels (use -SkipInsiders to avoid this message)" -ForegroundColor Yellow
+        $insider = 'N'
+    } else {
+        $insider = Read-Host "   Enable Insider channels? (Y/N) [Default: N]"
+        if ([string]::IsNullOrWhiteSpace($insider)) { $insider = 'N' }
+    }
 
     if ($insider -eq 'Y') {
         Write-Step "PHASE 10: Insider Channels"
@@ -563,10 +649,16 @@ try {
         # Test if Ubuntu has been initialized
         wsl -d Ubuntu -e whoami 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "⚠️  Ubuntu needs first-time setup (create username/password)" -ForegroundColor Yellow
-            Write-Host "   Opening Ubuntu... complete the setup, then close it and press Enter here`n" -ForegroundColor Yellow
-            Start-Process wsl -ArgumentList "-d Ubuntu"
-            Read-Host "Press Enter after Ubuntu setup is complete"
+            if ($UnattendedMode) {
+                Write-Host "⚠️  Ubuntu needs first-time setup but running in unattended mode" -ForegroundColor Yellow
+                Write-Host "   Skipping Ubuntu setup - run 'wsl -d Ubuntu' manually to complete setup" -ForegroundColor Yellow
+                return
+            } else {
+                Write-Host "⚠️  Ubuntu needs first-time setup (create username/password)" -ForegroundColor Yellow
+                Write-Host "   Opening Ubuntu... complete the setup, then close it and press Enter here`n" -ForegroundColor Yellow
+                Start-Process wsl -ArgumentList "-d Ubuntu"
+                Read-Host "Press Enter after Ubuntu setup is complete"
+            }
         }
 
         Write-Step "PHASE 11: Ubuntu Bootstrap"
@@ -602,6 +694,81 @@ try {
 }
 
 # ============================================================================
+# PATH OPTIMIZATION & CLEANUP
+# ============================================================================
+
+Write-Step "PATH Optimization & Environment Cleanup"
+
+Write-Host "🔧 Optimizing PATH environment for user: $env:USERNAME" -ForegroundColor Cyan
+
+# Get current user and machine PATH
+$machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+
+Write-Host "  Current user PATH entries: $($userPath.Split(';').Count)" -ForegroundColor Gray
+Write-Host "  Current machine PATH entries: $($machinePath.Split(';').Count)" -ForegroundColor Gray
+
+# Essential paths that should be in user PATH
+$essentialUserPaths = @(
+    "$env:USERPROFILE\.local\bin",                    # pipx, Python user scripts
+    "$env:USERPROFILE\go\bin",                        # Go binaries
+    "$env:USERPROFILE\.cargo\bin",                    # Rust/cargo binaries
+    "$env:USERPROFILE\.dotnet\tools",                 # .NET global tools
+    "$env:USERPROFILE\AppData\Roaming\npm",           # npm global packages
+    "$env:USERPROFILE\AppData\Local\Programs\Microsoft VS Code\bin"  # VS Code CLI
+)
+
+# Check and add missing essential paths
+$pathsAdded = 0
+$currentUserPaths = $userPath.Split(';') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
+
+foreach ($essentialPath in $essentialUserPaths) {
+    if (Test-Path $essentialPath) {
+        $pathExists = $currentUserPaths | Where-Object { $_ -eq $essentialPath }
+        if (-not $pathExists) {
+            Write-Host "  ➕ Adding to user PATH: $essentialPath" -ForegroundColor Green
+            $userPath = "$userPath;$essentialPath"
+            $pathsAdded++
+        } else {
+            Write-Host "  ✅ Already in PATH: $essentialPath" -ForegroundColor Gray
+        }
+    } else {
+        Write-Host "  ⚠️  Path not found (skipping): $essentialPath" -ForegroundColor Yellow
+    }
+}
+
+# Remove duplicate and empty entries
+$cleanUserPaths = $userPath.Split(';') |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -ne "" } |
+    Select-Object -Unique
+
+$cleanUserPath = $cleanUserPaths -join ";"
+
+# Update user PATH if changes were made
+if ($pathsAdded -gt 0 -or $cleanUserPath -ne $userPath) {
+    Write-Host "  🔄 Updating user PATH environment variable..." -ForegroundColor Cyan
+    [Environment]::SetEnvironmentVariable("Path", $cleanUserPath, "User")
+    Write-Host "  ✅ Added $pathsAdded new paths, removed duplicates" -ForegroundColor Green
+} else {
+    Write-Host "  ✅ User PATH is already optimized" -ForegroundColor Green
+}
+
+# Set current session PATH for immediate use
+$env:Path = $machinePath + ";" + $cleanUserPath
+Write-Host "  ✅ Current session PATH updated" -ForegroundColor Green
+
+# Clean up temporary unattended mode files
+if ($UnattendedMode -and $env:DEVMACHINE_OVERRIDE_PATH -and (Test-Path $env:DEVMACHINE_OVERRIDE_PATH)) {
+    Remove-Item $env:DEVMACHINE_OVERRIDE_PATH -Force -ErrorAction SilentlyContinue
+    Remove-Item Env:DEVMACHINE_OVERRIDE_PATH -ErrorAction SilentlyContinue
+    Remove-Item Env:DEVMACHINE_UNATTENDED -ErrorAction SilentlyContinue
+    Write-Host "  🧹 Cleaned up unattended mode artifacts" -ForegroundColor Gray
+}
+
+Write-Host "  Final user PATH entries: $($cleanUserPaths.Count)" -ForegroundColor Green
+
+# ============================================================================
 # FINAL STEPS & VERIFICATION
 # ============================================================================
 
@@ -628,8 +795,14 @@ Write-Host "   - Credential Guard" -ForegroundColor Yellow
 Write-Host "   - LSA Protection (RunAsPPL)" -ForegroundColor Yellow
 Write-Host "   - Core Isolation (HVCI)" -ForegroundColor Yellow
 
-$reboot = Read-Host "`nReboot now? (Y/N) [Default: N]"
-if ([string]::IsNullOrWhiteSpace($reboot)) { $reboot = 'N' }
+if ($UnattendedMode) {
+    Write-Host "🤖 Unattended mode: Skipping reboot (remember to reboot manually)" -ForegroundColor Yellow
+    $reboot = 'N'
+} else {
+    $reboot = Read-Host "`nReboot now? (Y/N) [Default: N]"
+    if ([string]::IsNullOrWhiteSpace($reboot)) { $reboot = 'N' }
+}
+
 if ($reboot -eq 'Y') {
     Write-Host "Rebooting in 10 seconds..." -ForegroundColor Green
     Start-Sleep -Seconds 10

@@ -9,18 +9,66 @@ Write-Host "[LINTERS] Installing linters and formatters for all languages..."
 # ============================================================================
 # POWERSHELL
 # ============================================================================
-Write-Host "`n📘 PowerShell Linting"
+Write-Host "📘 PowerShell Linting"
 try {
-  Install-Module -Name PSScriptAnalyzer -Scope AllUsers -Force -Confirm:$false
+  # Try AllUsers first, fallback to CurrentUser if not admin
+  Install-Module -Name PSScriptAnalyzer -Scope AllUsers -Force -Confirm:$false -ErrorAction Stop
   Write-Host "  ✅ PSScriptAnalyzer installed" -ForegroundColor Green
 } catch {
-  Write-Warning "PSScriptAnalyzer installation failed: $_"
+  try {
+    Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -Confirm:$false
+    Write-Host "  ✅ PSScriptAnalyzer installed (current user)" -ForegroundColor Green
+  } catch {
+    Write-Warning "PSScriptAnalyzer installation failed: $_"
+  }
 }
 
 # ============================================================================
 # PYTHON
 # ============================================================================
-Write-Host "`n🐍 Python Linting & Formatting"
+Write-Host "🐍 Python Linting & Formatting"
+
+# Find pipx executable - could be global, in venv, or need installation
+$pipxCmd = $null
+$possiblePipxPaths = @(
+  "pipx",                                           # Global PATH
+  "$env:USERPROFILE\.local\bin\pipx.exe",          # Standard user install
+  "$PWD\.venv\Scripts\pipx.exe",                   # Local venv
+  "$env:USERPROFILE\AppData\Roaming\Python\Python*\Scripts\pipx.exe"  # Python user scripts
+)
+
+foreach ($path in $possiblePipxPaths) {
+  if ($path -like "*`**") {
+    # Handle wildcard paths
+    $resolved = Get-ChildItem $path -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+    if ($resolved -and (Test-Path $resolved)) {
+      $pipxCmd = $resolved
+      break
+    }
+  } elseif (Get-Command $path -ErrorAction SilentlyContinue) {
+    $pipxCmd = $path
+    break
+  }
+}
+
+if (-not $pipxCmd) {
+  Write-Host "  Installing pipx first..." -ForegroundColor Yellow
+  try {
+    python -m pip install --user --upgrade pipx
+    python -m pipx ensurepath
+    # Try to find pipx again after installation
+    foreach ($path in $possiblePipxPaths) {
+      if (Get-Command $path -ErrorAction SilentlyContinue) {
+        $pipxCmd = $path
+        break
+      }
+    }
+  } catch {
+    Write-Warning "Failed to install pipx. Will use pip instead for Python tools."
+    $pipxCmd = $null
+  }
+}
+
 $pythonTools = @(
   "ruff",           # Modern all-in-one linter/formatter (replaces flake8, black, isort, etc.)
   "black",          # Code formatter
@@ -35,7 +83,12 @@ $pythonTools = @(
 foreach ($tool in $pythonTools) {
   try {
     Write-Host "  Installing $tool..." -NoNewline
-    pipx install $tool --force 2>&1 | Out-Null
+    if ($pipxCmd) {
+      & $pipxCmd install $tool --force 2>&1 | Out-Null
+    } else {
+      # Fallback to pip install --user if pipx is not available
+      python -m pip install --user --upgrade $tool 2>&1 | Out-Null
+    }
     Write-Host " ✅" -ForegroundColor Green
   } catch {
     Write-Warning "  $tool installation failed"
@@ -45,7 +98,7 @@ foreach ($tool in $pythonTools) {
 # ============================================================================
 # JAVASCRIPT / TYPESCRIPT / NODE
 # ============================================================================
-Write-Host "`n📦 JavaScript/TypeScript Linting & Formatting"
+Write-Host "📦 JavaScript/TypeScript Linting & Formatting"
 $npmTools = @(
   "eslint",
   "prettier",
@@ -70,7 +123,7 @@ foreach ($tool in $npmTools) {
 # ============================================================================
 # GO
 # ============================================================================
-Write-Host "`n🔵 Go Linting"
+Write-Host "🔵 Go Linting"
 if (Get-Command go -ErrorAction SilentlyContinue) {
   try {
     Write-Host "  Installing golangci-lint..." -NoNewline
@@ -90,7 +143,7 @@ if (Get-Command go -ErrorAction SilentlyContinue) {
 # ============================================================================
 # RUST
 # ============================================================================
-Write-Host "`n🦀 Rust Linting & Security"
+Write-Host "🦀 Rust Linting & Security"
 if (Get-Command cargo -ErrorAction SilentlyContinue) {
   try {
     Write-Host "  Ensuring clippy is installed..." -NoNewline
@@ -114,7 +167,7 @@ if (Get-Command cargo -ErrorAction SilentlyContinue) {
 # ============================================================================
 # SHELL / BASH
 # ============================================================================
-Write-Host "`n🐚 Shell Script Linting"
+Write-Host "🐚 Shell Script Linting"
 try {
   Write-Host "  Installing shellcheck..."
   winget install koalaman.shellcheck --source winget --silent --accept-package-agreements --accept-source-agreements
@@ -126,7 +179,7 @@ try {
 # ============================================================================
 # DOCKER / YAML / MISC
 # ============================================================================
-Write-Host "`n🐳 Docker, YAML, and Config Linting"
+Write-Host "🐳 Docker, YAML, and Config Linting"
 
 # Hadolint (Dockerfile linter)
 try {
@@ -140,7 +193,11 @@ try {
 # yamllint
 try {
   Write-Host "  Installing yamllint..." -NoNewline
-  pipx install yamllint --force 2>&1 | Out-Null
+  if ($pipxCmd) {
+    & $pipxCmd install yamllint --force 2>&1 | Out-Null
+  } else {
+    python -m pip install --user --upgrade yamllint 2>&1 | Out-Null
+  }
   Write-Host " ✅" -ForegroundColor Green
 } catch {
   Write-Warning "  yamllint installation failed"
@@ -160,7 +217,7 @@ if (Get-Command go -ErrorAction SilentlyContinue) {
 # ============================================================================
 # JSON / TOML / EDITORCONFIG
 # ============================================================================
-Write-Host "`n📄 Config File Linting"
+Write-Host "📄 Config File Linting"
 try {
   Write-Host "  Installing jsonlint..." -NoNewline
   npm install -g jsonlint 2>&1 | Out-Null
@@ -176,7 +233,7 @@ try {
 # ============================================================================
 # SECURITY / PRE-COMMIT
 # ============================================================================
-Write-Host "`n🔒 Security and Git Hooks"
+Write-Host "🔒 Security and Git Hooks"
 $securityTools = @(
   "pre-commit",      # Git hook framework
   "detect-secrets",  # Prevent secrets in commits
@@ -186,7 +243,11 @@ $securityTools = @(
 foreach ($tool in $securityTools) {
   try {
     Write-Host "  Installing $tool..." -NoNewline
-    pipx install $tool --force 2>&1 | Out-Null
+    if ($pipxCmd) {
+      & $pipxCmd install $tool --force 2>&1 | Out-Null
+    } else {
+      python -m pip install --user --upgrade $tool 2>&1 | Out-Null
+    }
     Write-Host " ✅" -ForegroundColor Green
   } catch {
     Write-Warning "  $tool installation failed"
@@ -196,7 +257,7 @@ foreach ($tool in $securityTools) {
 # ============================================================================
 # PATH REFRESH
 # ============================================================================
-Write-Host "`n♻️ Refreshing PATH environment..."
+Write-Host "♻️ Refreshing PATH environment..."
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + `
             [System.Environment]::GetEnvironmentVariable("Path","User")
 
@@ -214,7 +275,7 @@ if ((Test-Path $pipxbin) -and ($env:PATH -notlike "*$pipxbin*")) {
   Write-Host "  Added pipx bin to PATH" -ForegroundColor Yellow
 }
 
-Write-Host "`n[OK] Linters and formatters installed!" -ForegroundColor Green
+Write-Host "[OK] Linters and formatters installed!" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 Write-Host "✅ PowerShell:  PSScriptAnalyzer" -ForegroundColor Green
 Write-Host "✅ Python:      ruff, black, mypy, pylint, bandit, pytest" -ForegroundColor Green
@@ -225,6 +286,6 @@ Write-Host "✅ Shell:       shellcheck" -ForegroundColor Green
 Write-Host "✅ Docker:      hadolint" -ForegroundColor Green
 Write-Host "✅ YAML:        yamllint" -ForegroundColor Green
 Write-Host "✅ GitHub:      actionlint" -ForegroundColor Green
-Write-Host "✅ Security:    pre-commit, detect-secrets, semgrep, gitleaks" -ForegroundColor Green
+Write-Host "✅ Security:    pre-commit, detect-secrets, semgrep" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-Write-Host "`n💡 Restart your terminal to ensure all tools are in PATH" -ForegroundColor Yellow
+Write-Host "💡 Restart your terminal to ensure all tools are in PATH" -ForegroundColor Yellow

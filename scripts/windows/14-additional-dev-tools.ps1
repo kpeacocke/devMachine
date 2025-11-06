@@ -52,4 +52,4 @@ Write-Host "✅ Screen Recording: OBS Studio" -ForegroundColor Green
 Write-Host "✅ 3D & Game Dev:    Blender, Godot Engine" -ForegroundColor Green
 Write-Host "✅ Utilities:        PowerToys, QuickLook" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-Write-Host "`n💡 NOTE: Paid tools (Typora) available in 11-licensed-apps.ps1" -ForegroundColor Yellow
+Write-Host "💡 NOTE: Paid tools (Typora) available in 11-licensed-apps.ps1" -ForegroundColor Yellow

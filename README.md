@@ -29,11 +29,18 @@ All releases include SHA256 checksums for verification.
 Set-ExecutionPolicy Bypass -Scope Process -Force; $release = (irm https://api.github.com/repos/kpeacocke/devMachine/releases/latest); $asset = $release.assets | Where-Object { $_.name -like '*complete*.zip' } | Select-Object -First 1; irm $asset.browser_download_url -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1"
 ```
 
-**For VMs (skip licensed apps, Dev Drive, and backup):**
+**Fully unattended installation (no prompts, uses defaults):**
 
 ```powershell
 # Open PowerShell as Administrator, then:
-Set-ExecutionPolicy Bypass -Scope Process -Force; $release = (irm https://api.github.com/repos/kpeacocke/devMachine/releases/latest); $asset = $release.assets | Where-Object { $_.name -like '*complete*.zip' } | Select-Object -First 1; irm $asset.browser_download_url -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1" -SkipLicensedApps -SkipDevDrive -SkipBackup
+Set-ExecutionPolicy Bypass -Scope Process -Force; $release = (irm https://api.github.com/repos/kpeacocke/devMachine/releases/latest); $asset = $release.assets | Where-Object { $_.name -like '*complete*.zip' } | Select-Object -First 1; irm $asset.browser_download_url -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1" -y
+```
+
+**For VMs (unattended, skip licensed apps, Dev Drive, and backup):**
+
+```powershell
+# Open PowerShell as Administrator, then:
+Set-ExecutionPolicy Bypass -Scope Process -Force; $release = (irm https://api.github.com/repos/kpeacocke/devMachine/releases/latest); $asset = $release.assets | Where-Object { $_.name -like '*complete*.zip' } | Select-Object -First 1; irm $asset.browser_download_url -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1" -y -SkipLicensedApps -SkipDevDrive -SkipBackup -SkipWSL
 ```
 
 ### Manual Download
@@ -70,14 +77,55 @@ This orchestrator will:
 hardened environment with firewall enabled and legacy protocols disabled from the start. Advanced security features
 requiring reboots (BitLocker, Credential Guard) apply after apps are installed.
 
+### Unattended Mode
+
+The setup orchestrator supports fully unattended installation for automation scenarios:
+
+```powershell
+# Use -y for unattended mode (like Linux package managers)
+.\setup-machine.ps1 -y
+
+# Or use the full parameter name
+.\setup-machine.ps1 -SkipPrompts
+```
+
+**How it works:**
+
+* Automatically answers "Y" to confirmation prompts  
+* Uses default values from prompts (e.g., `[Default: 1]` → chooses "1")
+* Shows what was auto-answered for transparency
+* Continues on errors without prompting
+* Perfect for CI/CD, deployment scripts, or VM provisioning
+
+**Examples:**
+
+```powershell
+# Full unattended setup
+.\setup-machine.ps1 -y
+
+# Unattended minimal VM setup  
+.\setup-machine.ps1 -y -SkipLicensedApps -SkipDevDrive -SkipBackup -SkipWSL
+
+# Unattended with custom options
+.\setup-machine.ps1 -SkipPrompts -ScheduleDotNetMaintenance -SetUltimatePerformance
+```
+
 ### Options
 
 ```powershell
+# Unattended installation (auto-answer all prompts with defaults)
+.\setup-machine.ps1 -y
+# or
+.\setup-machine.ps1 -SkipPrompts
+
 # Skip optional components
 .\setup-machine.ps1 -SkipBackup -SkipOptionalGoodies -SkipInsiders
 
 # For VMs (skip licensed apps and Dev Drive optimizations)
 .\setup-machine.ps1 -SkipLicensedApps -SkipDevDrive -SkipBackup
+
+# Unattended VM setup (no prompts, minimal components)
+.\setup-machine.ps1 -y -SkipLicensedApps -SkipDevDrive -SkipBackup -SkipWSL
 
 # Enable .NET weekly maintenance task
 .\setup-machine.ps1 -ScheduleDotNetMaintenance
@@ -659,6 +707,19 @@ $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Env
 
 # Verify specific tool
 Get-Command <tool-name>
+```
+
+### Unattended Mode Not Working
+
+If child scripts still prompt in unattended mode:
+
+```powershell
+# Check environment variable is set
+$env:DEVMACHINE_UNATTENDED
+
+# Manually run problematic script with override
+$env:DEVMACHINE_UNATTENDED = "true"
+.\scripts\windows\<script-name>.ps1
 ```
 
 Happy building!
