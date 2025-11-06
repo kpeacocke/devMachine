@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/kpeacocke/devMachine/compare/v1.0.2...v1.1.0) (2025-11-06)
+
+### 🚀 Features
+
+* Add scripts for Windows Terminal configuration, privacy hardening, DNS security, and service optimization ([8e7811c](https://github.com/kpeacocke/devMachine/commit/8e7811c4c18a4fda99e9aa95abf3c30cbb480698))
+* **setup:** add optional phase for social media and streaming app installation ([da6214c](https://github.com/kpeacocke/devMachine/commit/da6214c2ba9875d51e5907567154919e3433f9c2))
+* **setup:** add optional Windows debloat phase to setup script and create debloat script ([0a2d4fe](https://github.com/kpeacocke/devMachine/commit/0a2d4fe27f096957d211dcc86478a0be471a422e))
+* **setup:** add script for installing social media and streaming apps from Microsoft Store ([046f81b](https://github.com/kpeacocke/devMachine/commit/046f81bdd92c1bde63afe9fc3446664af78f2c00))
+* **setup:** update README and scripts for Pester 5 installation and licensed apps management ([20e9597](https://github.com/kpeacocke/devMachine/commit/20e9597080f5081b2abca3424053d7a3fec33e5d))
+* **setup:** update setup order and scripts for Windows debloat, Git configuration, and media installations ([9433873](https://github.com/kpeacocke/devMachine/commit/94338733574d352ef1a4e124f96a2f22d2ac68d4))
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## [1.0.2](https://github.com/kpeacocke/devMachine/compare/v1.0.1...v1.0.2) (2025-11-05)
 
 ### 📚 Documentation
