@@ -278,6 +278,23 @@ if (-not $SkipCommunicationsMedia) {
 }
 
 # ============================================================================
+# PHASE 2.65: SOCIAL MEDIA & STREAMING (OPTIONAL)
+# ============================================================================
+
+Write-Host "`n📱 Social Media & Streaming Services" -ForegroundColor Yellow
+Write-Host "   Facebook, LinkedIn, X, Reddit, Apple Music/TV, Netflix, Disney+, AU TV apps, etc.`n" -ForegroundColor Yellow
+$installSocialStreaming = Read-Host "Install social media & streaming apps? (Y/N) [Default: N]"
+if ([string]::IsNullOrWhiteSpace($installSocialStreaming)) { $installSocialStreaming = 'N' }
+
+if ($installSocialStreaming -eq 'Y') {
+    Write-Step "PHASE 2.65: Social Media & Streaming"
+    Invoke-Script -Path (Join-Path $WindowsScripts "16-social-streaming.ps1") `
+        -Description "Install Facebook, LinkedIn, X, Reddit, Netflix, Disney+, AU TV apps, Plex"
+} else {
+    Write-Host "   ⭐  Skipped social media & streaming installation" -ForegroundColor Yellow
+}
+
+# ============================================================================
 # PHASE 2.7: WINDOWS TERMINAL CONFIGURATION
 # ============================================================================
 
