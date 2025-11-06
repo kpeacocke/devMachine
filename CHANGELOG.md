@@ -10,6 +10,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [Conventional Commits](https://www.conventionalcommits.org/).
 > See [COMMIT_CONVENTION.md](.github/COMMIT_CONVENTION.md) for commit message guidelines.
 
+## [1.5.0](https://github.com/kpeacocke/devMachine/compare/v1.4.0...v1.5.0) (2025-11-06)
+
+
+### 🚀 Features
+
+* **partition:** improve C: drive shrinking logic and handle unallocated space creation ([959124d](https://github.com/kpeacocke/devMachine/commit/959124d1f05a02ac8d36ad52067a500c630d747f))
+* **setup:** add InstallEverything parameter for complete unattended installation ([4b92500](https://github.com/kpeacocke/devMachine/commit/4b925006b89a474c294530b92fb71c9bfc6a7dfe))
+
+
+### 🐛 Bug Fixes
+
+* **apps:** remove unnecessary blank line before fallback installation for Malwarebytes ([b6102da](https://github.com/kpeacocke/devMachine/commit/b6102da8417888b0eb5f1db1d60ed1926d6137f4))
+
+
+### 📚 Documentation
+
+* **readme:** enhance unattended installation instructions and clarify default behaviors ([24b005a](https://github.com/kpeacocke/devMachine/commit/24b005a22394c6302e3194362d81fa51d010a8be))
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+> **Note**: From v1.1.0 onwards, this changelog is automatically generated using
+> [semantic-release](https://semantic-release.gitbook.io/) based on
+> [Conventional Commits](https://www.conventionalcommits.org/).
+> See [COMMIT_CONVENTION.md](.github/COMMIT_CONVENTION.md) for commit message guidelines.
+
 ## [1.4.0](https://github.com/kpeacocke/devMachine/compare/v1.3.0...v1.4.0) (2025-11-06)
 
 ### 🚀 Features
