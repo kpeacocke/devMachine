@@ -39,9 +39,31 @@ try {
 
 Write-Host "Malwarebytes..."
 try {
+  # Try winget first
   winget install Malwarebytes.Malwarebytes --source winget --silent --accept-source-agreements --accept-package-agreements
+  Write-Host "  ✅ Malwarebytes installed via winget" -ForegroundColor Green
 } catch {
-  Write-Warning "Malwarebytes failed - install manually"
+  Write-Warning "Winget installation failed (Error 200 common). Trying alternative sources..."
+
+  # Try msstore source as fallback
+  try {
+    winget install 9P0R8S0LZJX7 --source msstore --accept-package-agreements --accept-source-agreements
+    Write-Host "  ✅ Malwarebytes installed via Microsoft Store" -ForegroundColor Green
+  } catch {
+    # Try chocolatey as final fallback
+    if (Get-Command choco -ErrorAction SilentlyContinue) {
+      try {
+        choco install malwarebytes -y
+        Write-Host "  ✅ Malwarebytes installed via Chocolatey" -ForegroundColor Green
+      } catch {
+        Write-Warning "All installation methods failed. Please install manually from malwarebytes.com"
+        Write-Host "  💡 Manual install: Download from https://www.malwarebytes.com/mwb-download" -ForegroundColor Yellow
+      }
+    } else {
+      Write-Warning "Malwarebytes installation failed. Install manually from malwarebytes.com"
+      Write-Host "  💡 Manual install: Download from https://www.malwarebytes.com/mwb-download" -ForegroundColor Yellow
+    }
+  }
 }
 
 Write-Host "GlassWire..."

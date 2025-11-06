@@ -1,6 +1,6 @@
 <#
 Run optionally for communications and media applications.
-Installs: Chrome, Firefox, Teams, WhatsApp, Signal, Slack, Discord, VLC, HandBrake (GUI + CLI), K-Lite Mega Codec Pack
+Installs: Chrome, Firefox, Teams, WhatsApp, Signal, Slack, Discord, Zoom, Google Meet, VLC, HandBrake (GUI + CLI), K-Lite Mega Codec Pack
 #>
 $ErrorActionPreference = 'Stop'
 
@@ -37,6 +37,17 @@ winget install SlackTechnologies.Slack --source winget --silent --accept-package
 Write-Host "  Installing Discord..."
 winget install Discord.Discord --source winget --silent --accept-package-agreements --accept-source-agreements
 
+Write-Host "  Installing Zoom..."
+winget install Zoom.Zoom --source winget --silent --accept-package-agreements --accept-source-agreements
+
+Write-Host "  Installing Google Meet (PWA)..."
+try {
+  winget install Google.Meet --source winget --silent --accept-package-agreements --accept-source-agreements
+  Write-Host "  ✅ Google Meet installed" -ForegroundColor Green
+} catch {
+  Write-Warning "Google Meet PWA not available via winget - use Chrome/Edge to install as PWA from meet.google.com"
+}
+
 Write-Host "`n🎬 Media Applications"
 Write-Host "  Installing VLC media player..."
 winget install VideoLAN.VLC --source winget --silent --accept-package-agreements --accept-source-agreements
@@ -51,4 +62,4 @@ Write-Host "  Installing K-Lite Mega Codec Pack..."
 winget install CodecGuide.K-LiteCodecPack.Mega --source winget --silent --accept-package-agreements --accept-source-agreements
 
 Write-Host "`n[OK] Communications & Media complete."
-Write-Host "Installed: Chrome, Firefox, Teams, WhatsApp, Signal, Slack, Discord, VLC, HandBrake (GUI + CLI), K-Lite Mega" -ForegroundColor Green
+Write-Host "Installed: Chrome, Firefox, Teams, WhatsApp, Signal, Slack, Discord, Zoom, Google Meet, VLC, HandBrake (GUI + CLI), K-Lite Mega" -ForegroundColor Green
