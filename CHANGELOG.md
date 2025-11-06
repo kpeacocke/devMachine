@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/kpeacocke/devMachine/compare/v1.6.0...v1.6.1) (2025-11-06)
+
+
+### 🐛 Bug Fixes
+
+* update privacy and services scripts to leave location services enabled for user convenience ([44c4328](https://github.com/kpeacocke/devMachine/commit/44c4328621a551d3263a61ed2781a66721ca458b))
+
 ## [1.6.0](https://github.com/kpeacocke/devMachine/compare/v1.5.0...v1.6.0) (2025-11-06)
 
 
