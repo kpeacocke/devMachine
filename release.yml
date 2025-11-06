@@ -126,6 +126,43 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
+      - name: Clean up CHANGELOG duplicates
+        run: |
+          python3 << 'EOF'
+          import re
+          from pathlib import Path
+
+          changelog = Path('CHANGELOG.md')
+          if not changelog.exists():
+              exit(0)
+
+          content = changelog.read_text(encoding='utf-8')
+
+          # Split by main header
+          parts = content.split('# Changelog')
+
+          if len(parts) <= 2:
+              # No duplicates
+              exit(0)
+
+          # Keep only the first occurrence (the one semantic-release maintains)
+          # First part is before first header (empty), second is the good content
+          clean_content = '# Changelog' + parts[1]
+
+          # Write back
+          changelog.write_text(clean_content, encoding='utf-8')
+          print("Cleaned up CHANGELOG duplicates")
+          EOF
+
+          # Commit if changes were made
+          if ! git diff --quiet CHANGELOG.md; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add CHANGELOG.md
+            git commit -m "chore: clean up CHANGELOG duplicates [skip ci]"
+            git push
+          fi
+
       - name: Get latest tag
         id: get_tag
         run: |
@@ -150,20 +187,20 @@ jobs:
         run: |
           mkdir -p release-artifacts
           TAG=${{ steps.get_tag.outputs.tag }}
-          
+
           # Create Windows scripts archive
           zip -r release-artifacts/devMachine-windows-scripts-${TAG}.zip \
             scripts/windows/*.ps1 \
             setup-machine.ps1 \
             README.md \
             LICENSE
-          
+
           # Create WSL scripts archive
           zip -r release-artifacts/devMachine-wsl-scripts-${TAG}.zip \
             scripts/wsl/*.sh \
             README.md \
             LICENSE
-          
+
           # Create complete archive
           zip -r release-artifacts/devMachine-complete-${TAG}.zip \
             scripts/ \
