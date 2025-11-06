@@ -12,17 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.5.0](https://github.com/kpeacocke/devMachine/compare/v1.4.0...v1.5.0) (2025-11-06)
 
-
 ### 🚀 Features
 
 * **partition:** improve C: drive shrinking logic and handle unallocated space creation ([959124d](https://github.com/kpeacocke/devMachine/commit/959124d1f05a02ac8d36ad52067a500c630d747f))
 * **setup:** add InstallEverything parameter for complete unattended installation ([4b92500](https://github.com/kpeacocke/devMachine/commit/4b925006b89a474c294530b92fb71c9bfc6a7dfe))
 
-
 ### 🐛 Bug Fixes
 
 * **apps:** remove unnecessary blank line before fallback installation for Malwarebytes ([b6102da](https://github.com/kpeacocke/devMachine/commit/b6102da8417888b0eb5f1db1d60ed1926d6137f4))
-
 
 ### 📚 Documentation
 
