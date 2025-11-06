@@ -29,19 +29,33 @@ All releases include SHA256 checksums for verification.
 Set-ExecutionPolicy Bypass -Scope Process -Force; $release = (irm https://api.github.com/repos/kpeacocke/devMachine/releases/latest); $asset = $release.assets | Where-Object { $_.name -like '*complete*.zip' } | Select-Object -First 1; irm $asset.browser_download_url -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1"
 ```
 
-**Fully unattended installation (no prompts, uses defaults):**
+**🚀 Complete Unattended Installation (Everything):**
 
 ```powershell
 # Open PowerShell as Administrator, then:
 Set-ExecutionPolicy Bypass -Scope Process -Force; $release = (irm https://api.github.com/repos/kpeacocke/devMachine/releases/latest); $asset = $release.assets | Where-Object { $_.name -like '*complete*.zip' } | Select-Object -First 1; irm $asset.browser_download_url -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1" -y
 ```
 
-**For VMs (unattended, skip licensed apps, Dev Drive, and backup):**
+⚠️ **Important**: This prompts for licensed apps, communications, and social media apps due to their
+default "NO" settings. For truly unattended "everything" install, see the Examples section below.
+
+**💻 Standard Unattended (Core Development):**
+
+```powershell
+# Open PowerShell as Administrator, then:
+Set-ExecutionPolicy Bypass -Scope Process -Force; $release = (irm https://api.github.com/repos/kpeacocke/devMachine/releases/latest); $asset = $release.assets | Where-Object { $_.name -like '*complete*.zip' } | Select-Object -First 1; irm $asset.browser_download_url -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1" -y
+```
+
+This installs core development tools with smart defaults (skips licensed/optional apps).
+
+**🏠 VM/Testing Setup (Minimal):**
 
 ```powershell
 # Open PowerShell as Administrator, then:
 Set-ExecutionPolicy Bypass -Scope Process -Force; $release = (irm https://api.github.com/repos/kpeacocke/devMachine/releases/latest); $asset = $release.assets | Where-Object { $_.name -like '*complete*.zip' } | Select-Object -First 1; irm $asset.browser_download_url -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1" -y -SkipLicensedApps -SkipDevDrive -SkipBackup -SkipWSL
 ```
+
+This skips expensive/VM-unfriendly components (licensed apps, disk partitioning, backup, WSL).
 
 ### Manual Download
 
@@ -91,11 +105,31 @@ The setup orchestrator supports fully unattended installation for automation sce
 
 **How it works:**
 
-* Automatically answers "Y" to confirmation prompts  
-* Uses default values from prompts (e.g., `[Default: 1]` → chooses "1")
+* Uses **specific default values** from each prompt (not all "Y"!)
 * Shows what was auto-answered for transparency
 * Continues on errors without prompting
 * Perfect for CI/CD, deployment scripts, or VM provisioning
+
+#### 🎯 Default Behaviors in Unattended Mode
+
+**✅ Installs by Default (YES):**
+
+* Core development tools (Git, PowerShell, linters, dev tools)
+* Security hardening and Windows debloat
+* Privacy/telemetry disabling
+* Performance tuning and optimization
+
+**❌ Skips by Default (NO):**
+
+* Licensed apps (1Password, Malwarebytes) - require licenses
+* Communications apps (Teams, Slack, Discord) - organization-specific
+* Social/streaming apps (TikTok, OBS) - personal preference
+* Dev Drive creation - requires disk partitioning consideration
+* Insider/preview programs - potentially unstable
+* Automatic reboot - user controls restart timing
+
+> 💡 **Key Point**: Each prompt has its own logical default. Core development tools install
+> automatically, but optional/expensive components are skipped to ensure safe, predictable automation.
 
 **Examples:**
 
