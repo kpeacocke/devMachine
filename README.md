@@ -108,55 +108,121 @@ If you prefer to run scripts individually:
    scripts/windows/10-windows-bootstrap.ps1
    ```
 
-3. **Licensed apps** (optional - skip for VMs)  
+3. **Windows debloat** (remove Xbox, games, Spotify, bloatware)
+
+   ```powershell
+   scripts/windows/09-debloat-windows.ps1
+   ```
+
+4. **Git & SSH configuration** (global config, SSH key generation)
+
+   ```powershell
+   scripts/windows/05-git-ssh-config.ps1
+   ```
+
+5. **PowerShell profile** (Oh-My-Posh, PSReadLine, aliases, functions)
+
+   ```powershell
+   scripts/windows/06-powershell-profile.ps1
+   ```
+
+6. **Licensed apps** (optional - skip for VMs)  
 
    ```powershell
    scripts/windows/11-licensed-apps.ps1
    ```
 
-4. **Optimize + Harden** (safe defaults)  
+7. **Browsers, communications & media** (Chrome, Firefox, Teams, VLC, etc.)
 
    ```powershell
-   scripts/windows/30-optimize-and-harden.ps1
+   scripts/windows/12-communications-media.ps1
    ```
 
-5. **Performance tuning** (Ultimate plan, storage sense, indexing)  
+8. **Social media & streaming** (Facebook, Instagram, Netflix, Disney+, AU TV apps)
 
    ```powershell
-   scripts/windows/31-performance-tuning.ps1 -SetUltimateNow
+   scripts/windows/16-social-streaming.ps1
    ```
 
-6. **Auto power plan toggle** (AC→Ultimate, Battery→Balanced)  
+9. **Windows Terminal configuration** (settings.json automation)
 
    ```powershell
-   scripts/windows/32-powerplan-auto-toggle.ps1
+   scripts/windows/15-windows-terminal-config.ps1
    ```
 
-7. **Move caches to Dev Drive** (saves 20-50GB on C:)
+10. **Optimize + Harden** (safe defaults)  
 
-   ```powershell
-   scripts/windows/40-devdrive-caches.ps1
-   ```
+    ```powershell
+    scripts/windows/30-optimize-and-harden.ps1
+    ```
 
-8. **Optional dev goodies** (Sysinternals, mkcert, security tools, k8s)
+11. **Performance tuning** (Ultimate plan, storage sense, indexing)  
 
-   ```powershell
-   scripts/windows/33-optional-dev-goodies.ps1
-   ```
+    ```powershell
+    scripts/windows/31-performance-tuning.ps1 -SetUltimateNow
+    ```
 
-9. **Backup setup** (File History, System Protection)
+12. **Auto power plan toggle** (AC→Ultimate, Battery→Balanced)  
 
-   ```powershell
-   scripts/windows/80-backup-setup.ps1
-   ```
+    ```powershell
+    scripts/windows/32-powerplan-auto-toggle.ps1
+    ```
 
-10. **.NET maintainer** (one-off or weekly)  
+13. **Privacy & telemetry hardening** (disable telemetry, Game Mode, Cortana, etc.)
+
+    ```powershell
+    scripts/windows/35-privacy-telemetry.ps1
+    ```
+
+14. **DNS security & advanced firewall** (DNS over HTTPS, dev tool firewall rules)
+
+    ```powershell
+    scripts/windows/36-dns-firewall-advanced.ps1
+    ```
+
+15. **Services optimization** (disable unnecessary Windows services)
+
+    ```powershell
+    scripts/windows/37-services-optimization.ps1
+    ```
+
+16. **Move caches to Dev Drive** (saves 20-50GB on C:)
+
+    ```powershell
+    scripts/windows/40-devdrive-caches.ps1
+    ```
+
+17. **Linters & formatters** (ESLint, Prettier, Ruff, Stylelint, etc.)
+
+    ```powershell
+    scripts/windows/13-linters-formatters.ps1
+    ```
+
+18. **Additional dev tools** (Insomnia, DBeaver, Wireshark, Blender, Godot, etc.)
+
+    ```powershell
+    scripts/windows/14-additional-dev-tools.ps1
+    ```
+
+19. **Optional dev goodies** (Sysinternals, mkcert, security tools, k8s)
+
+    ```powershell
+    scripts/windows/33-optional-dev-goodies.ps1
+    ```
+
+20. **Backup setup** (File History, System Protection)
+
+    ```powershell
+    scripts/windows/80-backup-setup.ps1
+    ```
+
+21. **.NET maintainer** (one-off or weekly)  
 
     ```powershell
     scripts/windows/60-dotnet-maintain.ps1 -ScheduleWeekly
     ```
 
-11. **Doctor check**  
+22. **Doctor check**  
 
     ```powershell
     scripts/windows/50-doctor.ps1 -VerboseOut
@@ -258,16 +324,30 @@ wsl -d Ubuntu -e bash ./scripts/wsl/doctor-ubuntu.sh
 * **VCS**: Git, Git LFS, GitHub CLI, Git Credential Manager
 * **Security**: 1Password (GUI + CLI), Backblaze, GlassWire (network monitor), Malwarebytes
 * **Productivity**: GitKraken, Beyond Compare, Scrivener, Obsidian
+* **Browsers**: Google Chrome, Mozilla Firefox
+* **Communications**: Microsoft Teams, WhatsApp, Signal, Slack, Discord
+* **Media Players**: VLC, HandBrake (GUI + CLI), K-Lite Mega Codec Pack, Plex
+* **Social Media**: Facebook, Instagram, LinkedIn, X (Twitter), Reddit
+* **Streaming**: Apple Music, Apple TV, Disney+, Netflix, Paramount+, Prime Video, Stan
+* **AU Free-to-Air TV**: ABC iview, SBS On Demand, 7plus, 9Now, 10 play
 * **Fonts**: Cascadia Code, JetBrains Mono Nerd Font
 * **Runtimes**: Python 3.13, Node Current, Go, Rust, .NET 9, Java Temurin (latest GA)
 * **Build Tools**: Maven, Gradle, CMake, Make
 * **Cloud/IaC**: Terraform, Packer, TFLint, AWS CLI, Azure CLI, Google Cloud SDK
 * **Version Managers**: mise (Kotlin + Gradle latest)
+* **Linters/Formatters**: ESLint, Prettier, Ruff, Stylelint, markdownlint-cli2, Yamllint, hadolint, tflint
+* **API Testing**: Insomnia (free REST client)
+* **Databases**: DBeaver (universal client), SQL Server Management Studio
+* **Network Tools**: Wireshark, nmap
+* **Screen Recording**: OBS Studio (free, open-source)
+* **3D & Game Dev**: Blender, Godot Engine
+* **System Utilities**: PowerToys, QuickLook
 * **Dev Tools**: Sysinternals, mkcert, ripgrep, fd, fzf, bat, delta, chezmoi
 * **Security Scanning**: Snyk, Trivy, gitleaks, pre-commit, semgrep, detect-secrets, bandit
 * **Testing/CI**: nektos/act, newman, pytest-cov, tox
 * **Kubernetes** (optional): kubectl, Helm, k9s
 * **Search**: Everything (replaces Windows Search)
+* **PowerShell**: Oh-My-Posh (paradox theme), PSReadLine (predictions, history search), posh-git
 
 ### Ubuntu (WSL)
 
@@ -298,6 +378,13 @@ wsl -d Ubuntu -e bash ./scripts/wsl/doctor-ubuntu.sh
 * **SSH**: Key-only authentication (password auth disabled)
 * **RDP**: Disabled
 * **SMBv1**: Disabled
+* **DNS over HTTPS**: Enabled (Cloudflare/Google/Quad9 options)
+* **LLMNR/NetBIOS**: Disabled (prevents spoofing attacks)
+* **Telemetry**: Disabled (privacy hardening)
+* **Cortana/Game Mode**: Disabled
+* **Windows Consumer Features**: Disabled (prevents bloatware reinstall)
+* **Firewall Rules**: Dev tools (Docker, Node.js, Python, databases, Kubernetes, WSL 2)
+* **Services**: Unnecessary services disabled (Print Spooler, Remote Registry, Xbox, etc.)
 * **Enhanced Audit Logging**: Process creation, logon, account lockout, file share
 * **Log Sizes**: Security 500MB, System 100MB
 
@@ -327,12 +414,34 @@ These exclusions improve build performance while maintaining security on source 
 * **Docker**: Data-root moved to Dev Drive (saves 20-50GB)
 * **Caches**: npm, yarn, pnpm, cargo, go, gradle, maven, composer → Dev Drive
 * **Search**: Windows Search disabled, replaced with Everything
-* **Services**: Superfetch/Prefetch disabled (SSD optimization)
+* **Services**: Superfetch/Prefetch disabled (SSD optimization), Xbox services disabled, unnecessary services stopped
 * **Network**: Bandwidth throttling disabled, TCP/IP stack optimized
 * **Power**: Ultimate Performance available, auto-toggle on AC/battery
 * **Indexing**: Dev Drive excluded from search indexing
+* **Bloatware Removed**: Xbox apps, games (Solitaire, Candy Crush), Spotify, pre-installed bloat
+* **Telemetry**: Disabled for privacy and performance
+* **PowerShell**: Enhanced profile with Oh-My-Posh, PSReadLine, 20+ aliases, helper functions
 
 **Total Storage Saved**: ~33-77GB on C:
+
+---
+
+## 🎯 Key Features
+
+### Automation Scripts
+
+* **09-debloat-windows.ps1**: Remove pre-installed bloatware (Xbox, games, Spotify, etc.)
+* **05-git-ssh-config.ps1**: Automated Git global config and SSH key generation
+* **06-powershell-profile.ps1**: Comprehensive PowerShell profile (Oh-My-Posh, PSReadLine, aliases, functions)
+* **12-communications-media.ps1**: Browsers, Teams, WhatsApp, Signal, Slack, Discord, VLC, HandBrake
+* **13-linters-formatters.ps1**: ESLint, Prettier, Ruff, Stylelint, markdownlint, Yamllint, hadolint
+* **14-additional-dev-tools.ps1**: Insomnia, DBeaver, SSMS, Wireshark, nmap, OBS Studio, Blender, Godot, PowerToys
+* **15-windows-terminal-config.ps1**: Automated Windows Terminal settings.json configuration
+* **16-social-streaming.ps1**: Social media (Facebook, Instagram, LinkedIn, X, Reddit) and streaming services
+  (Netflix, Disney+, AU TV apps)
+* **35-privacy-telemetry.ps1**: Disable Windows telemetry, Game Mode, Cortana, advertising ID
+* **36-dns-firewall-advanced.ps1**: DNS over HTTPS + dev tool firewall rules
+* **37-services-optimization.ps1**: Disable unnecessary Windows services for performance/security
 
 ---
 
@@ -467,24 +576,26 @@ Happy building!
 Some tools require paid licenses. These are split into a separate script (`11-licensed-apps.ps1`)
 that you can skip when setting up VMs or if you prefer free alternatives.
 
-### Required Payment
+### Core Licensed Apps (Always Installed)
 
 | Tool | Type | Cost | Notes |
 |------|------|------|-------|
 | **1Password** | Password Manager | ~$36-96/year | Essential for SSH agent in this setup |
-| **Backblaze** | Cloud Backup | ~$99/year | Unlimited backup |
+| **Microsoft 365** | Office Suite | ~$70-100/year | Productivity apps |
+| **GitKraken** | Git GUI | ~$60-90/year | Free for public repos |
 | **Beyond Compare 4** | Diff/Merge Tool | ~$60 one-time | 30-day trial available |
 | **Scrivener 3** | Writing Software | ~$50-60 one-time | For long-form writing |
-| **Microsoft 365** | Office Suite | ~$70-100/year | Productivity apps |
+| **Obsidian** | Note-taking | Free (personal) | ~$50/year commercial |
+| **Backblaze** | Cloud Backup | ~$99/year | Unlimited backup |
+| **Malwarebytes** | Anti-malware | ~$40/year | Free tier for manual scans |
+| **GlassWire** | Network Monitor | ~$50-100 one-time | Free tier available |
 
-### Freemium (Free Tier Available)
+### Optional Paid Apps (Prompted During Setup)
 
-| Tool | Free Tier | Paid Tier | Notes |
-|------|-----------|-----------|-------|
-| **GitKraken** | Public repos | ~$60-90/year for private | Free version may be sufficient |
-| **Malwarebytes** | Manual scans | ~$40/year for real-time | Free tier works for weekly scans |
-| **GlassWire** | Basic monitoring | ~$50-100 one-time for pro | Free version sufficient for most |
-| **Obsidian** | Personal use | ~$50/year commercial | Free for personal |
+| Tool | Type | Cost | Notes |
+|------|------|------|-------|
+| **Typora** | Markdown Editor | ~$15 one-time | Beautiful WYSIWYG markdown |
+| **Postman Pro** | API Testing | ~$12-49/month | Free tier available (Insomnia is free alternative) |
 
 ### Free Alternatives
 
@@ -493,11 +604,15 @@ that you can skip when setting up VMs or if you prefer free alternatives.
 * **GitKraken** → GitHub Desktop (free), Fork (free for evaluation)
 * **Backblaze** → Google Drive, OneDrive (included with Microsoft 365)
 * **Office** → LibreOffice (free), Google Docs (free)
+* **Obsidian** → Notion (free), Logseq (free), Joplin (free)
+* **Postman** → Insomnia (free, installed in 14-additional-dev-tools.ps1)
+* **Typora** → VS Code (free, already installed), MarkText (free)
 
 **Total Cost Estimate:**
 
 * **First Year**: ~$315-505 (including one-time purchases)
 * **Annual**: ~$205-395/year (subscriptions only)
-* **VM/Free Setup**: $0 (use alternatives)
+* **Optional Add-ons**: ~$15-588/year (Typora + Postman Pro if chosen)
+* **VM/Free Setup**: $0 (use alternatives and skip licensed apps script)
 
 **Skip licensed apps**: `.\setup-machine.ps1 -SkipLicensedApps`
