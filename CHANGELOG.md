@@ -1,3 +1,16 @@
+## [1.6.0](https://github.com/kpeacocke/devMachine/compare/v1.5.0...v1.6.0) (2025-11-06)
+
+
+### 🚀 Features
+
+* implement SSL/TLS hardening script and integrate into setup process ([71a907a](https://github.com/kpeacocke/devMachine/commit/71a907a4b351665484ac83858bd08ca54bfc7438))
+
+
+### 🐛 Bug Fixes
+
+* correct formatting and spacing in ReFS minimum size requirements ([65b04e1](https://github.com/kpeacocke/devMachine/commit/65b04e1dc8b4eca88b9168049fabf0d34ab56d86))
+* improve logic for calculating shrinkable disk space in partition setup script ([fbc8902](https://github.com/kpeacocke/devMachine/commit/fbc8902f959b6119ed9cc00946848e5e464e92ec))
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
