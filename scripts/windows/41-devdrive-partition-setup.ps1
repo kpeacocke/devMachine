@@ -53,7 +53,8 @@ $currentUsedGB = [math]::Round(($cDrive.Size - $cDrive.SizeRemaining) / 1GB, 2)
 
 # Get actual shrinkable space from Windows
 $shrinkInfo = Get-PartitionSupportedSize -DriveLetter C
-$maxShrinkableGB = [math]::Floor(($cDrive.Size - $shrinkInfo.SizeMin) / 1GB)
+$minSizeBytes = if ($shrinkInfo.SizeMin -is [array]) { $shrinkInfo.SizeMin[0] } else { $shrinkInfo.SizeMin }
+$maxShrinkableGB = [math]::Floor(($cDrive.Size - $minSizeBytes) / 1GB)
 
 Write-Host "💾 Disk Space Analysis" -ForegroundColor Cyan
 Write-Host "   Total disk size: $totalDiskGB GB" -ForegroundColor Gray
@@ -257,7 +258,8 @@ if ($shrinkAmountGB -le 0) {
         $shrinkBytes = $shrinkAmountGB * 1GB
 
         # Get maximum shrinkable size
-        $maxShrink = (Get-PartitionSupportedSize -DriveLetter C).SizeMin
+        $supportedSize = Get-PartitionSupportedSize -DriveLetter C
+        $maxShrink = if ($supportedSize.SizeMin -is [array]) { $supportedSize.SizeMin[0] } else { $supportedSize.SizeMin }
         $currentSize = $partition.Size
         $targetSize = $currentSize - $shrinkBytes
 
@@ -295,7 +297,8 @@ if (-not $skipCachePartition) {
 
         # Check available unallocated space
         $availableExtents = Get-Disk -Number $disk.Number | Get-PartitionSupportedSize
-        $maxAvailableGB = [math]::Floor($availableExtents.SizeMax / 1GB)
+        $maxSizeBytes = if ($availableExtents.SizeMax -is [array]) { $availableExtents.SizeMax[0] } else { $availableExtents.SizeMax }
+        $maxAvailableGB = [math]::Floor($maxSizeBytes / 1GB)
 
         if ($maxAvailableGB -lt $cachePartitionGB) {
             Write-Host "   ⚠️  Adjusting cache partition size from $cachePartitionGB GB to $maxAvailableGB GB" -ForegroundColor Yellow
@@ -314,7 +317,8 @@ if (-not $skipCachePartition) {
         Write-Host "   ❌ Failed to create cache partition: $_" -ForegroundColor Red
         Write-Host "      Attempting to restore C: drive size..." -ForegroundColor Yellow
         try {
-            $maxSize = (Get-PartitionSupportedSize -DriveLetter C).SizeMax
+            $sizeInfo = Get-PartitionSupportedSize -DriveLetter C
+            $maxSize = if ($sizeInfo.SizeMax -is [array]) { $sizeInfo.SizeMax[0] } else { $sizeInfo.SizeMax }
             Resize-Partition -DriveLetter C -Size $maxSize
             Write-Host "      C: drive restored" -ForegroundColor Green
         } catch {
@@ -335,7 +339,8 @@ try {
 
     # Check for largest available extent on the disk
     $maxExtent = Get-Disk -Number $disk.Number | Get-PartitionSupportedSize
-    $maxAvailableGB = [math]::Floor($maxExtent.SizeMax / 1GB)
+    $maxSizeBytes = if ($maxExtent.SizeMax -is [array]) { $maxExtent.SizeMax[0] } else { $maxExtent.SizeMax }
+    $maxAvailableGB = [math]::Floor($maxSizeBytes / 1GB)
 
     Write-Host "   Available disk space: $availableSpaceGB GB, Max extent: $maxAvailableGB GB" -ForegroundColor Gray
 
@@ -359,7 +364,8 @@ try {
     Write-Host "   Trying to create with maximum available space..." -ForegroundColor Yellow
     try {
         # Try with maximum available space
-        $maxSize = (Get-Disk -Number $disk.Number | Get-PartitionSupportedSize).SizeMax
+        $maxSizeInfo = Get-Disk -Number $disk.Number | Get-PartitionSupportedSize
+        $maxSize = if ($maxSizeInfo.SizeMax -is [array]) { $maxSizeInfo.SizeMax[0] } else { $maxSizeInfo.SizeMax }
         if ($maxSize -gt 2GB) {
             $fallbackSize = [math]::Min($maxSize, 5GB) # Max 5GB fallback
             $codePartition = New-Partition -DiskNumber $disk.Number -Size $fallbackSize -AssignDriveLetter
