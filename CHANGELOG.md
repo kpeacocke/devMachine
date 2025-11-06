@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/kpeacocke/devMachine/compare/v1.1.0...v1.2.0) (2025-11-06)
+
+
+### 🚀 Features
+
+* **security:** update firewall script to reflect early hardening phase and remove redundant checks ([e2cbfd8](https://github.com/kpeacocke/devMachine/commit/e2cbfd885a7d81173c256d75ffdf8a320d5dc079))
+* **setup:** add early security hardening phase to setup process and update related scripts ([4f40bca](https://github.com/kpeacocke/devMachine/commit/4f40bcafcd4aad67e8af90bcbd29c088c179532e))
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## [1.1.0](https://github.com/kpeacocke/devMachine/compare/v1.0.2...v1.1.0) (2025-11-06)
 
 ### 🚀 Features
