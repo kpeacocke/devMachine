@@ -240,35 +240,51 @@ Write-Host "🔧 Starting partition operations..." -ForegroundColor Cyan
 
 # Step 1: Shrink C: drive
 Write-Host "`n[1/5] Shrinking C: drive by $shrinkAmountGB GB..." -ForegroundColor Yellow
-try {
-    $shrinkBytes = $shrinkAmountGB * 1GB
 
-    # Get maximum shrinkable size
-    $maxShrink = (Get-PartitionSupportedSize -DriveLetter C).SizeMin
-    $currentSize = $partition.Size
-    $targetSize = $currentSize - $shrinkBytes
+if ($shrinkAmountGB -le 0) {
+    Write-Host "   ℹ️  No shrinking needed - sufficient unallocated space available" -ForegroundColor Cyan
+} else {
+    try {
+        $shrinkBytes = $shrinkAmountGB * 1GB
 
-    if ($targetSize -lt $maxShrink) {
-        Write-Host "   ❌ Cannot shrink C: drive to $finalCDriveSizeGB GB" -ForegroundColor Red
-        Write-Host "      Minimum size: $([math]::Round($maxShrink / 1GB, 2)) GB" -ForegroundColor Yellow
-        Write-Host "      You may need to disable hibernation, page file, or system restore" -ForegroundColor Yellow
-        Write-Host "      Run: powercfg /h off" -ForegroundColor Gray
+        # Get maximum shrinkable size
+        $maxShrink = (Get-PartitionSupportedSize -DriveLetter C).SizeMin
+        $currentSize = $partition.Size
+        $targetSize = $currentSize - $shrinkBytes
+
+        if ($targetSize -lt $maxShrink) {
+            Write-Host "   ❌ Cannot shrink C: drive to $finalCDriveSizeGB GB" -ForegroundColor Red
+            Write-Host "      Minimum size: $([math]::Round($maxShrink / 1GB, 2)) GB" -ForegroundColor Yellow
+            Write-Host "      You may need to disable hibernation, page file, or system restore" -ForegroundColor Yellow
+            Write-Host "      Run: powercfg /h off" -ForegroundColor Gray
+            exit 1
+        }
+
+        Resize-Partition -DriveLetter C -Size $targetSize
+        Write-Host "   ✅ C: drive shrunk to $finalCDriveSizeGB GB" -ForegroundColor Green
+    } catch {
+        Write-Host "   ❌ Failed to shrink C: drive: $_" -ForegroundColor Red
+        Write-Host "      Try running: Optimize-Volume -DriveLetter C -Defrag -Verbose" -ForegroundColor Yellow
         exit 1
     }
-
-    Resize-Partition -DriveLetter C -Size $targetSize
-    Write-Host "   ✅ C: drive shrunk to $finalCDriveSizeGB GB" -ForegroundColor Green
-} catch {
-    Write-Host "   ❌ Failed to shrink C: drive: $_" -ForegroundColor Red
-    Write-Host "      Try running: Optimize-Volume -DriveLetter C -Defrag -Verbose" -ForegroundColor Yellow
-    exit 1
 }
 
 # Step 2: Create Cache partition
 if (-not $skipCachePartition) {
     Write-Host "`n[2/5] Creating Cache Dev Drive partition ($cachePartitionGB GB)..." -ForegroundColor Yellow
     try {
-        # Double-check available space before creating partition
+        # If we didn't shrink C: drive, we need to do it now to create unallocated space
+        if ($shrinkAmountGB -le 0) {
+            Write-Host "   Creating unallocated space by shrinking C: drive..." -ForegroundColor Gray
+            $shrinkBytes = $totalPartitionsGB * 1GB
+            $currentSize = (Get-Partition -DriveLetter C).Size
+            $targetSize = $currentSize - $shrinkBytes
+
+            Resize-Partition -DriveLetter C -Size $targetSize
+            Write-Host "   ✅ Created $totalPartitionsGB GB of unallocated space" -ForegroundColor Green
+        }
+
+        # Check available unallocated space
         $availableExtents = Get-Disk -Number $disk.Number | Get-PartitionSupportedSize
         $maxAvailableGB = [math]::Floor($availableExtents.SizeMax / 1GB)
 
