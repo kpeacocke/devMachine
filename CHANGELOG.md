@@ -61,4 +61,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Power management automation
 * Complete test coverage (Windows + Ubuntu)
 * Licensed application cost analysis and alternatives
-
