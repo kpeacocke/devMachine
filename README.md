@@ -197,43 +197,61 @@ If you prefer to run scripts individually:
     scripts/windows/37-services-optimization.ps1
     ```
 
-17. **Move caches to Dev Drive** (saves 20-50GB on C:)
+17. **Dev Drive partitions** (optional - single-drive optimization)
+
+    ```powershell
+    scripts/windows/41-devdrive-partition-setup.ps1
+    ```
+
+    Creates ReFS Dev Drive partitions with mount points:
+    * `C:\DevCache` (~50-60GB) for package manager caches
+    * `C:\Users\<username>\code` (~10GB) for active development
+
+    Benefits: Faster builds, no antivirus scanning, better I/O performance
+
+18. **Move caches to Dev Drive** (saves 20-50GB on C:, requires step 17)
 
     ```powershell
     scripts/windows/40-devdrive-caches.ps1
     ```
 
-18. **Linters & formatters** (ESLint, Prettier, Ruff, Stylelint, etc.)
+19. **Linters & formatters** (ESLint, Prettier, Ruff, Stylelint, etc.)
 
     ```powershell
     scripts/windows/13-linters-formatters.ps1
     ```
 
-19. **Additional dev tools** (Insomnia, DBeaver, Wireshark, Blender, Godot, etc.)
+20. **Additional dev tools** (Insomnia, DBeaver, Wireshark, Blender, Godot, etc.)
 
     ```powershell
     scripts/windows/14-additional-dev-tools.ps1
     ```
 
-20. **Optional dev goodies** (Sysinternals, mkcert, security tools, k8s)
+21. **Optional dev goodies** (Sysinternals, mkcert, security tools, k8s)
 
     ```powershell
     scripts/windows/33-optional-dev-goodies.ps1
     ```
 
-21. **Backup setup** (File History, System Protection)
+22. **Backup setup** (File History, System Protection)
 
     ```powershell
     scripts/windows/80-backup-setup.ps1
     ```
 
-22. **.NET maintainer** (one-off or weekly)  
+23. **.NET maintainer** (one-off or weekly)  
 
     ```powershell
     scripts/windows/60-dotnet-maintain.ps1 -ScheduleWeekly
     ```
 
-23. **Doctor check**  
+24. **Python maintainer** (upgrade pip and packages)  
+
+    ```powershell
+    scripts/windows/61-python-maintain.ps1
+    ```
+
+25. **Doctor check**
 
     ```powershell
     scripts/windows/50-doctor.ps1 -VerboseOut
@@ -268,7 +286,13 @@ If you prefer to run scripts individually:
    scripts/wsl/21-wsl-tune.sh
    ```
 
-3. Health check:
+3. Python maintainer (upgrade pip and packages):
+
+   ```bash
+   scripts/wsl/python-maintain.sh
+   ```
+
+4. Health check:
 
    ```powershell
    scripts/wsl/doctor-ubuntu.sh
@@ -368,7 +392,7 @@ wsl -d Ubuntu -e bash ./scripts/wsl/doctor-ubuntu.sh
 * **System Utilities**: PowerToys, QuickLook
 * **Dev Tools**: Sysinternals, mkcert, ripgrep, fd, fzf, bat, delta, chezmoi
 * **Security Scanning**: Snyk, Trivy, gitleaks, pre-commit, semgrep, detect-secrets, bandit
-* **Testing/CI**: Pester 5+ (PowerShell), nektos/act (GitHub Actions), newman (Postman), pytest-cov, tox
+* **Testing/CI**: Pester 5+ (PowerShell), nektos/act (GitHub Actions), pytest-cov, tox
 * **Kubernetes** (optional): kubectl, Helm, k9s
 * **Search**: Everything (replaces Windows Search)
 * **PowerShell**: Oh-My-Posh (paradox theme), PSReadLine (predictions, history search), posh-git
@@ -441,9 +465,10 @@ Applied via `30-optimize-and-harden.ps1`:
 
 **Automated Defender Exclusions** (applied during hardening):
 
-* Dev Drive caches: `D:\dev\caches`
+* Dev Drive caches: `C:\DevCache` (if using partition setup)
 * Package manager caches: `.cargo`, `.rustup`, `go`, `.gradle`, `.m2`, `.nuget`, `.dotnet`, `pip`, `pipx`, `npm`
 * Common build folders: `node_modules`, `.git`, `target`, `build`, `dist`, `.venv`, `venv`
+* Code workspace: `C:\Users\<username>\code` (if using Dev Drive partition)
 
 These exclusions improve build performance while maintaining security on source code and downloads.
 
@@ -451,10 +476,35 @@ These exclusions improve build performance while maintaining security on source 
 
 ## ⚡ Performance Optimizations
 
+### Dev Drive Strategy (Single-Drive Systems)
+
+**New Approach**: Instead of requiring a secondary drive, we create ReFS Dev Drive partitions on your main SSD:
+
+* **C:\DevCache** (~50-60GB): Package manager caches
+  * npm, yarn, pnpm, cargo, go, gradle, maven, pip, composer
+  * Docker WSL data (saves 20-50GB on C:)
+  * Mounted as folder (no drive letter)
+* **C:\Users\<username>\code** (~10GB): Active development workspace
+  * Your repositories and projects
+  * Isolated from system drive
+  * Mounted as folder
+
+**Benefits of Dev Drive Partitions:**
+
+* **ReFS Performance**: Optimized for developer workloads (small file operations)
+* **No Antivirus Scanning**: Windows Defender automatically trusts Dev Drive
+* **Faster Builds**: 30-50% faster npm installs, cargo builds, go compilations
+* **Storage Clarity**: Caches isolated from system and user files
+* **Easy Cleanup**: Blow away C:\DevCache anytime, reinstall packages fresh
+
+**Setup**: Run `41-devdrive-partition-setup.ps1` to create partitions (interactive, calculates safe sizes)
+
+**Skip if**: Using VM, external drive, or prefer traditional setup (`-SkipDevDrive`)
+
+### Other Optimizations
+
 * **WSL**: Sparse VHD (saves 10-20GB), auto memory reclaim
 * **Storage**: Component cleanup (2-5GB saved), Storage Sense automation
-* **Docker**: Data-root moved to Dev Drive (saves 20-50GB)
-* **Caches**: npm, yarn, pnpm, cargo, go, gradle, maven, composer → Dev Drive
 * **Search**: Windows Search disabled, replaced with Everything
 * **Services**: Superfetch/Prefetch disabled (SSD optimization), Xbox services disabled, unnecessary services stopped
 * **Network**: Bandwidth throttling disabled, TCP/IP stack optimized
@@ -506,7 +556,8 @@ After installation, configure Malwarebytes for optimal dev machine performance:
 
 1. **Open Malwarebytes** → Settings → Security
 2. **Exclude Dev Folders** from scans:
-   * Add: `D:\dev\caches` (entire Dev Drive)
+   * Add: `C:\DevCache` (Dev Drive cache partition, if created)
+   * Add: `C:\Users\<YourUsername>\code` (Dev Drive code partition, if created)
    * Add: `C:\Users\<YourUsername>\.cargo`
    * Add: `C:\Users\<YourUsername>\.rustup`
    * Add: `C:\Users\<YourUsername>\go`
@@ -542,9 +593,10 @@ Configure network monitoring:
 
 1. **Sign in** to Backblaze account
 2. **Exclusions** (Settings → Exclusions):
-   * Exclude: `D:\` (entire Dev Drive - temporary build artifacts)
-   * Exclude: `C:\Users\<YourUsername>\node_modules` (if not on Dev Drive)
+   * Exclude: `C:\DevCache\` (Dev Drive cache partition - temporary artifacts)
+   * Exclude: `C:\Users\<YourUsername>\code\node_modules` (if exists)
    * Exclude: `C:\Users\<YourUsername>\AppData\Local\Docker`
+   * Note: Your code in `C:\Users\<YourUsername>\code` IS backed up (source files)
 3. **Threads**: Settings → Performance → Increase to 10-20 threads for faster backup
 4. **Version History**: Keep default (30 days)
 
@@ -637,7 +689,6 @@ that you can skip when setting up VMs or if you prefer free alternatives.
 | Tool | Type | Cost | Notes |
 |------|------|------|-------|
 | **Typora** | Markdown Editor | ~$15 one-time | Beautiful WYSIWYG markdown |
-| **Postman Pro** | API Testing | ~$12-49/month | Free tier available (Insomnia is free alternative) |
 
 ### Free Alternatives
 
@@ -647,14 +698,13 @@ that you can skip when setting up VMs or if you prefer free alternatives.
 * **Backblaze** → Google Drive, OneDrive (included with Microsoft 365)
 * **Office** → LibreOffice (free), Google Docs (free)
 * **Obsidian** → Notion (free), Logseq (free), Joplin (free)
-* **Postman** → Insomnia (free, installed in 14-additional-dev-tools.ps1)
 * **Typora** → VS Code (free, already installed), MarkText (free)
 
 **Total Cost Estimate:**
 
-* **First Year**: ~$315-505 (including one-time purchases)
+* **First Year**: ~$300-490 (including one-time purchases)
 * **Annual**: ~$205-395/year (subscriptions only)
-* **Optional Add-ons**: ~$15-588/year (Typora + Postman Pro if chosen)
+* **Optional Add-ons**: ~$15 (Typora if chosen)
 * **VM/Free Setup**: $0 (use alternatives and skip licensed apps script)
 
 **Skip licensed apps**: `.\setup-machine.ps1 -SkipLicensedApps`

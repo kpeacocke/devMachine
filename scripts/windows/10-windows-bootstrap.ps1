@@ -99,11 +99,21 @@ Write-Host "🌐 Runtimes (latest channels)"
 # Python latest (3.13 line)
 winget install Python.Python.3.13 --source winget --silent --accept-package-agreements --accept-source-agreements
 
+# Upgrade pip to latest version
+Write-Host "  Upgrading pip to latest version..."
+try {
+  python -m pip install --upgrade pip
+  Write-Host "  [OK] pip upgraded" -ForegroundColor Green
+} catch {
+  Write-Warning "pip upgrade failed - will retry after environment refresh"
+}
+
 # Install pipx for isolated Python tool management
 Write-Host "  Installing pipx for Python CLI tools..."
 try {
-  python -m pip install --user pipx
+  python -m pip install --user --upgrade pipx
   python -m pipx ensurepath
+  Write-Host "  [OK] pipx installed" -ForegroundColor Green
 } catch {
   Write-Warning "pipx installation failed - will retry after environment refresh"
 }

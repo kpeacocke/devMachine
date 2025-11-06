@@ -1,7 +1,7 @@
 <#
 Additional Development Tools
 Installs FREE supplementary dev tools: Insomnia, database clients, Wireshark, diagrams, etc.
-NOTE: Paid tools (Postman Pro, Figma Pro, Typora, Sublime Text) are in 11-licensed-apps.ps1
+NOTE: Paid tools (Figma Pro, Typora, Sublime Text) are in 11-licensed-apps.ps1
 #>
 $ErrorActionPreference = 'Stop'
 
@@ -52,4 +52,4 @@ Write-Host "✅ Screen Recording: OBS Studio" -ForegroundColor Green
 Write-Host "✅ 3D & Game Dev:    Blender, Godot Engine" -ForegroundColor Green
 Write-Host "✅ Utilities:        PowerToys, QuickLook" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-Write-Host "`n💡 NOTE: Paid tools (Postman Pro, Typora) available in 11-licensed-apps.ps1" -ForegroundColor Yellow
+Write-Host "`n💡 NOTE: Paid tools (Typora) available in 11-licensed-apps.ps1" -ForegroundColor Yellow

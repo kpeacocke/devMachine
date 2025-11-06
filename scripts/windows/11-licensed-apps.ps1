@@ -51,20 +51,11 @@ try {
   Write-Warning "GlassWire failed - install manually"
 }
 
-$opt = Read-Host "Install Typora or Postman? (1=Typora, 2=Postman, 3=Both, N=Skip)"
+$opt = Read-Host "Install Typora? (Y/N) [Default: N]"
 if ([string]::IsNullOrWhiteSpace($opt)) { $opt = 'N' }
 
-switch ($opt) {
-    '1' {
-        winget install Typora.Typora --source winget --silent --accept-package-agreements --accept-source-agreements
-    }
-    '2' {
-        winget install Postman.Postman --source winget --silent --accept-package-agreements --accept-source-agreements
-    }
-    '3' {
-        winget install Typora.Typora --source winget --silent --accept-package-agreements --accept-source-agreements
-        winget install Postman.Postman --source winget --silent --accept-package-agreements --accept-source-agreements
-    }
+if ($opt -eq 'Y') {
+    winget install Typora.Typora --source winget --silent --accept-package-agreements --accept-source-agreements
 }
 
 Write-Host "Licensed apps complete!" -ForegroundColor Green

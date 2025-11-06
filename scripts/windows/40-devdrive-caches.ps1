@@ -1,10 +1,13 @@
 <#
 Move build/tool caches to a Dev Drive to save C: space and improve performance.
-Default: D:\dev\caches
+Default: C:\DevCache (mounted Dev Drive partition)
+Alternative: Specify custom path like D:\dev\caches if using external drive
 Run in pwsh (non-Admin is fine).
+
+NOTE: Run 41-devdrive-partition-setup.ps1 first to create the C:\DevCache partition.
 #>
 
-param([string]$DevCacheRoot = "D:\dev\caches")
+param([string]$DevCacheRoot = "C:\DevCache")
 
 $ErrorActionPreference = 'Stop'
 New-Item -Force -ItemType Directory -Path $DevCacheRoot | Out-Null

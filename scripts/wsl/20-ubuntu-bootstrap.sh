@@ -45,6 +45,13 @@ if ! command -v pyenv >/dev/null; then
   . ~/.bashrc
 fi
 
+# Upgrade pip to latest version (system Python)
+echo "  Upgrading pip to latest version..."
+if command -v pip3 >/dev/null; then
+  python3 -m pip install --upgrade pip || true
+  echo "  [OK] pip upgraded"
+fi
+
 # R / PHP / Ruby / linters
 sudo apt-get install -y r-base r-base-dev php php-cli php-xml php-mbstring php-curl php-zip php-gd php-intl ruby-full shellcheck docker.io
 R -q -e "install.packages(c('languageserver','lintr','styler'), repos='https://cloud.r-project.org')" || true

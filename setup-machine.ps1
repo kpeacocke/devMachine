@@ -361,13 +361,50 @@ Invoke-Script -Path (Join-Path $WindowsScripts "32-powerplan-auto-toggle.ps1") `
     -Description "Auto-switch: AC→Ultimate, Battery→Balanced"
 
 # ============================================================================
-# PHASE 6: DEV DRIVE CACHE RELOCATION
+# PHASE 6: DEV DRIVE PARTITION SETUP & CACHE RELOCATION
 # ============================================================================
 
 if (-not $SkipDevDrive) {
-    Write-Step "PHASE 6: Dev Drive Cache Setup"
-    Invoke-Script -Path (Join-Path $WindowsScripts "40-devdrive-caches.ps1") `
-        -Description "Move npm/cargo/go/maven/docker to Dev Drive"
+    Write-Step "PHASE 6: Dev Drive Setup"
+
+    # Check if Dev Drive partitions already exist
+    $cacheExists = Test-Path "C:\DevCache"
+    $codeExists = Test-Path "C:\Users\$env:USERNAME\code"
+
+    if (-not $cacheExists -or -not $codeExists) {
+        Write-Host "🔧 Dev Drive Partition Creation" -ForegroundColor Yellow
+        Write-Host "   This will:" -ForegroundColor Yellow
+        Write-Host "   • Shrink C: drive (maintaining 30% free space)" -ForegroundColor Yellow
+        Write-Host "   • Create ~50-60GB ReFS partition for caches → C:\DevCache" -ForegroundColor Yellow
+        Write-Host "   • Create ~10GB ReFS partition for code → C:\Users\$env:USERNAME\code" -ForegroundColor Yellow
+        Write-Host "   • Mount partitions as folders (no drive letters)" -ForegroundColor Yellow
+        Write-Host "`n   Benefits: Faster builds, no AV scanning, better performance`n" -ForegroundColor Green
+
+        $createPartitions = Read-Host "Create Dev Drive partitions? (Y/N) [Default: N]"
+        if ([string]::IsNullOrWhiteSpace($createPartitions)) { $createPartitions = 'N' }
+
+        if ($createPartitions -eq 'Y') {
+            Invoke-Script -Path (Join-Path $WindowsScripts "41-devdrive-partition-setup.ps1") `
+                -Description "Create Dev Drive partitions with mount points"
+        } else {
+            Write-Host "   ℹ️  Skipping partition creation. You can run 41-devdrive-partition-setup.ps1 manually later." -ForegroundColor Yellow
+            Write-Host "   Or use -SkipDevDrive to skip this entirely." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "   ✅ Dev Drive partitions already exist" -ForegroundColor Green
+    }
+
+    # Move caches to Dev Drive (if partition exists)
+    if (Test-Path "C:\DevCache") {
+        Write-Host "`n📦 Moving package caches to Dev Drive..." -ForegroundColor Yellow
+        Invoke-Script -Path (Join-Path $WindowsScripts "40-devdrive-caches.ps1") `
+            -Description "Relocate npm/cargo/go/maven/docker caches to C:\DevCache"
+    } else {
+        Write-Host "   ⚠️  C:\DevCache not found - skipping cache relocation" -ForegroundColor Yellow
+        Write-Host "      Run 41-devdrive-partition-setup.ps1 to create it" -ForegroundColor Gray
+    }
+} else {
+    Write-Host "`n⏭️  Skipping Dev Drive setup (use for single-drive systems or VMs)" -ForegroundColor Yellow
 }
 
 # ============================================================================
@@ -404,7 +441,7 @@ if ($installLinters -eq 'Y') {
 
 Write-Step "PHASE 7.6: Additional Development Tools"
 Write-Host "🛠️  Supplementary Dev Tools" -ForegroundColor Yellow
-Write-Host "   Postman, DBeaver, Wireshark, draw.io, ScreenToGif, PowerToys, etc.`n" -ForegroundColor Yellow
+Write-Host "   DBeaver, Wireshark, draw.io, ScreenToGif, PowerToys, etc.`n" -ForegroundColor Yellow
 $installDevTools = Read-Host "Install additional dev tools? (Y/N) [Default: Y]"
 if ([string]::IsNullOrWhiteSpace($installDevTools)) { $installDevTools = 'Y' }
 

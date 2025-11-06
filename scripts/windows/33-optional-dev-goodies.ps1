@@ -48,10 +48,7 @@ Write-Host "[NOTE] GlassWire and Malwarebytes moved to 11-licensed-apps.ps1" -Fo
 
 Write-Host "[CI/CD] Installing testing and CI/CD tools..."
 winget install nektos.act --source winget --silent --accept-source-agreements --accept-package-agreements
-try {
-  npm install -g newman
-  Write-Host "  Note: pytest, pytest-cov, tox moved to 13-linters-formatters.ps1" -ForegroundColor Yellow
-} catch { Write-Warning "newman installation failed" }
+Write-Host "  Note: pytest, pytest-cov, tox moved to 13-linters-formatters.ps1" -ForegroundColor Yellow
 
 Write-Host "[WINGET] Exporting installed packages and refreshing sources..."
 $export = Join-Path $env:USERPROFILE "Desktop\winget-installed.json"
