@@ -111,8 +111,15 @@ Write-Host "✅ Consumer features disabled - bloatware won't reinstall" -Foregro
 # Clean up Windows.old if it exists (from previous Windows updates)
 Write-Host "🧹 Checking for Windows.old folder..."
 if (Test-Path "C:\Windows.old") {
-    $response = Read-Host "  Found Windows.old folder. Remove it to free up disk space? (Y/N) [Default: Y]"
-    if ([string]::IsNullOrWhiteSpace($response)) { $response = 'Y' }
+    if ($env:REMOVE_WINDOWS_OLD -eq 'N') {
+        Write-Host "  → Keeping Windows.old folder (REMOVE_WINDOWS_OLD=N)" -ForegroundColor Yellow
+    } elseif ($env:UNATTENDED_MODE -or $env:REMOVE_WINDOWS_OLD -eq 'Y') {
+        Write-Host "  → Removing Windows.old folder (unattended mode)" -ForegroundColor Yellow
+        $response = 'Y'
+    } else {
+        $response = Read-Host "  Found Windows.old folder. Remove it to free up disk space? (Y/N) [Default: Y]"
+        if ([string]::IsNullOrWhiteSpace($response)) { $response = 'Y' }
+    }
     if ($response -eq 'Y') {
         try {
             Write-Host "  Running Disk Cleanup for previous Windows installations..." -ForegroundColor Yellow

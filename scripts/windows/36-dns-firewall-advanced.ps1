@@ -28,7 +28,13 @@ Write-Host "  2. Google (8.8.8.8) - Reliable, widely used"
 Write-Host "  3. Quad9 (9.9.9.9) - Security-focused, blocks malicious domains"
 Write-Host "  4. Skip DNS configuration"
 
-$dnsChoice = Read-Host "Choice (1-4) [Default: 1]"
+if ($env:DNS_CHOICE) {
+    $dnsChoice = $env:DNS_CHOICE
+} elseif ($env:UNATTENDED_MODE) {
+    $dnsChoice = '1'  # Default to Cloudflare
+} else {
+    $dnsChoice = Read-Host "Choice (1-4) [Default: 1]"
+}
 if ([string]::IsNullOrWhiteSpace($dnsChoice)) { $dnsChoice = '1' }
 
 switch ($dnsChoice) {
@@ -189,7 +195,7 @@ Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True
 # Note: LLMNR and NetBIOS are already disabled in 01-early-hardening.ps1
 
 # Enable firewall notifications (helpful during development)
-Set-NetFirewallProfile -Profile Domain,Public,Private -NotifyOnListenPortAdded True
+Set-NetFirewallProfile -Profile Domain,Public,Private -NotifyOnListen True
 
 Write-Host "[OK] DNS and firewall configuration complete!" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan

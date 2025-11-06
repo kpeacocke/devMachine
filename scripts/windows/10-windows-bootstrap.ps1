@@ -17,11 +17,20 @@ try {
   $vmInfo = Get-WmiObject -Class Win32_ComputerSystem
   if ($vmInfo.Model -match "Virtual|VMware|Parallels|VirtualBox|QEMU|Hyper-V") {
     Write-Host "  ⚠️  VM detected ($($vmInfo.Model)) - WSL may not work with nested virtualization" -ForegroundColor Yellow
-    $installWSL = Read-Host "  Install WSL anyway? (Y/N) [Default: N]"
-    if ([string]::IsNullOrWhiteSpace($installWSL)) { $installWSL = 'N' }
-    if ($installWSL -ne 'Y') {
-      Write-Host "  → Skipping WSL installation" -ForegroundColor Yellow
-      $skipWSL = $true
+    if ($env:UNATTENDED_MODE -or $env:INSTALL_WSL_IN_VM -eq 'Y') {
+      if ($env:INSTALL_WSL_IN_VM -eq 'Y') {
+        Write-Host "  → Installing WSL in VM (INSTALL_WSL_IN_VM=Y)" -ForegroundColor Green
+      } else {
+        Write-Host "  → Skipping WSL installation in unattended mode" -ForegroundColor Yellow
+        $skipWSL = $true
+      }
+    } else {
+      $installWSL = Read-Host "  Install WSL anyway? (Y/N) [Default: N]"
+      if ([string]::IsNullOrWhiteSpace($installWSL)) { $installWSL = 'N' }
+      if ($installWSL -ne 'Y') {
+        Write-Host "  → Skipping WSL installation" -ForegroundColor Yellow
+        $skipWSL = $true
+      }
     }
   }
 } catch { }

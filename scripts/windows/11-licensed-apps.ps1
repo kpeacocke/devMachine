@@ -9,11 +9,25 @@ if ($env:DEVMACHINE_OVERRIDE_PATH -and (Test-Path $env:DEVMACHINE_OVERRIDE_PATH)
     . $env:DEVMACHINE_OVERRIDE_PATH
 }
 
+# Check for unattended mode and provide appropriate messaging
+if ($env:UNATTENDED_MODE) {
+    Write-Host "🤖 UNATTENDED MODE: Skipping apps that require user interaction" -ForegroundColor Gray
+} else {
+    Write-Host "⚠️  INTERACTIVE MODE: Some licensed apps may prompt for user input" -ForegroundColor Yellow
+    Write-Host "   (account setup, license agreements, trial notifications)" -ForegroundColor Yellow
+    Write-Host "   Set `$env:UNATTENDED_MODE = 'true' to skip apps that require interaction" -ForegroundColor Yellow
+    Write-Host ""
+}
+
 Write-Host "Installing Licensed Apps..." -ForegroundColor Yellow
 
 Write-Host "1Password..."
-winget install AgileBits.1Password --source winget --silent --accept-package-agreements --accept-source-agreements
-winget install 1Password.CLI --source winget --silent --accept-package-agreements --accept-source-agreements
+if ($env:UNATTENDED_MODE) {
+    Write-Host "  → Skipped in unattended mode (requires account setup)" -ForegroundColor Gray
+} else {
+    winget install AgileBits.1Password --source winget --silent --accept-package-agreements --accept-source-agreements
+    winget install AgileBits.1Password.CLI --source winget --silent --accept-package-agreements --accept-source-agreements
+}
 
 Write-Host "Microsoft 365..."
 $officeInstalled = (winget list | Select-String -SimpleMatch "Microsoft 365") -or (winget list | Select-String -SimpleMatch "Microsoft Office")
@@ -24,7 +38,11 @@ if (-not $officeInstalled) {
 }
 
 Write-Host "GitKraken..."
-winget install Axosoft.GitKraken --source winget --silent --accept-package-agreements --accept-source-agreements
+if ($env:UNATTENDED_MODE) {
+    Write-Host "  → Skipped in unattended mode (requires account setup)" -ForegroundColor Gray
+} else {
+    winget install Axosoft.GitKraken --source winget --silent --accept-package-agreements --accept-source-agreements
+}
 
 Write-Host "Beyond Compare..."
 try {
@@ -56,7 +74,7 @@ try {
     Write-Host "  ✅ Scrivener installed via winget" -ForegroundColor Green
   } catch {
     try {
-      winget install XP8M0NGDB6HR07 --source msstore --accept-package-agreements --accept-source-agreements
+      winget install XP8M0NGDB6HR07 --source msstore --silent --accept-package-agreements --accept-source-agreements
       Write-Host "  ✅ Scrivener installed via Microsoft Store" -ForegroundColor Green
     } catch {
       Write-Warning "Scrivener not found - install manually from literatureandlatte.com"
@@ -111,23 +129,40 @@ if ($process.ExitCode -eq 0) {
       Write-Host "  💡 Manual install: Download from https://www.malwarebytes.com/mwb-download" -ForegroundColor Yellow
     }
   }
-}Write-Host "GlassWire..."
+}
+
+Write-Host "GlassWire..."
 try {
   winget install GlassWire.GlassWire --source winget --silent --accept-source-agreements --accept-package-agreements
 } catch {
   Write-Warning "GlassWire failed - install manually"
 }
 
-$opt = Read-Host "Install Typora? (Y/N) [Default: N]"
-if ([string]::IsNullOrWhiteSpace($opt)) { $opt = 'N' }
-
-if ($opt -eq 'Y') {
+# Typora (optional - check environment variable for unattended mode)
+if ($env:INSTALL_TYPORA -eq 'Y' -or $env:INSTALL_TYPORA -eq 'yes') {
+    Write-Host "Typora..."
     try {
         winget install Typora.Typora --source winget --silent --accept-package-agreements --accept-source-agreements
         Write-Host "  ✅ Typora installed" -ForegroundColor Green
     } catch {
         Write-Warning "Typora installation failed - install manually from typora.io"
     }
+} elseif (-not $env:UNATTENDED_MODE) {
+    # Only prompt if not in unattended mode
+    $opt = Read-Host "Install Typora? (Y/N) [Default: N]"
+    if ([string]::IsNullOrWhiteSpace($opt)) { $opt = 'N' }
+
+    if ($opt -eq 'Y') {
+        Write-Host "Typora..."
+        try {
+            winget install Typora.Typora --source winget --silent --accept-package-agreements --accept-source-agreements
+            Write-Host "  ✅ Typora installed" -ForegroundColor Green
+        } catch {
+            Write-Warning "Typora installation failed - install manually from typora.io"
+        }
+    }
+} else {
+    Write-Host "Typora skipped (unattended mode, set INSTALL_TYPORA=Y to include)" -ForegroundColor Gray
 }
 
 Write-Host "Licensed apps complete!" -ForegroundColor Green

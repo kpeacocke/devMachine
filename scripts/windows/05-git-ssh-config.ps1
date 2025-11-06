@@ -11,15 +11,29 @@ $currentName = git config --global user.name 2>$null
 $currentEmail = git config --global user.email 2>$null
 
 if ([string]::IsNullOrWhiteSpace($currentName)) {
-    $userName = Read-Host "Enter your full name for Git commits"
-    git config --global user.name "$userName"
+    if ($env:GIT_USER_NAME) {
+        git config --global user.name "$env:GIT_USER_NAME"
+        Write-Host "  ✅ Git user.name set from environment: $env:GIT_USER_NAME" -ForegroundColor Green
+    } elseif (-not $env:UNATTENDED_MODE) {
+        $userName = Read-Host "Enter your full name for Git commits"
+        git config --global user.name "$userName"
+    } else {
+        Write-Host "  ⚠️  Git user.name not set (set GIT_USER_NAME environment variable)" -ForegroundColor Yellow
+    }
 } else {
     Write-Host "  ✅ Git user.name already set: $currentName" -ForegroundColor Green
 }
 
 if ([string]::IsNullOrWhiteSpace($currentEmail)) {
-    $userEmail = Read-Host "Enter your email for Git commits"
-    git config --global user.email "$userEmail"
+    if ($env:GIT_USER_EMAIL) {
+        git config --global user.email "$env:GIT_USER_EMAIL"
+        Write-Host "  ✅ Git user.email set from environment: $env:GIT_USER_EMAIL" -ForegroundColor Green
+    } elseif (-not $env:UNATTENDED_MODE) {
+        $userEmail = Read-Host "Enter your email for Git commits"
+        git config --global user.email "$userEmail"
+    } else {
+        Write-Host "  ⚠️  Git user.email not set (set GIT_USER_EMAIL environment variable)" -ForegroundColor Yellow
+    }
 } else {
     Write-Host "  ✅ Git user.email already set: $currentEmail" -ForegroundColor Green
 }
@@ -75,10 +89,17 @@ if (-not (Test-Path $sshDir)) {
 
 if (Test-Path $keyPath) {
     Write-Host "  ✅ SSH key already exists: $keyPath" -ForegroundColor Green
-    $regenerate = Read-Host "  Generate new SSH key? (Y/N) [Default: N]"
-    if ([string]::IsNullOrWhiteSpace($regenerate)) { $regenerate = 'N' }
-    if ($regenerate -ne 'Y') {
-        Write-Host "  → Keeping existing SSH key" -ForegroundColor Yellow
+    if ($env:REGENERATE_SSH_KEY -eq 'Y') {
+        Write-Host "  → Regenerating SSH key (REGENERATE_SSH_KEY=Y)" -ForegroundColor Yellow
+    } elseif (-not $env:UNATTENDED_MODE) {
+        $regenerate = Read-Host "  Generate new SSH key? (Y/N) [Default: N]"
+        if ([string]::IsNullOrWhiteSpace($regenerate)) { $regenerate = 'N' }
+        if ($regenerate -ne 'Y') {
+            Write-Host "  → Keeping existing SSH key" -ForegroundColor Yellow
+            $skipKeyGen = $true
+        }
+    } else {
+        Write-Host "  → Keeping existing SSH key (unattended mode)" -ForegroundColor Yellow
         $skipKeyGen = $true
     }
 }
@@ -86,7 +107,14 @@ if (Test-Path $keyPath) {
 if (-not $skipKeyGen) {
     $email = git config --global user.email
     if ([string]::IsNullOrWhiteSpace($email)) {
-        $email = Read-Host "  Enter email for SSH key"
+        if ($env:GIT_USER_EMAIL) {
+            $email = $env:GIT_USER_EMAIL
+        } elseif (-not $env:UNATTENDED_MODE) {
+            $email = Read-Host "  Enter email for SSH key"
+        } else {
+            $email = "user@example.com"
+            Write-Host "  ⚠️  Using placeholder email for SSH key (set GIT_USER_EMAIL)" -ForegroundColor Yellow
+        }
     }
 
     Write-Host "  Generating Ed25519 SSH key..."

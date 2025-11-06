@@ -64,7 +64,13 @@ Write-Host "  ✅ Cortana and voice activation disabled" -ForegroundColor Green
 
 Write-Host "`n☁️ OneDrive & Cloud"
 # Disable OneDrive (optional - prompts user)
-$disableOneDrive = Read-Host "  Disable OneDrive integration? (Y/N) [Default: N]"
+if ($env:DISABLE_ONEDRIVE -eq 'Y') {
+    $disableOneDrive = 'Y'
+} elseif ($env:UNATTENDED_MODE) {
+    $disableOneDrive = 'N'  # Conservative default
+} else {
+    $disableOneDrive = Read-Host "  Disable OneDrive integration? (Y/N) [Default: N]"
+}
 if ([string]::IsNullOrWhiteSpace($disableOneDrive)) { $disableOneDrive = 'N' }
 
 if ($disableOneDrive -eq 'Y') {

@@ -26,27 +26,27 @@ Write-Host "== Seed Insiders settings + profile"
 $settingsPath = Join-Path $UserDir "settings.json"
 
 $settings = @{
-  "workbench.startupEditor" = "none";
-  "window.zoomLevel"        = 0;
+  "workbench.startupEditor" = "none"
+  "window.zoomLevel"        = 0
   # cspell:ignore Consolas
-  "editor.fontFamily"       = "JetBrainsMono NF, Cascadia Code, Consolas, 'Courier New', monospace";
-  "editor.fontLigatures"    = true;
-  "editor.renderWhitespace" = "selection";
-  "editor.formatOnSave"     = true;
+  "editor.fontFamily"       = "JetBrainsMono NF, Cascadia Code, Consolas, 'Courier New', monospace"
+  "editor.fontLigatures"    = $true
+  "editor.renderWhitespace" = "selection"
+  "editor.formatOnSave"     = $true
   "editor.codeActionsOnSave" = @{
     "source.organizeImports" = "explicit"
-  };
-  "files.trimTrailingWhitespace" = true;
-  "files.insertFinalNewline" = true;
+  }
+  "files.trimTrailingWhitespace" = $true
+  "files.insertFinalNewline" = $true
 
-  "settingsSync.keybindingsPerPlatform" = true;
-  "settingsSync.editor" = true;
-  "settingsSync.languageSpecificSettings" = true;
-  "settingsSync.enabled" = true;
+  "settingsSync.keybindingsPerPlatform" = $true
+  "settingsSync.editor" = $true
+  "settingsSync.languageSpecificSettings" = $true
+  "settingsSync.enabled" = $true
 
-  "telemetry.telemetryLevel" = "error";
-  "remote.WSL.logLevel" = "info";
-  "remote.autoForwardPorts" = true;
+  "telemetry.telemetryLevel" = "error"
+  "remote.WSL.logLevel" = "info"
+  "remote.autoForwardPorts" = $true
 }
 
 ($settings | ConvertTo-Json -Depth 10) | Out-File -Encoding utf8 $settingsPath

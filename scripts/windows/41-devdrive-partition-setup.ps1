@@ -167,8 +167,17 @@ Write-Host "   • Backup important data before proceeding" -ForegroundColor Yel
 Write-Host "   • This operation cannot be easily reversed" -ForegroundColor Yellow
 Write-Host "   • The process may take 10-15 minutes" -ForegroundColor Yellow
 
-$confirm = Read-Host "`nProceed with partition creation? (Y/N) [Default: N]"
-if ([string]::IsNullOrWhiteSpace($confirm)) { $confirm = 'N' }
+if ($env:CREATE_DEV_DRIVE -eq 'Y') {
+    Write-Host "→ Proceeding with partition creation (CREATE_DEV_DRIVE=Y)" -ForegroundColor Green
+    $confirm = 'Y'
+} elseif ($env:UNATTENDED_MODE) {
+    Write-Host "❌ Dev Drive creation skipped in unattended mode (set CREATE_DEV_DRIVE=Y to enable)" -ForegroundColor Yellow
+    Write-Host "   You can run this script manually later" -ForegroundColor Yellow
+    exit 0
+} else {
+    $confirm = Read-Host "`nProceed with partition creation? (Y/N) [Default: N]"
+    if ([string]::IsNullOrWhiteSpace($confirm)) { $confirm = 'N' }
+}
 
 if ($confirm -ne 'Y') {
     Write-Host "❌ Setup cancelled" -ForegroundColor Red

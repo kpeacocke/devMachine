@@ -36,6 +36,10 @@ winget install Microsoft.PowerToys --source winget --silent --accept-package-agr
 Write-Host "  Installing QuickLook (file preview)..."
 winget install QL-Win.QuickLook --source winget --silent --accept-package-agreements --accept-source-agreements
 
+Write-Host "🔐 Security & Password Management"
+Write-Host "  Installing 1Password CLI (for developers and automation)..."
+winget install AgileBits.1Password.CLI --source winget --silent --accept-package-agreements --accept-source-agreements
+
 Write-Host "🎮 3D & Game Development"
 Write-Host "  Installing Blender (3D modeling/animation)..."
 winget install BlenderFoundation.Blender --source winget --silent --accept-package-agreements --accept-source-agreements

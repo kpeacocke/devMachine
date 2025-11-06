@@ -61,7 +61,11 @@ foreach ($service in $servicesToDisable) {
     if ($service.Prompt) {
         Write-Host "`n  Disable '$($service.DisplayName)'?" -ForegroundColor Yellow
         Write-Host "    Reason: $($service.Reason)" -ForegroundColor Gray
-        $response = Read-Host "    Disable? (Y/N) [Default: Y]"
+        if ($env:UNATTENDED_MODE) {
+            $response = 'Y'
+        } else {
+            $response = Read-Host "    Disable? (Y/N) [Default: Y]"
+        }
         if ([string]::IsNullOrWhiteSpace($response)) { $response = 'Y' }
         if ($response -ne 'Y') {
             $shouldDisable = $false
@@ -90,7 +94,11 @@ foreach ($service in $servicesToDisable) {
 # Special: Windows Update can be set to Manual (not Disabled) for control
 Write-Host "`n  Would you like to set Windows Update to Manual (recommended for dev machines)?"
 Write-Host "    This prevents automatic restarts but allows manual updates." -ForegroundColor Gray
-$wuResponse = Read-Host "    Set to Manual? (Y/N) [Default: Y]"
+if ($env:UNATTENDED_MODE) {
+    $wuResponse = 'Y'
+} else {
+    $wuResponse = Read-Host "    Set to Manual? (Y/N) [Default: Y]"
+}
 if ([string]::IsNullOrWhiteSpace($wuResponse)) { $wuResponse = 'Y' }
 
 if ($wuResponse -eq 'Y') {

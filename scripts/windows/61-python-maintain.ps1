@@ -48,7 +48,11 @@ try {
         }
 
         # Ask user if they want to update all packages
-        $response = Read-Host "`n  Update all packages? (Y/N) [Default: Y]"
+        if ($env:UNATTENDED_MODE) {
+            $response = 'Y'
+        } else {
+            $response = Read-Host "`n  Update all packages? (Y/N) [Default: Y]"
+        }
         if ([string]::IsNullOrWhiteSpace($response)) { $response = 'Y' }
 
         if ($response -eq 'Y') {
