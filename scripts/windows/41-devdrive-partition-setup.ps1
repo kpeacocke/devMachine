@@ -68,7 +68,7 @@ $requestedCacheGB = 60  # For package manager caches
 $requestedCodeGB = 10   # For active development
 
 # ReFS minimum size requirements (ReFS won't format on partitions < 2GB)
-$minCacheGB = 2         # ReFS absolute minimum size 
+$minCacheGB = 2         # ReFS absolute minimum size
 $minCodeGB = 3          # ReFS minimum + buffer for actual development work
 
 # Apply constraints based on available space
@@ -91,7 +91,7 @@ if ($availableForDevDrives -lt ($requestedCacheGB + $requestedCodeGB)) {
             $cachePartitionGB = $minCacheGB
             $codePartitionGB = $availableForDevDrives - $cachePartitionGB
         }
-        
+
         # Ensure code partition meets ReFS minimum
         if ($codePartitionGB -lt $minCodeGB) {
             Write-Host "   ⚠️  Adjusting partitions to meet ReFS 3GB minimum for code partition" -ForegroundColor Yellow
