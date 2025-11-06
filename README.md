@@ -57,13 +57,18 @@ After download, extract and run:
 This orchestrator will:
 
 * Install PowerShell 7 & Windows Terminal
+* **Apply early security hardening BEFORE app installation** (firewall, UAC, Defender, disable legacy protocols)
 * Install all dev tools (VS Code, Docker, Git, runtimes, cloud CLIs)
 * Configure WSL 2 with Ubuntu
-* Apply security hardening (Defender, BitLocker, Credential Guard, firewall)
+* Apply advanced security hardening AFTER apps (BitLocker, Credential Guard, HVCI, LSA Protection)
 * Optimize for 512GB storage (move caches to Dev Drive, cleanup)
 * Set up backup (Backblaze, File History, System Protection)
 * Configure Ubuntu with full dev stack
 * Run verification tests
+
+**Security-First Approach**: Network-facing applications (Docker, Node.js, Python, VS Code, Git) install into a
+hardened environment with firewall enabled and legacy protocols disabled from the start. Advanced security features
+requiring reboots (BitLocker, Credential Guard) apply after apps are installed.
 
 ### Options
 
@@ -102,127 +107,133 @@ If you prefer to run scripts individually:
    scripts/windows/00-pwsh-first.ps1
    ```
 
-2. **Windows tooling** (VS Code, Docker, runtimes, CLIs, apps)  
+2. **Early security hardening** – enable firewall, UAC, Defender BEFORE app installation
+
+   ```powershell
+   scripts/windows/01-early-hardening.ps1
+   ```
+
+3. **Windows tooling** (VS Code, Docker, runtimes, CLIs, apps)  
 
    ```powershell
    scripts/windows/10-windows-bootstrap.ps1
    ```
 
-3. **Windows debloat** (remove Xbox, games, Spotify, bloatware)
+4. **Windows debloat** (remove Xbox, games, Spotify, bloatware)
 
    ```powershell
    scripts/windows/09-debloat-windows.ps1
    ```
 
-4. **Git & SSH configuration** (global config, SSH key generation)
+5. **Git & SSH configuration** (global config, SSH key generation)
 
    ```powershell
    scripts/windows/05-git-ssh-config.ps1
    ```
 
-5. **PowerShell profile** (Oh-My-Posh, PSReadLine, aliases, functions)
+6. **PowerShell profile** (Oh-My-Posh, PSReadLine, aliases, functions)
 
    ```powershell
    scripts/windows/06-powershell-profile.ps1
    ```
 
-6. **Licensed apps** (optional - skip for VMs)  
+7. **Licensed apps** (optional - skip for VMs)  
 
    ```powershell
    scripts/windows/11-licensed-apps.ps1
    ```
 
-7. **Browsers, communications & media** (Chrome, Firefox, Teams, VLC, etc.)
+8. **Browsers, communications & media** (Chrome, Firefox, Teams, VLC, etc.)
 
    ```powershell
    scripts/windows/12-communications-media.ps1
    ```
 
-8. **Social media & streaming** (Facebook, Instagram, Netflix, Disney+, AU TV apps)
+9. **Social media & streaming** (Facebook, Instagram, Netflix, Disney+, AU TV apps)
 
    ```powershell
    scripts/windows/16-social-streaming.ps1
    ```
 
-9. **Windows Terminal configuration** (settings.json automation)
+10. **Windows Terminal configuration** (settings.json automation)
 
-   ```powershell
-   scripts/windows/15-windows-terminal-config.ps1
-   ```
+    ```powershell
+    scripts/windows/15-windows-terminal-config.ps1
+    ```
 
-10. **Optimize + Harden** (safe defaults)  
+11. **Advanced security hardening** (BitLocker, Credential Guard, HVCI, LSA Protection - requires reboot)
 
     ```powershell
     scripts/windows/30-optimize-and-harden.ps1
     ```
 
-11. **Performance tuning** (Ultimate plan, storage sense, indexing)  
+12. **Performance tuning** (Ultimate plan, storage sense, indexing)  
 
     ```powershell
     scripts/windows/31-performance-tuning.ps1 -SetUltimateNow
     ```
 
-12. **Auto power plan toggle** (AC→Ultimate, Battery→Balanced)  
+13. **Auto power plan toggle** (AC→Ultimate, Battery→Balanced)  
 
     ```powershell
     scripts/windows/32-powerplan-auto-toggle.ps1
     ```
 
-13. **Privacy & telemetry hardening** (disable telemetry, Game Mode, Cortana, etc.)
+14. **Privacy & telemetry hardening** (disable telemetry, Game Mode, Cortana, etc.)
 
     ```powershell
     scripts/windows/35-privacy-telemetry.ps1
     ```
 
-14. **DNS security & advanced firewall** (DNS over HTTPS, dev tool firewall rules)
+15. **DNS security & advanced firewall** (DNS over HTTPS, dev tool firewall rules)
 
     ```powershell
     scripts/windows/36-dns-firewall-advanced.ps1
     ```
 
-15. **Services optimization** (disable unnecessary Windows services)
+16. **Services optimization** (disable unnecessary Windows services)
 
     ```powershell
     scripts/windows/37-services-optimization.ps1
     ```
 
-16. **Move caches to Dev Drive** (saves 20-50GB on C:)
+17. **Move caches to Dev Drive** (saves 20-50GB on C:)
 
     ```powershell
     scripts/windows/40-devdrive-caches.ps1
     ```
 
-17. **Linters & formatters** (ESLint, Prettier, Ruff, Stylelint, etc.)
+18. **Linters & formatters** (ESLint, Prettier, Ruff, Stylelint, etc.)
 
     ```powershell
     scripts/windows/13-linters-formatters.ps1
     ```
 
-18. **Additional dev tools** (Insomnia, DBeaver, Wireshark, Blender, Godot, etc.)
+19. **Additional dev tools** (Insomnia, DBeaver, Wireshark, Blender, Godot, etc.)
 
     ```powershell
     scripts/windows/14-additional-dev-tools.ps1
     ```
 
-19. **Optional dev goodies** (Sysinternals, mkcert, security tools, k8s)
+20. **Optional dev goodies** (Sysinternals, mkcert, security tools, k8s)
 
     ```powershell
     scripts/windows/33-optional-dev-goodies.ps1
     ```
 
-20. **Backup setup** (File History, System Protection)
+21. **Backup setup** (File History, System Protection)
 
     ```powershell
     scripts/windows/80-backup-setup.ps1
     ```
 
-21. **.NET maintainer** (one-off or weekly)  
+22. **.NET maintainer** (one-off or weekly)  
 
     ```powershell
     scripts/windows/60-dotnet-maintain.ps1 -ScheduleWeekly
     ```
 
-22. **Doctor check**  
+23. **Doctor check**  
 
     ```powershell
     scripts/windows/50-doctor.ps1 -VerboseOut
@@ -381,22 +392,40 @@ wsl -d Ubuntu -e bash ./scripts/wsl/doctor-ubuntu.sh
 
 ## 🔒 Security Hardening Applied
 
+### Two-Phase Security Architecture
+
+**Phase 1: Early Hardening (BEFORE app installation)**
+Network-facing applications install into a secure environment from the start. Applied via `01-early-hardening.ps1`:
+
 * **Firewall**: Enabled on all profiles (block inbound by default)
-* **Windows Defender**: PUA protection, Network Protection, ASR rules (audit mode)
+* **Windows Defender**: PUA protection, Network Protection, cloud-delivered protection
+* **UAC**: Always notify (max security, secure desktop)
+* **SMBv1**: Disabled (WannaCry vulnerability)
+* **RDP**: Disabled (security risk)
+* **LLMNR/NetBIOS**: Disabled (prevents spoofing attacks)
+* **NTFS Long Paths**: Enabled (npm, modern dev tools)
+* **Developer Mode**: Enabled (symlinks, debugging)
+
+**Phase 2: Advanced Hardening (AFTER app installation - requires reboot)**
+Applied via `30-optimize-and-harden.ps1`:
+
 * **BitLocker**: Enabled on C: with XTS-AES256
 * **Credential Guard**: Enabled with UEFI lock
 * **LSA Protection**: RunAsPPL enabled
 * **Core Isolation (HVCI)**: Enabled
-* **UAC**: Always notify (max security)
 * **SSH**: Key-only authentication (password auth disabled)
-* **RDP**: Disabled
-* **SMBv1**: Disabled
 * **DNS over HTTPS**: Enabled (Cloudflare/Google/Quad9 options)
-* **LLMNR/NetBIOS**: Disabled (prevents spoofing attacks)
+* **Windows Defender ASR Rules**: Enabled (audit mode)
+* **PowerShell Logging**: ScriptBlock logging, transcription
+* **Firewall Rules**: Dev tools (Docker, Node.js, Python, databases, Kubernetes, WSL 2)
+
+**Additional Privacy & Security** (optional scripts):
+
 * **Telemetry**: Disabled (privacy hardening)
 * **Cortana/Game Mode**: Disabled
 * **Windows Consumer Features**: Disabled (prevents bloatware reinstall)
-* **Firewall Rules**: Dev tools (Docker, Node.js, Python, databases, Kubernetes, WSL 2)
+* **Services**: Unnecessary Windows services disabled
+* **DNS Security**: Advanced firewall rules for dev tools
 * **Services**: Unnecessary services disabled (Print Spooler, Remote Registry, Xbox, etc.)
 * **Enhanced Audit Logging**: Process creation, logon, account lockout, file share
 * **Log Sizes**: Security 500MB, System 100MB

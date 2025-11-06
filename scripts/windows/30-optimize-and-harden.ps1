@@ -1,25 +1,22 @@
 <#
-Surface Pro (ARM64) — Optimize & Harden
-Safe, dev-friendly defaults: power, storage, WSL/Docker, Defender, firewall, logging, SSH (key-only), ASR (audit first).
-Reboot recommended after it finishes.
+Advanced Security Hardening & Optimization
+Run AFTER app installation. Applies advanced security (BitLocker, Credential Guard, HVCI, LSA Protection)
+and optimization settings. REQUIRES REBOOT after completion.
+NOTE: Basic hardening (firewall, UAC, Defender) is done in 01-early-hardening.ps1 BEFORE app installation.
 #>
 
 $ErrorActionPreference = 'Stop'
 function Test-Command($n){ $null -ne (Get-Command $n -ErrorAction SilentlyContinue) }
 
-Write-Host "== Create a system restore point (best-effort)"
-try { Checkpoint-Computer -Description "Pre-Optimize-Harden" -RestorePointType "MODIFY_SETTINGS" } catch { }
+Write-Host "[ADVANCED HARDENING] Applying advanced security and optimization..." -ForegroundColor Cyan
+Write-Host "   Note: This script applies settings that require a reboot" -ForegroundColor Yellow
+
+Write-Host "`n== Create a system restore point (best-effort)"
+try { Checkpoint-Computer -Description "Pre-Advanced-Harden" -RestorePointType "MODIFY_SETTINGS" } catch { }
 
 # PERFORMANCE / QUALITY OF LIFE
-Write-Host "== Enable NTFS long paths & Developer Mode"
-reg add HKLM\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1 /f | Out-Null
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" /t REG_DWORD /f /v "AllowDevelopmentWithoutDevLicense" /d 1 | Out-Null
-
-Write-Host "== UAC: Always notify (max security)"
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 2 /f | Out-Null
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v PromptOnSecureDesktop /t REG_DWORD /d 1 /f | Out-Null
-
-Write-Host "== Create/update .wslconfig (resource caps for battery/thermals)"
+Write-Host "`n== WSL Configuration"
+Write-Host "   Creating/updating .wslconfig (resource caps for battery/thermals)..."
 $wslCfg = @"
 [wsl2]
 memory=8GB
@@ -36,28 +33,27 @@ autoMemoryReclaim=gradual
 "@
 $wslPath = Join-Path $env:UserProfile ".wslconfig"
 $wslCfg | Out-File -FilePath $wslPath -Encoding utf8
+Write-Host "   ✅ .wslconfig created" -ForegroundColor Green
 
-Write-Host "== Power plan: Expose Ultimate Performance (you can activate later)"
+Write-Host "`n== Power Plan Configuration"
+Write-Host "   Exposing Ultimate Performance plan (activate later if needed)..."
 try { powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 | Out-Null } catch {}
 powercfg /change standby-timeout-dc 30  | Out-Null
 powercfg /change standby-timeout-ac 0   | Out-Null
 powercfg /change monitor-timeout-ac 30  | Out-Null
+Write-Host "   ✅ Power plan configured" -ForegroundColor Green
 
-Write-Host "== Storage Sense: enable automated cleanup"
+Write-Host "`n== Storage Sense"
+Write-Host "   Enabling automated cleanup..."
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 01 /t REG_DWORD /d 1 /f | Out-Null
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 02 /t REG_DWORD /d 2 /f | Out-Null
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 08 /t REG_DWORD /d 1 /f | Out-Null
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 32 /t REG_DWORD /d 1 /f | Out-Null
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 33 /t REG_DWORD /d 30 /f | Out-Null
+Write-Host "   ✅ Storage Sense enabled" -ForegroundColor Green
 
-# SECURITY BASELINE
-Write-Host "== Firewall: ON for all profiles; inbound block"
-Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True -DefaultInboundAction Block -DefaultOutboundAction Allow
-
-Write-Host "== Defender core settings"
-Set-MpPreference -PUAProtection Enabled -MAPSReporting Advanced -SubmitSamplesConsent SendSafeSamples -EnableNetworkProtection Enabled
-
-Write-Host "== Defender exclusions for dev performance"
+# ADVANCED SECURITY (requires reboot)
+Write-Host "`n== Defender: Performance exclusions for dev folders"
 # Exclude common dev folders and build artifacts to avoid scan overhead
 $exclusions = @(
   "$env:USERPROFILE\.cargo"
@@ -92,8 +88,9 @@ try {
   Add-MpPreference -ExclusionPath "*\venv"
   Write-Host "  → Excluded common build/temp folders (node_modules, .git, target, build, dist, .venv)"
 } catch { Write-Warning "Some folder exclusions failed" }
+Write-Host "   ✅ Defender exclusions configured" -ForegroundColor Green
 
-Write-Host "== Defender Attack Surface Reduction (ASR) — Audit mode first"
+Write-Host "`n== Defender Attack Surface Reduction (ASR) — Audit mode first"
 $ASR = @{
   "56a863a9-875e-4185-98a7-b882c64b5ce5" = "AuditMode" # vulnerable driver block
   "9e6c4e1f-7d60-472f-ba1a-a39ef669e4b2" = "AuditMode" # LSASS credential theft
@@ -108,15 +105,18 @@ $acts = $ASR.Values | ForEach-Object {
   }
 }
 Add-MpPreference -AttackSurfaceReductionRules_Ids $ids -AttackSurfaceReductionRules_Actions $acts
+Write-Host "   ✅ ASR rules enabled in audit mode" -ForegroundColor Green
 
-Write-Host "== SmartScreen + Controlled Folder Access"
+Write-Host "`n== Controlled Folder Access"
 Set-MpPreference -EnableControlledFolderAccess Disabled 2>$null
-# Note: Controlled Folder Access is disabled to avoid blocking dev tools. Enable manually if needed.
+Write-Host "   ⚠️  Controlled Folder Access disabled (to avoid blocking dev tools)" -ForegroundColor Yellow
+Write-Host "   💡 Enable manually if needed for ransomware protection" -ForegroundColor Gray
 
-Write-Host "== PowerShell Script Block Logging (security auditing)"
+Write-Host "`n== PowerShell Script Block Logging (security auditing)"
 $regPath = "HKLM:\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging"
 if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
 Set-ItemProperty -Path $regPath -Name "EnableScriptBlockLogging" -Value 1 -Force
+Write-Host "   ✅ PowerShell script block logging enabled" -ForegroundColor Green
 
 Write-Host "== Audit Process Creation: include command line"
 New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System\Audit" -Force | Out-Null
@@ -160,19 +160,17 @@ try {
   $dgPath = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard"
   Set-ItemProperty -Path $dgPath -Name "RequirePlatformSecurityFeatures" -Value 3 -Type DWord -Force
   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "LsaCfgFlags" -Value 1 -Type DWord -Force
+  Write-Host "   ✅ Credential Guard and LSA Protection enabled (requires reboot)" -ForegroundColor Green
 } catch {
   Write-Warning "Credential Guard settings skipped: $_"
 }
 
-Write-Host "== Disable SMBv1"
-Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -ErrorAction SilentlyContinue | Out-Null
-
-Write-Host "== RDP disable; OpenSSH enable (key-only)"
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 1 /f | Out-Null
+Write-Host "`n== OpenSSH Server: Enable with key-only authentication"
 try {
   Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0 | Out-Null
   Set-Service -Name sshd -StartupType Automatic
   Start-Service sshd
+  Write-Host "   ✅ OpenSSH Server enabled" -ForegroundColor Green
 } catch { Write-Warning "OpenSSH install skipped/failed: $_" }
 $sshd = "$env:ProgramData\ssh\sshd_config"
 if (Test-Path $sshd) {

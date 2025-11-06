@@ -176,6 +176,23 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 }
 
 # ============================================================================
+# PHASE 1.5: EARLY SECURITY HARDENING
+# ============================================================================
+
+Write-Host "`n🛡️  Early Security Hardening" -ForegroundColor Yellow
+Write-Host "   Apply basic security BEFORE app installation: firewall, UAC, Defender, disable legacy protocols`n" -ForegroundColor Yellow
+$earlyHarden = Read-Host "Apply early hardening? (Y/N) [Default: Y]"
+if ([string]::IsNullOrWhiteSpace($earlyHarden)) { $earlyHarden = 'Y' }
+
+if ($earlyHarden -eq 'Y') {
+    Write-Step "PHASE 1.5: Early Security Hardening"
+    Invoke-Script -Path (Join-Path $WindowsScripts "01-early-hardening.ps1") `
+        -Description "Enable firewall, UAC, Defender, disable legacy protocols (NO REBOOT)"
+} else {
+    Write-Host "   ⭐  Skipped early hardening - apps will install on un-hardened system" -ForegroundColor Yellow
+}
+
+# ============================================================================
 # PHASE 2: CORE WINDOWS TOOLING
 # ============================================================================
 
@@ -187,7 +204,7 @@ Invoke-Script -Path (Join-Path $WindowsScripts "10-windows-bootstrap.ps1") `
 # PHASE 2.05: WINDOWS DEBLOAT (OPTIONAL)
 # ============================================================================
 
-Write-Host "`n🗑️  Windows Debloat" -ForegroundColor Yellow
+Write-Host "🗑️  Windows Debloat" -ForegroundColor Yellow
 Write-Host "   Remove pre-installed bloatware: Xbox, Solitaire, Spotify, Candy Crush, etc.`n" -ForegroundColor Yellow
 $debloatWindows = Read-Host "Remove Windows bloatware? (Y/N) [Default: Y]"
 if ([string]::IsNullOrWhiteSpace($debloatWindows)) { $debloatWindows = 'Y' }
@@ -261,7 +278,7 @@ if (-not $SkipLicensedApps) {
 # ============================================================================
 
 if (-not $SkipCommunicationsMedia) {
-    Write-Host "`n💬 Browsers, Communications & Media" -ForegroundColor Yellow
+    Write-Host "💬 Browsers, Communications & Media" -ForegroundColor Yellow
     Write-Host "   Chrome, Firefox, Teams, WhatsApp, Signal, Slack, Discord, VLC, HandBrake, K-Lite Mega`n" -ForegroundColor Yellow
     $installComms = Read-Host "Install browsers, communications & media apps? (Y/N) [Default: N]"
     if ([string]::IsNullOrWhiteSpace($installComms)) { $installComms = 'N' }
@@ -281,7 +298,7 @@ if (-not $SkipCommunicationsMedia) {
 # PHASE 2.65: SOCIAL MEDIA & STREAMING (OPTIONAL)
 # ============================================================================
 
-Write-Host "`n📱 Social Media & Streaming Services" -ForegroundColor Yellow
+Write-Host "📱 Social Media & Streaming Services" -ForegroundColor Yellow
 Write-Host "   Facebook, LinkedIn, X, Reddit, Apple Music/TV, Netflix, Disney+, AU TV apps, etc.`n" -ForegroundColor Yellow
 $installSocialStreaming = Read-Host "Install social media & streaming apps? (Y/N) [Default: N]"
 if ([string]::IsNullOrWhiteSpace($installSocialStreaming)) { $installSocialStreaming = 'N' }
@@ -584,7 +601,7 @@ if ($reboot -eq 'Y') {
     Write-Host "Remember to reboot before running production workloads!" -ForegroundColor Yellow
 }
 
-Write-Host "`n========================================================================" -ForegroundColor Green
+Write-Host "========================================================================" -ForegroundColor Green
 Write-Host "" -ForegroundColor Green
 Write-Host "     Setup Complete! Your Surface Pro is ready for development" -ForegroundColor Green
 Write-Host "" -ForegroundColor Green
