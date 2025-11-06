@@ -4,10 +4,11 @@
 
 .DESCRIPTION
     This script shrinks the C: drive and creates two ReFS Dev Drive partitions:
-    1. Cache partition (~50-60GB) mounted at C:\DevCache
-    2. Code partition (~10GB) mounted at C:\Users\<username>\code
+    1. Cache partition (~50-60GB, minimum 2GB) mounted at C:\DevCache
+    2. Code partition (~10GB, minimum 3GB) mounted at C:\Users\<username>\code
 
-    Ensures 30% free space remains on C: after partitioning.
+    ReFS requires a minimum of 2GB per partition. The script automatically adjusts sizes
+    to meet these requirements while ensuring 30% free space remains on C:.
 
 .EXAMPLE
     .\scripts\windows\41-devdrive-partition-setup.ps1
@@ -66,28 +67,47 @@ Write-Host "   Maximum shrinkable: $maxShrinkableGB GB" -ForegroundColor Yellow
 $requestedCacheGB = 60  # For package manager caches
 $requestedCodeGB = 10   # For active development
 
+# ReFS minimum size requirements (ReFS won't format on partitions < 2GB)
+$minCacheGB = 2         # ReFS absolute minimum size 
+$minCodeGB = 3          # ReFS minimum + buffer for actual development work
+
 # Apply constraints based on available space
 $availableForDevDrives = [math]::Floor($maxShrinkableGB * 0.85) # Use only 85% of shrinkable space for safety
 
 if ($availableForDevDrives -lt ($requestedCacheGB + $requestedCodeGB)) {
     Write-Host "   ⚠️  Limited space available for Dev Drives: $availableForDevDrives GB" -ForegroundColor Yellow
 
-    # Prioritize cache partition, reduce both if necessary
-    if ($availableForDevDrives -ge 40) {
-        $cachePartitionGB = [math]::Min($requestedCacheGB, [math]::Floor($availableForDevDrives * 0.8))
-        $codePartitionGB = [math]::Min($requestedCodeGB, $availableForDevDrives - $cachePartitionGB)
-    } elseif ($availableForDevDrives -ge 20) {
-        $cachePartitionGB = [math]::Floor($availableForDevDrives * 0.7)
-        $codePartitionGB = $availableForDevDrives - $cachePartitionGB
+    # Prioritize cache partition, but ensure ReFS minimums are met
+    if ($availableForDevDrives -ge ($minCacheGB + $minCodeGB)) {
+        # We have enough for minimums, calculate optimal split
+        if ($availableForDevDrives -ge 40) {
+            $cachePartitionGB = [math]::Min($requestedCacheGB, [math]::Floor($availableForDevDrives * 0.8))
+            $codePartitionGB = [math]::Max($minCodeGB, $availableForDevDrives - $cachePartitionGB)
+        } elseif ($availableForDevDrives -ge 20) {
+            $cachePartitionGB = [math]::Max($minCacheGB, [math]::Floor($availableForDevDrives * 0.7))
+            $codePartitionGB = [math]::Max($minCodeGB, $availableForDevDrives - $cachePartitionGB)
+        } else {
+            # Minimum viable setup
+            $cachePartitionGB = $minCacheGB
+            $codePartitionGB = $availableForDevDrives - $cachePartitionGB
+        }
+        
+        # Ensure code partition meets ReFS minimum
+        if ($codePartitionGB -lt $minCodeGB) {
+            Write-Host "   ⚠️  Adjusting partitions to meet ReFS 3GB minimum for code partition" -ForegroundColor Yellow
+            $codePartitionGB = $minCodeGB
+            $cachePartitionGB = [math]::Max($minCacheGB, $availableForDevDrives - $codePartitionGB)
+        }
     } else {
-        Write-Host "   ❌ Insufficient space for Dev Drives (need at least 20GB)" -ForegroundColor Red
+        Write-Host "   ❌ Insufficient space for ReFS Dev Drives (need at least $($minCacheGB + $minCodeGB)GB)" -ForegroundColor Red
         Write-Host "      Available: $availableForDevDrives GB" -ForegroundColor Yellow
+        Write-Host "      ReFS requires minimum 2GB per partition" -ForegroundColor Yellow
         Write-Host "      Try freeing up disk space or disabling hibernation: powercfg /h off" -ForegroundColor Yellow
         exit 1
     }
 } else {
     $cachePartitionGB = $requestedCacheGB
-    $codePartitionGB = $requestedCodeGB
+    $codePartitionGB = [math]::Max($minCodeGB, $requestedCodeGB)  # Ensure ReFS minimum
 }
 
 # Calculate total partition sizes needed
@@ -105,9 +125,9 @@ if ($totalPartitionsGB -gt $maxShrinkableGB) {
     exit 1
 }
 
-Write-Host "   ✅ Space allocation feasible" -ForegroundColor Green
-Write-Host "      Cache partition: $cachePartitionGB GB" -ForegroundColor Gray
-Write-Host "      Code partition: $codePartitionGB GB" -ForegroundColor Gray
+Write-Host "   ✅ Space allocation feasible (meets ReFS minimums)" -ForegroundColor Green
+Write-Host "      Cache partition: $cachePartitionGB GB (ReFS minimum: 2GB)" -ForegroundColor Gray
+Write-Host "      Code partition: $codePartitionGB GB (ReFS minimum: 3GB)" -ForegroundColor Gray
 Write-Host "      Total Dev Drives: $totalPartitionsGB GB" -ForegroundColor Gray
 
 # Final validation: Ensure 30% free space requirement after partitioning

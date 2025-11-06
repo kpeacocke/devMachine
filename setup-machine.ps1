@@ -601,6 +601,23 @@ if ($configureDnsFirewall -eq 'Y') {
 }
 
 # ============================================================================
+# PHASE 8.65: SSL/TLS HARDENING
+# ============================================================================
+
+Write-Step "PHASE 8.65: SSL/TLS & Encryption Hardening"
+Write-Host "🔒 Modern Cryptography & Protocol Security" -ForegroundColor Yellow
+Write-Host "   Disable weak protocols, enable TLS 1.2/1.3, harden cipher suites`n" -ForegroundColor Yellow
+$hardenSslTls = Read-Host "Apply SSL/TLS hardening? (Y/N) [Default: Y]"
+if ([string]::IsNullOrWhiteSpace($hardenSslTls)) { $hardenSslTls = 'Y' }
+
+if ($hardenSslTls -eq 'Y') {
+    Invoke-Script -Path (Join-Path $WindowsScripts "38-ssl-tls-hardening.ps1") `
+        -Description "Disable SSL 2.0/3.0, TLS 1.0/1.1, enable modern ciphers, harden .NET crypto"
+} else {
+    Write-Host "   ⭐  Skipped SSL/TLS hardening" -ForegroundColor Yellow
+}
+
+# ============================================================================
 # PHASE 8.7: SERVICES OPTIMIZATION
 # ============================================================================
 

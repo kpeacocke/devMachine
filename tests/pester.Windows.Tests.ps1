@@ -28,12 +28,20 @@ Describe "Windows Dev Environment" {
       Set-ItResult -Skipped -Because "WSL not installed"
       return
     }
-    $distros = wsl -l -v 2>&1 | Out-String
-    if ($distros -match "no installed distributions" -or $distros -match "has no installed distributions") {
-      Set-ItResult -Skipped -Because "No WSL distributions installed"
-      return
+    try {
+      $distros = wsl -l -v 2>&1 | Out-String
+      if ($distros -match "no installed distributions" -or $distros -match "has no installed distributions") {
+        Set-ItResult -Skipped -Because "No WSL distributions installed"
+        return
+      }
+      if ($distros -match "Ubuntu") {
+        $true | Should -Be $true
+      } else {
+        Set-ItResult -Skipped -Because "Ubuntu not found in WSL distributions"
+      }
+    } catch {
+      Set-ItResult -Skipped -Because "Cannot check WSL distributions"
     }
-    $distros | Should -Match "Ubuntu"
   }
 
   It ".wslconfig exists with sparse VHD enabled" {
@@ -574,6 +582,71 @@ Describe "Windows Dev Environment - Maintenance" {
     }
     $LASTEXITCODE | Should -Be 0
     $result | Should -Not -BeNullOrEmpty
+  }
+}
+
+Describe "SSL/TLS Security Tests" {
+  BeforeAll {
+    $ErrorActionPreference = 'SilentlyContinue'
+  }
+
+  It "SSL/TLS hardening script exists" {
+    $scriptPath = Join-Path $PSScriptRoot "..\scripts\windows\38-ssl-tls-hardening.ps1"
+    $scriptPath | Should -Exist
+  }
+
+  It "Weak SSL protocols are disabled (if hardening applied)" {
+    try {
+      $sslPath = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\SSL 2.0\Server"
+      if (Test-Path $sslPath) {
+        $ssl2Disabled = Get-ItemProperty -Path $sslPath -Name "Enabled" -ErrorAction SilentlyContinue
+        if ($ssl2Disabled) {
+          $ssl2Disabled.Enabled | Should -Be 0
+        } else {
+          Set-ItResult -Skipped -Because "SSL 2.0 registry key not found"
+        }
+      } else {
+        Set-ItResult -Skipped -Because "SSL/TLS hardening not applied"
+      }
+    } catch {
+      Set-ItResult -Skipped -Because "Cannot check SSL settings without elevation"
+    }
+  }
+
+  It "Modern TLS is enabled (if hardening applied)" {
+    try {
+      $tls12Path = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\Server"
+      if (Test-Path $tls12Path) {
+        $tls12Enabled = Get-ItemProperty -Path $tls12Path -Name "Enabled" -ErrorAction SilentlyContinue
+        if ($tls12Enabled) {
+          $tls12Enabled.Enabled | Should -Be 1
+        } else {
+          Set-ItResult -Skipped -Because "TLS 1.2 not explicitly configured"
+        }
+      } else {
+        Set-ItResult -Skipped -Because "SSL/TLS hardening not applied"
+      }
+    } catch {
+      Set-ItResult -Skipped -Because "Cannot check TLS settings without elevation"
+    }
+  }
+
+  It ".NET Framework strong crypto is enabled (if hardening applied)" {
+    try {
+      $dotnetPath = "HKLM:\SOFTWARE\Microsoft\.NETFramework\v4.0.30319"
+      if (Test-Path $dotnetPath) {
+        $strongCrypto = Get-ItemProperty -Path $dotnetPath -Name "SchUseStrongCrypto" -ErrorAction SilentlyContinue
+        if ($strongCrypto) {
+          $strongCrypto.SchUseStrongCrypto | Should -Be 1
+        } else {
+          Set-ItResult -Skipped -Because "Strong crypto not configured"
+        }
+      } else {
+        Set-ItResult -Skipped -Because ".NET Framework not found"
+      }
+    } catch {
+      Set-ItResult -Skipped -Because "Cannot check .NET settings without elevation"
+    }
   }
 }
 

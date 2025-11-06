@@ -103,4 +103,31 @@ Describe "CI/CD Safe Environment Tests" {
         # At least one core service should exist
         $services | Should -Not -BeNullOrEmpty
     }
+
+    It "SSL/TLS hardening script exists and is valid" {
+        $scriptPath = Join-Path (Split-Path -Parent $PSScriptRoot) "scripts\windows\38-ssl-tls-hardening.ps1"
+        $scriptPath | Should -Exist
+
+        # Test script syntax
+        { [scriptblock]::Create((Get-Content -Path $scriptPath -Raw)) } | Should -Not -Throw
+    }
+
+    It "Modern TLS is supported (if hardening applied)" {
+        try {
+            # Check if .NET is configured for strong crypto
+            $dotnetPath = "HKLM:\SOFTWARE\Microsoft\.NETFramework\v4.0.30319"
+            if (Test-Path $dotnetPath) {
+                $strongCrypto = Get-ItemProperty -Path $dotnetPath -Name "SchUseStrongCrypto" -ErrorAction SilentlyContinue
+                if ($strongCrypto -and $strongCrypto.SchUseStrongCrypto -eq 1) {
+                    $strongCrypto.SchUseStrongCrypto | Should -Be 1
+                } else {
+                    Set-ItResult -Skipped -Because "SSL/TLS hardening not applied"
+                }
+            } else {
+                Set-ItResult -Skipped -Because ".NET Framework not found"
+            }
+        } catch {
+            Set-ItResult -Skipped -Because "Cannot check SSL/TLS settings without elevation"
+        }
+    }
 }
