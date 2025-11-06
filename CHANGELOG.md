@@ -10,6 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [Conventional Commits](https://www.conventionalcommits.org/).
 > See [COMMIT_CONVENTION.md](.github/COMMIT_CONVENTION.md) for commit message guidelines.
 
+## [1.3.0](https://github.com/kpeacocke/devMachine/compare/v1.2.0...v1.3.0) (2025-11-06)
+
+
+### 🚀 Features
+
+* **changelog:** update changelog title and cleanup duplicates in release workflow ([5d82617](https://github.com/kpeacocke/devMachine/commit/5d82617c3819d19d0a39730bff59970bfdb68c51))
+* **settings:** add new words to cSpell dictionary for improved spell checking ([7ef0ff2](https://github.com/kpeacocke/devMachine/commit/7ef0ff2a9b133440e2ed7cb05bfd18e82f832a54))
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+> **Note**: From v1.1.0 onwards, this changelog is automatically generated using
+> [semantic-release](https://semantic-release.gitbook.io/) based on
+> [Conventional Commits](https://www.conventionalcommits.org/).
+> See [COMMIT_CONVENTION.md](.github/COMMIT_CONVENTION.md) for commit message guidelines.
+
 ## [1.2.0](https://github.com/kpeacocke/devMachine/compare/v1.1.0...v1.2.0) (2025-11-06)
 
 ### 🚀 Features
