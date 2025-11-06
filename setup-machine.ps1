@@ -184,6 +184,40 @@ Invoke-Script -Path (Join-Path $WindowsScripts "10-windows-bootstrap.ps1") `
     -Description "Install VS Code, Docker, WSL, Git, runtimes, cloud CLIs"
 
 # ============================================================================
+# PHASE 2.1: GIT & SSH CONFIGURATION
+# ============================================================================
+
+Write-Step "PHASE 2.1: Git & SSH Configuration"
+Write-Host "🔑 Git Global Config & SSH Key Generation" -ForegroundColor Yellow
+Write-Host "   This will configure Git global settings and generate SSH keys`n" -ForegroundColor Yellow
+$configureGit = Read-Host "Configure Git & SSH? (Y/N) [Default: Y]"
+if ([string]::IsNullOrWhiteSpace($configureGit)) { $configureGit = 'Y' }
+
+if ($configureGit -eq 'Y') {
+    Invoke-Script -Path (Join-Path $WindowsScripts "05-git-ssh-config.ps1") `
+        -Description "Configure Git global settings and generate SSH keys"
+} else {
+    Write-Host "   ⭐  Skipped Git/SSH configuration" -ForegroundColor Yellow
+}
+
+# ============================================================================
+# PHASE 2.2: POWERSHELL PROFILE ENHANCEMENT
+# ============================================================================
+
+Write-Step "PHASE 2.2: PowerShell Profile Enhancement"
+Write-Host "⚡ Enhanced PowerShell Profile" -ForegroundColor Yellow
+Write-Host "   Oh-My-Posh, PSReadLine, posh-git, mise, aliases, helper functions`n" -ForegroundColor Yellow
+$configurePowerShell = Read-Host "Configure PowerShell profile? (Y/N) [Default: Y]"
+if ([string]::IsNullOrWhiteSpace($configurePowerShell)) { $configurePowerShell = 'Y' }
+
+if ($configurePowerShell -eq 'Y') {
+    Invoke-Script -Path (Join-Path $WindowsScripts "06-powershell-profile.ps1") `
+        -Description "Create comprehensive PowerShell profile with productivity enhancements"
+} else {
+    Write-Host "   ⭐  Skipped PowerShell profile configuration" -ForegroundColor Yellow
+}
+
+# ============================================================================
 # PHASE 2.5: LICENSED/COMMERCIAL APPS (OPTIONAL)
 # ============================================================================
 
@@ -224,6 +258,23 @@ if (-not $SkipCommunicationsMedia) {
     }
 } else {
     Write-Host "⭐  Skipping browsers/communications/media (use -SkipCommunicationsMedia:`$false to enable)" -ForegroundColor Yellow
+}
+
+# ============================================================================
+# PHASE 2.7: WINDOWS TERMINAL CONFIGURATION
+# ============================================================================
+
+Write-Step "PHASE 2.7: Windows Terminal Configuration"
+Write-Host "🎨 Windows Terminal Settings" -ForegroundColor Yellow
+Write-Host "   Auto-configure settings.json with optimal dev settings`n" -ForegroundColor Yellow
+$configureTerminal = Read-Host "Configure Windows Terminal? (Y/N) [Default: Y]"
+if ([string]::IsNullOrWhiteSpace($configureTerminal)) { $configureTerminal = 'Y' }
+
+if ($configureTerminal -eq 'Y') {
+    Invoke-Script -Path (Join-Path $WindowsScripts "15-windows-terminal-config.ps1") `
+        -Description "Configure Windows Terminal with JetBrainsMono, color scheme, keyboard shortcuts"
+} else {
+    Write-Host "   ⭐  Skipped Windows Terminal configuration" -ForegroundColor Yellow
 }
 
 # ============================================================================
@@ -297,6 +348,23 @@ if ($installLinters -eq 'Y') {
 }
 
 # ============================================================================
+# PHASE 7.6: ADDITIONAL DEVELOPMENT TOOLS
+# ============================================================================
+
+Write-Step "PHASE 7.6: Additional Development Tools"
+Write-Host "🛠️  Supplementary Dev Tools" -ForegroundColor Yellow
+Write-Host "   Postman, DBeaver, Wireshark, draw.io, ScreenToGif, PowerToys, etc.`n" -ForegroundColor Yellow
+$installDevTools = Read-Host "Install additional dev tools? (Y/N) [Default: Y]"
+if ([string]::IsNullOrWhiteSpace($installDevTools)) { $installDevTools = 'Y' }
+
+if ($installDevTools -eq 'Y') {
+    Invoke-Script -Path (Join-Path $WindowsScripts "14-additional-dev-tools.ps1") `
+        -Description "Install API testing, database clients, network tools, diagrams, utilities"
+} else {
+    Write-Host "   ⭐  Skipped additional dev tools installation" -ForegroundColor Yellow
+}
+
+# ============================================================================
 # PHASE 8: .NET MAINTENANCE
 # ============================================================================
 
@@ -308,6 +376,57 @@ if ($ScheduleDotNetMaintenance) {
 Invoke-Script -Path (Join-Path $WindowsScripts "60-dotnet-maintain.ps1") `
     -Description "Install latest .NET SDK, clean old versions" `
     -Arguments $dotnetArgs
+
+# ============================================================================
+# PHASE 8.5: PRIVACY & TELEMETRY HARDENING
+# ============================================================================
+
+Write-Step "PHASE 8.5: Privacy & Telemetry Hardening"
+Write-Host "🔒 Privacy & Telemetry Settings" -ForegroundColor Yellow
+Write-Host "   Disable Windows telemetry, Game Mode, Cortana, advertising, etc.`n" -ForegroundColor Yellow
+$hardenPrivacy = Read-Host "Disable privacy-invasive features? (Y/N) [Default: Y]"
+if ([string]::IsNullOrWhiteSpace($hardenPrivacy)) { $hardenPrivacy = 'Y' }
+
+if ($hardenPrivacy -eq 'Y') {
+    Invoke-Script -Path (Join-Path $WindowsScripts "35-privacy-telemetry.ps1") `
+        -Description "Disable telemetry, Game Mode, Cortana, advertising, location tracking"
+} else {
+    Write-Host "   ⭐  Skipped privacy hardening" -ForegroundColor Yellow
+}
+
+# ============================================================================
+# PHASE 8.6: DNS SECURITY & FIREWALL RULES
+# ============================================================================
+
+Write-Step "PHASE 8.6: DNS Security & Advanced Firewall"
+Write-Host "🛡️  DNS over HTTPS & Dev Tool Firewall Rules" -ForegroundColor Yellow
+Write-Host "   Configure encrypted DNS and allow dev server ports`n" -ForegroundColor Yellow
+$configureDnsFirewall = Read-Host "Configure DNS & firewall? (Y/N) [Default: Y]"
+if ([string]::IsNullOrWhiteSpace($configureDnsFirewall)) { $configureDnsFirewall = 'Y' }
+
+if ($configureDnsFirewall -eq 'Y') {
+    Invoke-Script -Path (Join-Path $WindowsScripts "36-dns-firewall-advanced.ps1") `
+        -Description "Configure DNS over HTTPS, create firewall rules for Docker, Node.js, Python, databases"
+} else {
+    Write-Host "   ⭐  Skipped DNS & firewall configuration" -ForegroundColor Yellow
+}
+
+# ============================================================================
+# PHASE 8.7: SERVICES OPTIMIZATION
+# ============================================================================
+
+Write-Step "PHASE 8.7: Windows Services Optimization"
+Write-Host "⚙️  Service Optimization" -ForegroundColor Yellow
+Write-Host "   Disable unnecessary Windows services for performance & security`n" -ForegroundColor Yellow
+$optimizeServices = Read-Host "Optimize Windows services? (Y/N) [Default: Y]"
+if ([string]::IsNullOrWhiteSpace($optimizeServices)) { $optimizeServices = 'Y' }
+
+if ($optimizeServices -eq 'Y') {
+    Invoke-Script -Path (Join-Path $WindowsScripts "37-services-optimization.ps1") `
+        -Description "Disable Print Spooler, telemetry, Xbox services, legacy services"
+} else {
+    Write-Host "   ⭐  Skipped services optimization" -ForegroundColor Yellow
+}
 
 # ============================================================================
 # PHASE 9: BACKUP SETUP
