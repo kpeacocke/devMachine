@@ -184,6 +184,23 @@ Invoke-Script -Path (Join-Path $WindowsScripts "10-windows-bootstrap.ps1") `
     -Description "Install VS Code, Docker, WSL, Git, runtimes, cloud CLIs"
 
 # ============================================================================
+# PHASE 2.05: WINDOWS DEBLOAT (OPTIONAL)
+# ============================================================================
+
+Write-Host "`n🗑️  Windows Debloat" -ForegroundColor Yellow
+Write-Host "   Remove pre-installed bloatware: Xbox, Solitaire, Spotify, Candy Crush, etc.`n" -ForegroundColor Yellow
+$debloatWindows = Read-Host "Remove Windows bloatware? (Y/N) [Default: Y]"
+if ([string]::IsNullOrWhiteSpace($debloatWindows)) { $debloatWindows = 'Y' }
+
+if ($debloatWindows -eq 'Y') {
+    Write-Step "PHASE 2.05: Windows Debloat"
+    Invoke-Script -Path (Join-Path $WindowsScripts "09-debloat-windows.ps1") `
+        -Description "Remove pre-installed bloatware and unnecessary apps"
+} else {
+    Write-Host "   ⭐  Skipped Windows debloat" -ForegroundColor Yellow
+}
+
+# ============================================================================
 # PHASE 2.1: GIT & SSH CONFIGURATION
 # ============================================================================
 
