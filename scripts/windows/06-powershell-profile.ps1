@@ -73,7 +73,7 @@ if (Get-Module -ListAvailable -Name posh-git) {
 
 # mise - Universal toolchain manager
 if (Get-Command mise -ErrorAction SilentlyContinue) {
-    eval "$(mise activate powershell)"
+    Invoke-Expression (mise activate pwsh)
 }
 
 # ============================================================================

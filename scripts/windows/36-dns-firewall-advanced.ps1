@@ -135,19 +135,10 @@ try {
 
 Write-Host "[NETWORK] Additional network security settings..."
 
-# Enable Windows Firewall for all profiles (redundant check)
+# Enable Windows Firewall for all profiles (redundant check - already done in 01-early-hardening.ps1)
 Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True
 
-# Disable LLMNR (Link-Local Multicast Name Resolution) - security risk
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" /v EnableMulticast /t REG_DWORD /d 0 /f | Out-Null
-Write-Host "  ✅ LLMNR disabled (security)" -ForegroundColor Green
-
-# Disable NetBIOS over TCP/IP (security risk on modern networks)
-$adapters = Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object { $_.IPEnabled -eq $true }
-foreach ($adapter in $adapters) {
-    $adapter.SetTcpipNetbios(2) | Out-Null  # 2 = Disable
-}
-Write-Host "  ✅ NetBIOS over TCP/IP disabled" -ForegroundColor Green
+# Note: LLMNR and NetBIOS are already disabled in 01-early-hardening.ps1
 
 # Enable firewall notifications (helpful during development)
 Set-NetFirewallProfile -Profile Domain,Public,Private -NotifyOnListenPortAdded True
@@ -162,6 +153,6 @@ Write-Host "✅ Python:            Ports 5000, 8000" -ForegroundColor Green
 Write-Host "✅ Databases:         PostgreSQL, MySQL, MongoDB, Redis, SQL Server" -ForegroundColor Green
 Write-Host "✅ Kubernetes:        Ports 6443, 10250, 10255" -ForegroundColor Green
 Write-Host "✅ WSL 2:             Localhost forwarding enabled" -ForegroundColor Green
-Write-Host "✅ Security:          LLMNR and NetBIOS disabled" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+Write-Host "💡 Note: LLMNR and NetBIOS already disabled in early hardening phase" -ForegroundColor Yellow
 Write-Host "💡 Firewall logs: %SystemRoot%\System32\LogFiles\Firewall\pfirewall.log" -ForegroundColor Yellow
