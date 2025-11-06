@@ -12,7 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.0](https://github.com/kpeacocke/devMachine/compare/v1.2.0...v1.3.0) (2025-11-06)
 
-
 ### 🚀 Features
 
 * **changelog:** update changelog title and cleanup duplicates in release workflow ([5d82617](https://github.com/kpeacocke/devMachine/commit/5d82617c3819d19d0a39730bff59970bfdb68c51))
