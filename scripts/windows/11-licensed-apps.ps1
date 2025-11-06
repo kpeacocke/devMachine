@@ -74,14 +74,6 @@ Write-Host "Backblaze..."
 Write-Host "  Backblaze Personal Backup requires manual installation" -ForegroundColor Yellow
 Write-Host "  💡 Download from: https://www.backblaze.com/b2/sign-up.html" -ForegroundColor Cyan
 Write-Host "  💡 After install, sign in with your Backblaze account" -ForegroundColor Cyan
-# Try B2 Explorer from Microsoft Store as alternative
-try {
-  Write-Host "  Installing Backblaze B2 Explorer (cloud storage tool)..." -ForegroundColor Gray
-  winget install 9PNQM52QGT3Z --source msstore --accept-package-agreements --accept-source-agreements
-  Write-Host "  ✅ Backblaze B2 Explorer installed" -ForegroundColor Green
-} catch {
-  Write-Host "  B2 Explorer installation skipped" -ForegroundColor Gray
-}
 
 Write-Host "Malwarebytes..."
 # Try winget first - capture exit code directly
