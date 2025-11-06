@@ -24,16 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 📚 Documentation
 
 * **readme:** enhance unattended installation instructions and clarify default behaviors ([24b005a](https://github.com/kpeacocke/devMachine/commit/24b005a22394c6302e3194362d81fa51d010a8be))
-
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-> **Note**: From v1.1.0 onwards, this changelog is automatically generated using
-> [semantic-release](https://semantic-release.gitbook.io/) based on
 > [Conventional Commits](https://www.conventionalcommits.org/).
 > See [COMMIT_CONVENTION.md](.github/COMMIT_CONVENTION.md) for commit message guidelines.
 

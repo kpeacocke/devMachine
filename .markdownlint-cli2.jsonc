@@ -1,0 +1,23 @@
+{
+  // Markdownlint-cli2 configuration
+  "config": {
+    "MD004": {
+      "style": "asterisk"
+    },
+    "MD024": {
+      "siblings_only": true
+    },
+    "MD013": {
+      "line_length": 120,
+      "code_blocks": false,
+      "tables": false
+    }
+  },
+  // Only lint specific markdown files, ignore problematic ones
+  "globs": [
+    "*.md",
+    "!CHANGELOG.md",
+    "!.venv/**",
+    "!node_modules/**"
+  ]
+}
