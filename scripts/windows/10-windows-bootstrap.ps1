@@ -72,6 +72,21 @@ winget install GitHub.cli --source winget --silent --accept-package-agreements -
 winget install Git.GCM --source winget --silent --accept-package-agreements --accept-source-agreements
 try { Install-Module posh-git -Scope AllUsers -Force -Confirm:$false } catch {}
 
+Write-Host "🧪 Testing Framework"
+# Install Pester 5 for running tests (replaces old Windows-bundled Pester 3)
+try {
+  $pesterVersion = (Get-Module -ListAvailable Pester | Sort-Object Version -Descending | Select-Object -First 1).Version
+  if ($pesterVersion -lt [Version]"5.0") {
+    Write-Host "  Installing Pester 5+ (replacing bundled Pester 3)..."
+    Install-Module -Name Pester -Force -Scope AllUsers -SkipPublisherCheck -MinimumVersion 5.0 -AllowClobber
+  } else {
+    Write-Host "  Pester $pesterVersion already installed"
+  }
+} catch {
+  Write-Host "  Installing Pester 5+..."
+  Install-Module -Name Pester -Force -Scope AllUsers -SkipPublisherCheck -MinimumVersion 5.0 -AllowClobber
+}
+
 Write-Host "🔤 Developer Fonts"
 winget install DEVCOM.JetBrainsMonoNerdFont --source winget `
   --silent --accept-package-agreements --accept-source-agreements

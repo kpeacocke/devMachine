@@ -271,6 +271,8 @@ Comprehensive test coverage for all installed components:
 
 ### Windows Tests (Pester)
 
+**Note:** Pester 5+ is automatically installed during bootstrap for local test execution.
+
 ```powershell
 pwsh -NoProfile -File .\tests\pester.Windows.Tests.ps1
 ```
@@ -335,7 +337,18 @@ wsl -d Ubuntu -e bash ./scripts/wsl/doctor-ubuntu.sh
 * **Build Tools**: Maven, Gradle, CMake, Make
 * **Cloud/IaC**: Terraform, Packer, TFLint, AWS CLI, Azure CLI, Google Cloud SDK
 * **Version Managers**: mise (Kotlin + Gradle latest)
-* **Linters/Formatters**: ESLint, Prettier, Ruff, Stylelint, markdownlint-cli2, Yamllint, hadolint, tflint
+* **Linters/Formatters**:
+  * **JavaScript/TypeScript**: ESLint, Prettier
+  * **Python**: Ruff (linter + formatter), Black (fallback)
+  * **CSS**: Stylelint
+  * **Markdown**: markdownlint-cli2
+  * **Shell**: shellcheck
+  * **Docker**: hadolint
+  * **YAML**: yamllint
+  * **Terraform**: tflint
+  * **GitHub Actions**: actionlint
+  * **JSON**: jsonlint
+  * **TOML**: taplo-cli
 * **API Testing**: Insomnia (free REST client)
 * **Databases**: DBeaver (universal client), SQL Server Management Studio
 * **Network Tools**: Wireshark, nmap
@@ -344,7 +357,7 @@ wsl -d Ubuntu -e bash ./scripts/wsl/doctor-ubuntu.sh
 * **System Utilities**: PowerToys, QuickLook
 * **Dev Tools**: Sysinternals, mkcert, ripgrep, fd, fzf, bat, delta, chezmoi
 * **Security Scanning**: Snyk, Trivy, gitleaks, pre-commit, semgrep, detect-secrets, bandit
-* **Testing/CI**: nektos/act, newman, pytest-cov, tox
+* **Testing/CI**: Pester 5+ (PowerShell), nektos/act (GitHub Actions), newman (Postman), pytest-cov, tox
 * **Kubernetes** (optional): kubectl, Helm, k9s
 * **Search**: Everything (replaces Windows Search)
 * **PowerShell**: Oh-My-Posh (paradox theme), PSReadLine (predictions, history search), posh-git
