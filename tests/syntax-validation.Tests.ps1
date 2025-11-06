@@ -105,6 +105,9 @@ Describe "Setup Orchestrator Script" {
         $content | Should -Match '\[switch\]\$SkipBackup'
         $content | Should -Match '\[switch\]\$SkipLicensedApps'
         $content | Should -Match '\[switch\]\$SkipOptionalGoodies'
+        $content | Should -Match '\[switch\]\$InstallEverything'
+        $content | Should -Match '\[switch\]\$SkipPrompts'
+        $content | Should -Match '\[Alias\("y"\)\]'
     }
 
     It "setup-machine.ps1 has no Unicode box-drawing characters" {

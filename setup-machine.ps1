@@ -46,6 +46,9 @@
 .PARAMETER SkipWSL
     Skip WSL/Ubuntu installation (use for VMs where nested virtualization isn't supported)
 
+.PARAMETER InstallEverything
+    Force installation of ALL components in unattended mode (overrides "NO" defaults for licensed apps, communications, social media, etc.)
+
 .EXAMPLE
     .\setup-machine.ps1
     Run full setup with defaults
@@ -60,7 +63,11 @@
 
 .EXAMPLE
     .\setup-machine.ps1 -y
-    Unattended installation - automatically answers "Y" to all prompts
+    Unattended installation - automatically answers with defaults (core tools only)
+
+.EXAMPLE
+    .\setup-machine.ps1 -y -InstallEverything
+    Complete unattended installation - forces installation of ALL components including licensed apps
 
 .EXAMPLE
     .\setup-machine.ps1 -SkipPrompts -SkipLicensedApps
@@ -81,6 +88,7 @@ param(
     [switch]$SkipPrompts,
     [Alias("y")]
     [switch]$AutoYes,
+    [switch]$InstallEverything,
     [string]$DevDrivePath = "D:\dev\caches"
 )
 
@@ -92,7 +100,13 @@ $WSLScripts = Join-Path $ScriptRoot "scripts\wsl"
 # Set up unattended mode
 $UnattendedMode = $SkipPrompts -or $AutoYes
 if ($UnattendedMode) {
-    Write-Host "🤖 UNATTENDED MODE: All prompts will be automatically answered with 'Y'" -ForegroundColor Cyan
+    if ($InstallEverything) {
+        Write-Host "🚀 INSTALL EVERYTHING MODE: All components will be installed automatically!" -ForegroundColor Magenta
+        $env:DEVMACHINE_INSTALL_EVERYTHING = "true"
+        [Environment]::SetEnvironmentVariable("DEVMACHINE_INSTALL_EVERYTHING", "true", "Process")
+    } else {
+        Write-Host "🤖 UNATTENDED MODE: All prompts will be automatically answered with defaults" -ForegroundColor Cyan
+    }
     # Set global environment variable that child scripts can check
     $env:DEVMACHINE_UNATTENDED = "true"
     [Environment]::SetEnvironmentVariable("DEVMACHINE_UNATTENDED", "true", "Process")
@@ -107,15 +121,22 @@ function Read-Host {
     )
 
     if ($env:DEVMACHINE_UNATTENDED -eq "true" -and -not $AsSecureString) {
-        # Extract default value from prompt if it exists
-        if ($Prompt -match '\[Default:\s*([^\]]+)\]') {
+        # Install Everything mode - override all "NO" defaults to "Y"
+        if ($env:DEVMACHINE_INSTALL_EVERYTHING -eq "true") {
+            Write-Host "$Prompt" -NoNewline
+            Write-Host " Y" -ForegroundColor Magenta -NoNewline
+            Write-Host " (install everything)" -ForegroundColor Gray
+            return 'Y'
+        }
+        # Standard unattended mode - use specified defaults
+        elseif ($Prompt -match '\[Default:\s*([^\]]+)\]') {
             $defaultValue = $matches[1].Trim()
             Write-Host "$Prompt" -NoNewline
             Write-Host " $defaultValue" -ForegroundColor Yellow -NoNewline
             Write-Host " (auto-answered)" -ForegroundColor Gray
             return $defaultValue
         } else {
-            # Default to 'Y' for yes/no prompts
+            # Default to 'Y' for yes/no prompts without defaults
             Write-Host "$Prompt" -NoNewline
             Write-Host " Y" -ForegroundColor Yellow -NoNewline
             Write-Host " (auto-answered)" -ForegroundColor Gray

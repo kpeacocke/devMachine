@@ -29,15 +29,15 @@ All releases include SHA256 checksums for verification.
 Set-ExecutionPolicy Bypass -Scope Process -Force; $release = (irm https://api.github.com/repos/kpeacocke/devMachine/releases/latest); $asset = $release.assets | Where-Object { $_.name -like '*complete*.zip' } | Select-Object -First 1; irm $asset.browser_download_url -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1"
 ```
 
-**🚀 Complete Unattended Installation (Everything):**
+**🚀 COMPLETE Unattended Installation (EVERYTHING):**
 
 ```powershell
 # Open PowerShell as Administrator, then:
-Set-ExecutionPolicy Bypass -Scope Process -Force; $release = (irm https://api.github.com/repos/kpeacocke/devMachine/releases/latest); $asset = $release.assets | Where-Object { $_.name -like '*complete*.zip' } | Select-Object -First 1; irm $asset.browser_download_url -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1" -y
+Set-ExecutionPolicy Bypass -Scope Process -Force; $release = (irm https://api.github.com/repos/kpeacocke/devMachine/releases/latest); $asset = $release.assets | Where-Object { $_.name -like '*complete*.zip' } | Select-Object -First 1; irm $asset.browser_download_url -OutFile "$env:TEMP\devMachine.zip"; Expand-Archive -Path "$env:TEMP\devMachine.zip" -DestinationPath "$env:TEMP\devMachine" -Force; & "$env:TEMP\devMachine\setup-machine.ps1" -y -InstallEverything
 ```
 
-⚠️ **Important**: This prompts for licensed apps, communications, and social media apps due to their
-default "NO" settings. For truly unattended "everything" install, see the Examples section below.
+This installs **EVERYTHING**: all dev tools, security hardening, licensed apps, browsers,
+communications, social media, streaming apps, and optional components. No prompts!
 
 **💻 Standard Unattended (Core Development):**
 
@@ -134,8 +134,11 @@ The setup orchestrator supports fully unattended installation for automation sce
 **Examples:**
 
 ```powershell
-# Full unattended setup
+# Core unattended setup (smart defaults - skips optional/expensive apps)
 .\setup-machine.ps1 -y
+
+# 🚀 COMPLETE unattended installation (forces ALL components)
+.\setup-machine.ps1 -y -InstallEverything
 
 # Unattended minimal VM setup  
 .\setup-machine.ps1 -y -SkipLicensedApps -SkipDevDrive -SkipBackup -SkipWSL
@@ -151,6 +154,9 @@ The setup orchestrator supports fully unattended installation for automation sce
 .\setup-machine.ps1 -y
 # or
 .\setup-machine.ps1 -SkipPrompts
+
+# Complete unattended installation (install EVERYTHING)
+.\setup-machine.ps1 -y -InstallEverything
 
 # Skip optional components
 .\setup-machine.ps1 -SkipBackup -SkipOptionalGoodies -SkipInsiders
