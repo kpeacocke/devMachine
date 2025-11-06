@@ -25,7 +25,7 @@ $servicesToDisable = @(
     @{ Name = 'MapsBroker'; DisplayName = 'Downloaded Maps Manager'; Prompt = $true; Reason = 'Not needed unless using Maps app' },
     @{ Name = 'PhoneSvc'; DisplayName = 'Phone Service'; Prompt = $true; Reason = 'Not needed unless linking phone' },
     @{ Name = 'dmwappushservice'; DisplayName = 'Device Management Wireless Application Protocol'; Prompt = $false; Reason = 'WAP Push telemetry' },
-    @{ Name = 'lfsvc'; DisplayName = 'Geolocation Service'; Prompt = $true; Reason = 'Location tracking (already disabled in privacy script)' },
+    # @{ Name = 'lfsvc'; DisplayName = 'Geolocation Service'; Prompt = $true; Reason = 'Location tracking (already disabled in privacy script)' }, # Kept enabled for user convenience
     @{ Name = 'TabletInputService'; DisplayName = 'Touch Keyboard and Handwriting Panel Service'; Prompt = $true; Reason = 'Not needed on non-touch devices' },
     @{ Name = 'WSearch'; DisplayName = 'Windows Search'; Prompt = $true; Reason = 'Can use Everything instead (indexing consumes resources)' },
     @{ Name = 'SysMain'; DisplayName = 'SysMain (Superfetch)'; Prompt = $true; Reason = 'May slow down SSDs (debated performance impact)' }

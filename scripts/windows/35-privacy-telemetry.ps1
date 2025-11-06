@@ -81,11 +81,8 @@ if ($disableOneDrive -eq 'Y') {
 }
 
 Write-Host "`n🌐 Location & Sensors"
-# Disable location tracking
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" /v Value /t REG_SZ /d Deny /f | Out-Null
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" /v DisableLocation /t REG_DWORD /d 1 /f | Out-Null
-
-Write-Host "  ✅ Location tracking disabled" -ForegroundColor Green
+# Location services left enabled (user may need for apps, navigation, etc.)
+Write-Host "  ℹ️  Location services left enabled (disable manually in Settings > Privacy if desired)" -ForegroundColor Gray
 
 Write-Host "`n📷 Camera & Microphone Privacy"
 # These are set to prompt, not fully disabled (keep for dev work like video calls)
@@ -153,7 +150,7 @@ Write-Host "✅ Activity History:   Disabled" -ForegroundColor Green
 Write-Host "✅ Advertising:        Disabled" -ForegroundColor Green
 Write-Host "✅ Game Mode/Bar:      Disabled" -ForegroundColor Green
 Write-Host "✅ Cortana:            Disabled" -ForegroundColor Green
-Write-Host "✅ Location:           Disabled" -ForegroundColor Green
+Write-Host "ℹ️  Location:           Enabled (user preference)" -ForegroundColor Gray
 Write-Host "✅ Feedback:           Disabled" -ForegroundColor Green
 Write-Host "✅ Web Search:         Disabled" -ForegroundColor Green
 Write-Host "✅ Bloatware:          Blocked" -ForegroundColor Green
