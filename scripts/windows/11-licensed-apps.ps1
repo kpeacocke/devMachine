@@ -90,7 +90,7 @@ if ($process.ExitCode -eq 0) {
   Write-Host "  ✅ Malwarebytes installed via winget" -ForegroundColor Green
 } else {
   Write-Warning "Winget installation failed (Exit code: $($process.ExitCode)). Trying alternative sources..."
-  
+
   # Try chocolatey as fallback
   if (Get-Command choco -ErrorAction SilentlyContinue) {
     try {
