@@ -45,8 +45,7 @@
     [
       "@semantic-release/changelog",
       {
-        "changelogFile": "CHANGELOG.md",
-        "changelogTitle": "# Changelog\n\nAll notable changes to this project will be documented in this file.\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),\nand this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\n\n> **Note**: From v1.1.0 onwards, this changelog is automatically generated using\n> [semantic-release](https://semantic-release.gitbook.io/) based on\n> [Conventional Commits](https://www.conventionalcommits.org/).\n> See [COMMIT_CONVENTION.md](.github/COMMIT_CONVENTION.md) for commit message guidelines."
+        "changelogFile": "CHANGELOG.md"
       }
     ],
     [

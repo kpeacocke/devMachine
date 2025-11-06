@@ -245,18 +245,46 @@ jobs:
           if ($changed -match "CHANGELOG.md") {
             Write-Host "Fixing CHANGELOG.md formatting..."
 
-            # Remove multiple consecutive blank lines (keep only 1)
+            # Read the current content
             $content = Get-Content CHANGELOG.md -Raw
-            $fixed = $content -replace "(`r?`n){3,}", "`r`n`r`n"
+
+            # Remove duplicate "# Changelog" headers (keep only the first one)
+            $lines = $content -split "`r?`n"
+            $foundFirstHeader = $false
+            $cleanedLines = @()
+            $skipUntilNextSection = $false
+
+            foreach ($line in $lines) {
+              if ($line -eq "# Changelog") {
+                if (-not $foundFirstHeader) {
+                  $cleanedLines += $line
+                  $foundFirstHeader = $true
+                  $skipUntilNextSection = $false
+                } else {
+                  # Skip this duplicate header and everything until next section
+                  $skipUntilNextSection = $true
+                  continue
+                }
+              } elseif ($line -match "^## " -and $skipUntilNextSection) {
+                # Found a version section, stop skipping
+                $skipUntilNextSection = $false
+                $cleanedLines += $line
+              } elseif (-not $skipUntilNextSection) {
+                $cleanedLines += $line
+              }
+            }
+
+            # Join lines and remove multiple consecutive blank lines
+            $fixed = ($cleanedLines -join "`r`n") -replace "(`r?`n){3,}", "`r`n`r`n"
             Set-Content -Path CHANGELOG.md -Value $fixed -NoNewline
 
             # Check if changes were made
             $diff = git diff CHANGELOG.md
             if ($diff) {
               git add CHANGELOG.md
-              git commit -m "chore(changelog): fix markdown formatting [skip ci]"
+              git commit -m "chore(changelog): fix formatting and remove duplicates [skip ci]"
               git push origin HEAD:main
-              Write-Host "✓ CHANGELOG.md formatting fixed"
+              Write-Host "✓ CHANGELOG.md formatting fixed and duplicates removed"
             } else {
               Write-Host "✓ CHANGELOG.md formatting is already correct"
             }
