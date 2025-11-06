@@ -12,7 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.0](https://github.com/kpeacocke/devMachine/compare/v1.3.0...v1.4.0) (2025-11-06)
 
-
 ### 🚀 Features
 
 * **apps:** enhance installation script for Malwarebytes and add Zoom and Google Meet ([7d6d62c](https://github.com/kpeacocke/devMachine/commit/7d6d62ce1857315bead23e40c7a378cc5d0e91f6))
