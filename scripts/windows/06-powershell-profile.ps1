@@ -73,19 +73,36 @@ if (Get-Module -ListAvailable -Name posh-git) {
 
 # mise - Universal toolchain manager
 if (Get-Command mise -ErrorAction SilentlyContinue) {
-    Invoke-Expression (mise activate pwsh)
+    try {
+        # Use a timeout job to prevent hanging
+        $miseJob = Start-Job -ScriptBlock { mise activate pwsh }
+        if (Wait-Job $miseJob -Timeout 5) {
+            $miseInit = Receive-Job $miseJob | Out-String
+            if ($miseInit -and $miseInit.Trim()) {
+                Invoke-Expression $miseInit
+            }
+        } else {
+            # mise is hanging, skip it
+            Write-Warning "mise activation timed out - skipping"
+        }
+        Remove-Job $miseJob -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Warning "mise activation failed: $_"
+    }
 }
 
 # ============================================================================
 # Aliases
 # ============================================================================
 
-# Git shortcuts
+# Git shortcuts (avoiding conflicts with built-in aliases)
 Set-Alias -Name g -Value git
 Set-Alias -Name gs -Value 'git status'
-Set-Alias -Name gp -Value 'git pull'
-Set-Alias -Name gpp -Value 'git push'
-Set-Alias -Name gc -Value 'git commit'
+# Note: gp, gc, gps, gcm are built-in PowerShell aliases
+# Using git-specific prefixes to avoid conflicts
+Set-Alias -Name gpl -Value 'git pull'
+Set-Alias -Name gpu -Value 'git push'  # gps conflicts with Get-Process
+Set-Alias -Name gco -Value 'git commit'  # gcm conflicts with Get-Command
 Set-Alias -Name ga -Value 'git add'
 Set-Alias -Name gd -Value 'git diff'
 

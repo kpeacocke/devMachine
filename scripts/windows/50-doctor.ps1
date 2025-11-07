@@ -28,7 +28,7 @@ if (Test-Command "docker") {
 $need = @(
   "git","gh","python","py","node","npm","go","rustup","cargo",
   "dotnet","java","mvn","gradle","terraform","packer","tflint",
-  "aws","az","gcloud","pwsh","op"
+  "aws","az","gcloud","pwsh","op","oscdimg"
 )
 foreach ($n in $need) {
   if (Test-Command $n) { Pass "$n found" } else { Fail "$n missing" }

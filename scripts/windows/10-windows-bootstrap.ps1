@@ -59,11 +59,32 @@ Write-Host "  This may take 5-10 minutes..." -ForegroundColor Yellow
 winget install Microsoft.VisualStudio.2022.BuildTools --source winget --silent --accept-package-agreements --accept-source-agreements --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 Write-Host "  Build Tools installed - refreshing environment..." -ForegroundColor Green
 
+# Windows Assessment and Deployment Kit (ADK) - includes oscdimg.exe for creating ISO images
+Write-Host "  Installing Windows ADK (Assessment and Deployment Kit)..."
+Write-Host "  Provides oscdimg.exe, Windows imaging tools, and deployment utilities..." -ForegroundColor Yellow
+winget install Microsoft.WindowsADK --source winget --silent --accept-package-agreements --accept-source-agreements
+
+# Add ADK tools to PATH
+Write-Host "  Adding ADK tools to PATH..." -ForegroundColor Cyan
+$adkPaths = @(
+    "${env:ProgramFiles(x86)}\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg",
+    "${env:ProgramFiles(x86)}\Windows Kits\10\Assessment and Deployment Kit\Windows Preinstallation Environment",
+    "${env:ProgramFiles(x86)}\Windows Kits\10\Assessment and Deployment Kit\Imaging and Configuration Designer\x86"
+)
+$currentPath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+foreach ($adkPath in $adkPaths) {
+    if ((Test-Path $adkPath) -and ($currentPath -notlike "*$adkPath*")) {
+        Write-Host "    Adding to PATH: $adkPath" -ForegroundColor Gray
+        [Environment]::SetEnvironmentVariable('Path', $currentPath + ";$adkPath", 'Machine')
+        $currentPath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+    }
+}
+
 Write-Host "📝 Editor & Containers"
 winget install Microsoft.VisualStudioCode --source winget --silent --accept-package-agreements --accept-source-agreements
 winget install Docker.DockerDesktop --source winget --silent --accept-package-agreements --accept-source-agreements
 
-Write-Host "`n🐧 Ubuntu for WSL"
+Write-Host "🐧 Ubuntu for WSL"
 if (-not $skipWSL) {
   # Install Ubuntu 24.04 LTS (latest)
   winget install Canonical.Ubuntu.2404 --source winget --silent --accept-package-agreements --accept-source-agreements
@@ -166,15 +187,11 @@ function Install-TFLint {
 }
 Install-TFLint
 
-Write-Host "`n🔧 mise (universal toolchain manager)"
+Write-Host "🔧 mise (universal toolchain manager)"
 Write-Host "  Installing mise..."
 winget install jdx.mise --source winget --silent --accept-package-agreements --accept-source-agreements
 
-# Configure mise in PowerShell profile
-if (-not (Test-Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force | Out-Null }
-if (-not (Get-Content $PROFILE | Select-String -SimpleMatch 'mise activate powershell')) {
-  Add-Content $PROFILE 'if (Get-Command mise -ErrorAction SilentlyContinue) { eval "$(mise activate powershell)" }'
-}
+# Note: mise activation is now handled by 06-powershell-profile.ps1
 
 # Install development tools via mise (better version management than winget)
 Write-Host "  Installing JVM tools via mise (Kotlin, Gradle, Maven)..."

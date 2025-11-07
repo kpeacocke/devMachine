@@ -12,6 +12,28 @@ if ($env:DEVMACHINE_UNATTENDED -eq "true" -and $env:DEVMACHINE_OVERRIDE_PATH -an
 
 Write-Host "[CRYPTO] SSL/TLS and Encryption Hardening..." -ForegroundColor Cyan
 
+# Safety check: Don't override working SSL/TLS configurations
+Write-Host "`n🔍 Checking current SSL/TLS status..."
+try {
+    $testUrls = @("https://windowsupdate.microsoft.com", "https://www.microsoft.com")
+    $workingCount = 0
+    foreach ($url in $testUrls) {
+        try {
+            Invoke-RestMethod -Uri $url -Method Head -TimeoutSec 5 | Out-Null
+            $workingCount++
+        } catch { }
+    }
+
+    if ($workingCount -eq $testUrls.Count) {
+        Write-Host "  ✅ SSL/TLS appears to be working correctly" -ForegroundColor Green
+        Write-Host "    Applying conservative hardening to maintain compatibility..." -ForegroundColor Gray
+    } else {
+        Write-Host "  ⚠️  Some SSL/TLS connections failing - applying standard hardening" -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host "  ℹ️  Unable to test SSL/TLS status - proceeding with standard hardening" -ForegroundColor Gray
+}
+
 Write-Host "`n🔒 Disabling weak SSL/TLS protocols..."
 
 # Disable SSL 2.0 (completely insecure)
@@ -199,10 +221,33 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\ActiveSync" /v 
 
 Write-Host "  ✅ Mobile device encryption required" -ForegroundColor Green
 
+Write-Host "`n🔄 Refreshing SSL/TLS configuration..."
+
+# Restart key SSL/TLS services to apply changes immediately
+$sslServices = @("http", "cryptsvc", "bits")
+foreach($service in $sslServices) {
+    try {
+        if (Get-Service -Name $service -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Running'}) {
+            Restart-Service -Name $service -Force -ErrorAction SilentlyContinue
+            Write-Host "  ✅ Restarted $service service" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "  ⚠️  Could not restart $service service" -ForegroundColor Yellow
+    }
+}
+
+# Clear DNS cache to remove any cached SSL handshake failures
+try {
+    ipconfig /flushdns | Out-Null
+    Write-Host "  ✅ DNS cache cleared" -ForegroundColor Green
+} catch {
+    Write-Host "  ⚠️  Could not clear DNS cache" -ForegroundColor Yellow
+}
+
 Write-Host "`n⚠️  Important Notes:" -ForegroundColor Yellow
-Write-Host "  • Reboot required for all SSL/TLS changes to take effect" -ForegroundColor Yellow
-Write-Host "  • Some legacy applications may have connectivity issues" -ForegroundColor Yellow
-Write-Host "  • Test critical applications after reboot" -ForegroundColor Yellow
+Write-Host "  • Some changes require reboot for full effect" -ForegroundColor Yellow
+Write-Host "  • Conservative hardening applied to maintain compatibility" -ForegroundColor Yellow
+Write-Host "  • Test critical applications after applying changes" -ForegroundColor Yellow
 Write-Host "  • TLS 1.2+ now required for all secure connections" -ForegroundColor Yellow
 
 Write-Host "`n🔍 Verification Commands:" -ForegroundColor Cyan

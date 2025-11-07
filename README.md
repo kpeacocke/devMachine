@@ -457,7 +457,7 @@ wsl -d Ubuntu -e bash ./scripts/wsl/doctor-ubuntu.sh
 * **AU Free-to-Air TV**: ABC iview, SBS On Demand, 7plus, 9Now, 10 play
 * **Fonts**: Cascadia Code, JetBrains Mono Nerd Font
 * **Runtimes**: Python 3.13, Node Current, Go, Rust, .NET 9, Java Temurin (latest GA)
-* **Build Tools**: Maven, Gradle, CMake, Make
+* **Build Tools**: Maven, Gradle, CMake, Make, Windows ADK (oscdimg.exe for ISO creation)
 * **Cloud/IaC**: Terraform, Packer, TFLint, AWS CLI, Azure CLI, Google Cloud SDK
 * **Version Managers**: mise (Kotlin + Gradle latest)
 * **Linters/Formatters**:
