@@ -19,6 +19,12 @@ if ($existingDohServers) {
         Write-Host "    $($_.ServerAddress) -> $($_.DohTemplate)" -ForegroundColor Gray
     }
     Write-Host "  Existing configuration will be replaced if you proceed." -ForegroundColor Yellow
+
+    # Clean up ALL existing DoH configurations to prevent conflicts
+    Write-Host "  Removing all existing DoH configurations..." -ForegroundColor Cyan
+    $existingDohServers | ForEach-Object {
+        Remove-DnsClientDohServerAddress -ServerAddress $_.ServerAddress -ErrorAction SilentlyContinue
+    }
 }
 
 # Prompt for DNS provider
@@ -51,9 +57,9 @@ switch ($dnsChoice) {
                 Write-Host "  Removing existing Cloudflare DoH configuration..." -ForegroundColor Yellow
                 $existingDoh | Remove-DnsClientDohServerAddress -ErrorAction SilentlyContinue
             }
-            # Enable DoH for Cloudflare
-            Add-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
-            Add-DnsClientDohServerAddress -ServerAddress '1.0.0.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
+            # Enable DoH for Cloudflare with UDP fallback for compatibility
+            Add-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $true -AutoUpgrade $false
+            Add-DnsClientDohServerAddress -ServerAddress '1.0.0.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $true -AutoUpgrade $false
             Write-Host "  ✅ Cloudflare DNS over HTTPS configured" -ForegroundColor Green
         } catch {
             Write-Warning "DNS configuration partially failed: $_"
@@ -72,8 +78,8 @@ switch ($dnsChoice) {
                 Write-Host "  Removing existing Google DoH configuration..." -ForegroundColor Yellow
                 $existingDoh | Remove-DnsClientDohServerAddress -ErrorAction SilentlyContinue
             }
-            Add-DnsClientDohServerAddress -ServerAddress '8.8.8.8' -DohTemplate 'https://dns.google/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
-            Add-DnsClientDohServerAddress -ServerAddress '8.8.4.4' -DohTemplate 'https://dns.google/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
+            Add-DnsClientDohServerAddress -ServerAddress '8.8.8.8' -DohTemplate 'https://dns.google/dns-query' -AllowFallbackToUdp $true -AutoUpgrade $false
+            Add-DnsClientDohServerAddress -ServerAddress '8.8.4.4' -DohTemplate 'https://dns.google/dns-query' -AllowFallbackToUdp $true -AutoUpgrade $false
             Write-Host "  ✅ Google DNS over HTTPS configured" -ForegroundColor Green
         } catch {
             Write-Warning "DNS configuration partially failed: $_"
@@ -92,8 +98,8 @@ switch ($dnsChoice) {
                 Write-Host "  Removing existing Quad9 DoH configuration..." -ForegroundColor Yellow
                 $existingDoh | Remove-DnsClientDohServerAddress -ErrorAction SilentlyContinue
             }
-            Add-DnsClientDohServerAddress -ServerAddress '9.9.9.9' -DohTemplate 'https://dns.quad9.net/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
-            Add-DnsClientDohServerAddress -ServerAddress '149.112.112.112' -DohTemplate 'https://dns.quad9.net/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true
+            Add-DnsClientDohServerAddress -ServerAddress '9.9.9.9' -DohTemplate 'https://dns.quad9.net/dns-query' -AllowFallbackToUdp $true -AutoUpgrade $false
+            Add-DnsClientDohServerAddress -ServerAddress '149.112.112.112' -DohTemplate 'https://dns.quad9.net/dns-query' -AllowFallbackToUdp $true -AutoUpgrade $false
             Write-Host "  ✅ Quad9 DNS over HTTPS configured" -ForegroundColor Green
         } catch {
             Write-Warning "DNS configuration partially failed: $_"

@@ -125,57 +125,35 @@ foreach ($hash in $weakHashes) {
 }
 Write-Host "  ✅ Weak hashes disabled (MD5, SHA-1)" -ForegroundColor Green
 
-Write-Host "`n🔐 Configuring strong cipher order..."
+Write-Host "`n🔐 Cipher suite configuration..."
 
-# Set cipher suite order (prioritize modern, secure algorithms)
-$cipherOrder = @(
-    # TLS 1.3 cipher suites (AEAD only)
-    "TLS_AES_256_GCM_SHA384",
-    "TLS_AES_128_GCM_SHA256",
-    "TLS_CHACHA20_POLY1305_SHA256",
-
-    # TLS 1.2 ECDHE cipher suites (Perfect Forward Secrecy)
-    "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-    "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
-    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-    "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
-    "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
-
-    # TLS 1.2 ECDHE with CBC (less preferred but compatible)
-    "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
-    "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
-    "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384",
-    "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256"
-) -join ","
-
-# Apply cipher suite order
-$cipherSuitePath = "HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002"
-New-Item -Path $cipherSuitePath -Force | Out-Null
-Set-ItemProperty -Path $cipherSuitePath -Name "Functions" -Value $cipherOrder -Type String
-Write-Host "  ✅ Modern cipher suite order configured" -ForegroundColor Green
+# DO NOT apply restrictive cipher suite policies - let Windows use defaults
+# Custom cipher suite ordering can break Windows Update, Discord, and other applications
+Write-Host "  ℹ️  Using Windows default cipher suite order for maximum compatibility" -ForegroundColor Yellow
+Write-Host "    Modern TLS 1.2/1.3 protocols provide sufficient security without custom ordering" -ForegroundColor Gray
+Write-Host "    Weak ciphers (RC4, DES, 3DES) are already disabled above" -ForegroundColor Gray
 
 Write-Host "`n🔐 Enabling strong key exchange..."
 
 # Enable strong key exchange algorithms
 $keyExchangePath = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\KeyExchangeAlgorithms"
 
-# Enable ECDH (Elliptic Curve Diffie-Hellman)
+# Enable ECDH (Elliptic Curve Diffie-Hellman) - preferred
 $ecdhPath = "$keyExchangePath\ECDH"
 New-Item -Path $ecdhPath -Force | Out-Null
 Set-ItemProperty -Path $ecdhPath -Name "Enabled" -Value 1 -Type DWord
 
-# Enable PKCS (RSA key exchange - for compatibility)
+# Enable PKCS (RSA key exchange - needed for compatibility with many services)
 $pkcsPath = "$keyExchangePath\PKCS"
 New-Item -Path $pkcsPath -Force | Out-Null
 Set-ItemProperty -Path $pkcsPath -Name "Enabled" -Value 1 -Type DWord
 
-# Disable Diffie-Hellman (DH) - prefer ECDH
+# Enable Diffie-Hellman for full compatibility (Windows Update and Discord need this)
 $dhPath = "$keyExchangePath\Diffie-Hellman"
 New-Item -Path $dhPath -Force | Out-Null
-Set-ItemProperty -Path $dhPath -Name "Enabled" -Value 0 -Type DWord
+Set-ItemProperty -Path $dhPath -Name "Enabled" -Value 1 -Type DWord
 
-Write-Host "  ✅ ECDH enabled, DH disabled" -ForegroundColor Green
+Write-Host "  ✅ All key exchange algorithms enabled for maximum compatibility" -ForegroundColor Green
 
 Write-Host "`n🛡️ Configuring .NET Framework crypto settings..."
 
@@ -238,7 +216,8 @@ Write-Host "✅ Disabled: SSL 2.0, SSL 3.0, TLS 1.0, TLS 1.1" -ForegroundColor G
 Write-Host "✅ Enabled:  TLS 1.2 (TLS 1.3 on Windows 11 22H2+)" -ForegroundColor Green
 Write-Host "✅ Removed:  Weak ciphers (RC4, DES, 3DES, NULL)" -ForegroundColor Green
 Write-Host "✅ Disabled: Weak hashes (MD5, SHA-1)" -ForegroundColor Green
-Write-Host "✅ Priority: AEAD ciphers with Perfect Forward Secrecy" -ForegroundColor Green
+Write-Host "✅ Ciphers:  Windows defaults maintained for compatibility" -ForegroundColor Green
+Write-Host "✅ Security: Weak protocols disabled, strong protocols enabled" -ForegroundColor Green
 Write-Host "✅ .NET:     Strong cryptography enabled" -ForegroundColor Green
 Write-Host "✅ Certs:    Signature validation hardened" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
