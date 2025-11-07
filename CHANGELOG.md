@@ -1,3 +1,10 @@
+## [1.7.0](https://github.com/kpeacocke/devMachine/compare/v1.6.1...v1.7.0) (2025-11-07)
+
+
+### 🚀 Features
+
+* enhance Snyk rules documentation and update DoH configuration script for improved security and compatibility ([4cf23fd](https://github.com/kpeacocke/devMachine/commit/4cf23fd5059343de37f0b0f947d31328622423f9))
+
 ## [1.6.1](https://github.com/kpeacocke/devMachine/compare/v1.6.0...v1.6.1) (2025-11-06)
 
 
