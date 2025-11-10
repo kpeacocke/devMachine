@@ -71,12 +71,42 @@ $adkPaths = @(
     "${env:ProgramFiles(x86)}\Windows Kits\10\Assessment and Deployment Kit\Windows Preinstallation Environment",
     "${env:ProgramFiles(x86)}\Windows Kits\10\Assessment and Deployment Kit\Imaging and Configuration Designer\x86"
 )
-$currentPath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+
+# Try to add to Machine PATH first (requires admin), fallback to User PATH
+$currentMachinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+$currentUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+
 foreach ($adkPath in $adkPaths) {
-    if ((Test-Path $adkPath) -and ($currentPath -notlike "*$adkPath*")) {
-        Write-Host "    Adding to PATH: $adkPath" -ForegroundColor Gray
-        [Environment]::SetEnvironmentVariable('Path', $currentPath + ";$adkPath", 'Machine')
-        $currentPath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+    if (Test-Path $adkPath) {
+        $pathAdded = $false
+
+        # Try Machine PATH first (system-wide)
+        if ($currentMachinePath -notlike "*$adkPath*") {
+            try {
+                [Environment]::SetEnvironmentVariable('Path', $currentMachinePath + ";$adkPath", 'Machine')
+                Write-Host "    Added to system PATH: $adkPath" -ForegroundColor Green
+                $currentMachinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+                $pathAdded = $true
+            } catch {
+                # Machine PATH failed, try User PATH
+            }
+        }
+
+        # Fallback to User PATH if Machine PATH failed or isn't admin
+        if (-not $pathAdded -and $currentUserPath -notlike "*$adkPath*") {
+            try {
+                [Environment]::SetEnvironmentVariable('Path', $currentUserPath + ";$adkPath", 'User')
+                Write-Host "    Added to user PATH: $adkPath" -ForegroundColor Yellow
+                $currentUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+                $pathAdded = $true
+            } catch {
+                Write-Warning "Could not add $adkPath to PATH"
+            }
+        }
+
+        if ($pathAdded) {
+            Write-Host "      oscdimg.exe will be available after restart" -ForegroundColor Gray
+        }
     }
 }
 

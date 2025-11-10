@@ -278,10 +278,56 @@ if (-not (Get-Module -ListAvailable -Name PSReadLine)) {
     }
 }
 
+# Configure console font for Nerd Font icons (PowerShell console)
+Write-Host "`n[CONSOLE] Configuring console font for Nerd Font support..."
+try {
+    # Registry paths for PowerShell console configurations
+    $consolePaths = @(
+        "HKCU:\Console\%SystemRoot%_System32_WindowsPowerShell_v1.0_powershell.exe",
+        "HKCU:\Console\C:_Program Files_PowerShell_7_pwsh.exe"
+    )
+
+    # Create registry paths if they don't exist
+    foreach ($path in $consolePaths) {
+        if (-not (Test-Path $path)) {
+            New-Item -Path $path -Force | Out-Null
+        }
+    }
+
+    # Font settings for JetBrains Mono Nerd Font
+    $fontSettings = @{
+        "FaceName" = "JetBrainsMono NF"
+        "FontFamily" = 54  # Modern font family
+        "FontSize" = 0x000C0000  # Size 12 (high word = height, low word = width)
+        "FontWeight" = 400  # Normal weight
+    }
+
+    # Additional console improvements
+    $consoleSettings = @{
+        "QuickEdit" = 1        # Enable quick edit mode
+        "InsertMode" = 1       # Insert mode enabled
+        "HistoryBufferSize" = 50    # Command history size
+        "NumberOfHistoryBuffers" = 4  # Number of history buffers
+    }
+
+    # Apply font and console settings
+    foreach ($path in $consolePaths) {
+        foreach ($setting in ($fontSettings + $consoleSettings).GetEnumerator()) {
+            Set-ItemProperty -Path $path -Name $setting.Key -Value $setting.Value -Type DWord -ErrorAction SilentlyContinue
+        }
+    }
+
+    Write-Host "  ✅ Console font configured for Nerd Font icons" -ForegroundColor Green
+    Write-Host "    Restart PowerShell console to see proper Git icons" -ForegroundColor Gray
+} catch {
+    Write-Warning "Console font configuration failed: $_"
+}
+
 Write-Host "`n[OK] Profile configuration complete!" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 Write-Host "Profile location: $PROFILE" -ForegroundColor Yellow
 Write-Host "Reload profile: Update-Profile" -ForegroundColor Yellow
 Write-Host "Edit profile: Edit-Profile" -ForegroundColor Yellow
+Write-Host "Console font: JetBrainsMono NF (for Git icons)" -ForegroundColor Yellow
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-Write-Host "`n💡 Restart your terminal or run: . `$PROFILE" -ForegroundColor Yellow
+Write-Host "`n💡 Restart PowerShell console to see proper Git icons!" -ForegroundColor Yellow
