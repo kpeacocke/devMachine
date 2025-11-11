@@ -1,4 +1,6 @@
 {
+    "terminal.integrated.fontFamily": "JetBrainsMono Nerd Font",
+    "terminal.integrated.fontSize": 12,
     "cSpell.words": [
         "adoptium",
         "Anson",

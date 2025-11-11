@@ -22,9 +22,7 @@ $wslCfg = @"
 memory=8GB
 processors=6
 swap=4GB
-localhostForwarding=true
 networkingMode=mirrored
-pageReporting=true
 autoProxy=true
 
 [experimental]

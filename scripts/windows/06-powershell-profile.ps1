@@ -323,6 +323,35 @@ try {
     Write-Warning "Console font configuration failed: $_"
 }
 
+# Configure VS Code terminal font for Nerd Font icons
+Write-Host "`n[VSCODE] Configuring VS Code terminal font..."
+try {
+    $vscodeSettingsPath = "$env:APPDATA\Code\User\settings.json"
+
+    if (Test-Path $vscodeSettingsPath) {
+        $vscodeSettings = Get-Content $vscodeSettingsPath -Raw | ConvertFrom-Json
+
+        # Add or update terminal font settings
+        if (-not $vscodeSettings.'terminal.integrated.fontFamily') {
+            $vscodeSettings | Add-Member -MemberType NoteProperty -Name 'terminal.integrated.fontFamily' -Value 'JetBrainsMono Nerd Font' -Force
+        } else {
+            $vscodeSettings.'terminal.integrated.fontFamily' = 'JetBrainsMono Nerd Font'
+        }
+
+        if (-not $vscodeSettings.'terminal.integrated.fontSize') {
+            $vscodeSettings | Add-Member -MemberType NoteProperty -Name 'terminal.integrated.fontSize' -Value 12 -Force
+        }
+
+        $vscodeSettings | ConvertTo-Json -Depth 10 | Set-Content $vscodeSettingsPath -Encoding UTF8
+        Write-Host "  ✅ VS Code terminal font configured" -ForegroundColor Green
+        Write-Host "    Reload VS Code terminal to see proper Git icons" -ForegroundColor Gray
+    } else {
+        Write-Host "  ℹ️  VS Code settings not found (run VS Code once to create)" -ForegroundColor Gray
+    }
+} catch {
+    Write-Warning "VS Code font configuration failed: $_"
+}
+
 Write-Host "`n[OK] Profile configuration complete!" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 Write-Host "Profile location: $PROFILE" -ForegroundColor Yellow
