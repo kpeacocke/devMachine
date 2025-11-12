@@ -1,3 +1,15 @@
+## [1.8.1](https://github.com/kpeacocke/devMachine/compare/v1.8.0...v1.8.1) (2025-11-12)
+
+
+### 🐛 Bug Fixes
+
+* **10-windows-bootstrap.ps1:** update Ubuntu installation command to use default version and improve user instructions ([bb121c3](https://github.com/kpeacocke/devMachine/commit/bb121c375d30502b81daa73a134b90a047a92230))
+
+
+### ♻️ Code Refactoring
+
+* **doctor-ubuntu.sh:** improve readability by restructuring conditional checks for tool availability ([bdaee0b](https://github.com/kpeacocke/devMachine/commit/bdaee0bcc5afc18bf65bde17814b9fb83be0e6df))
+
 ## [1.8.0](https://github.com/kpeacocke/devMachine/compare/v1.7.0...v1.8.0) (2025-11-12)
 
 
