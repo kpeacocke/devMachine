@@ -1,3 +1,14 @@
+## [1.8.0](https://github.com/kpeacocke/devMachine/compare/v1.7.0...v1.8.0) (2025-11-12)
+
+
+### 🚀 Features
+
+* configure VS Code terminal font settings for improved appearance ([b20b33f](https://github.com/kpeacocke/devMachine/commit/b20b33f9ffc570f4e6adbf7ef71fde85696e2687))
+* enhance Dev Drive cache configuration with additional package managers and improved error handling ([109d217](https://github.com/kpeacocke/devMachine/commit/109d217c3aceac2290972a0adb539b98c9e8dd73))
+* enhance PowerShell profile and bootstrap scripts for improved console configuration and PATH management ([8e33a52](https://github.com/kpeacocke/devMachine/commit/8e33a5247bf9ad6203a940dcda073f7855a29a98))
+* update scripts and documentation for improved VS Code Insiders installation and OneDrive handling ([698496c](https://github.com/kpeacocke/devMachine/commit/698496cab0ac2d941eddd6f1ece4babdb06c35cd))
+* update settings and scripts for improved tooling and SSL/TLS hardening ([17d07f5](https://github.com/kpeacocke/devMachine/commit/17d07f543336034886cfe1fecb84076396ee0138))
+
 ## [1.7.0](https://github.com/kpeacocke/devMachine/compare/v1.6.1...v1.7.0) (2025-11-07)
 
 
