@@ -1,56 +1,23 @@
 <#
 Opt into Insider/preview channels:
 
-- Windows: Canary (most forward). If you prefer Dev, set $WindowsInsiderChannel = 'Dev'
-- Office: BetaChannel (formerly “Insider Fast”)
+- Office: BetaChannel (formerly "Insider Fast")
 - VS Code: install Insiders, optionally make 'code' -> 'code-insiders'
 
-Limitations:
-- You must link a Microsoft account to Windows Insider manually (Settings UI will be opened for you).
+NOTE: Windows Insider enrollment has been REMOVED from this script as it's
+unreliable and potentially dangerous. Use Settings > Windows Update > Windows
+Insider Program manually if you need Windows preview builds.
 #>
 
 $ErrorActionPreference = 'Stop'
 
 # === Settings you can tweak ===
-$WindowsInsiderChannel = 'Canary'   # 'Canary' | 'Dev' | 'Beta' | 'ReleasePreview'
 $MakeCodeCLIPointToInsiders = $true # make 'code' invoke 'code-insiders'
 
-Write-Host "🪟 Windows Insider: target channel = $WindowsInsiderChannel"
+Write-Host "🚀 Insider Channels Setup (Office & VS Code)" -ForegroundColor Cyan
+Write-Host "   Note: Windows Insider enrollment removed (do manually if needed)" -ForegroundColor Gray
 
-# 1) WINDOWS INSIDER CHANNEL
-$sel = 'HKLM:\SOFTWARE\Microsoft\WindowsSelfHost\UI\Selection'
-$app = 'HKLM:\SOFTWARE\Microsoft\WindowsSelfHost\Applicability'
-New-Item -Path $sel -Force | Out-Null
-New-Item -Path $app -Force | Out-Null
-
-switch ($WindowsInsiderChannel) {
-  'Canary'         { $Ring='Canary'; $BranchName='Canary' }
-  'Dev'            { $Ring='Dev';    $BranchName='Dev' }
-  'Beta'           { $Ring='Beta';   $BranchName='Beta' }
-  'ReleasePreview' { $Ring='External'; $BranchName='ReleasePreview' }
-  default          { throw "Unknown WindowsInsiderChannel '$WindowsInsiderChannel'" }
-}
-
-New-ItemProperty -Path $sel -Name 'UIContentType' -Type String -Value 'Mainline' -Force | Out-Null
-New-ItemProperty -Path $sel -Name 'UIRing'        -Type String -Value $Ring        -Force | Out-Null
-New-ItemProperty -Path $sel -Name 'UIBranch'      -Type String -Value $BranchName   -Force | Out-Null
-
-New-ItemProperty -Path $app -Name 'BranchName'        -Type String -Value $BranchName -Force | Out-Null
-New-ItemProperty -Path $app -Name 'Ring'              -Type String -Value $Ring       -Force | Out-Null
-New-ItemProperty -Path $app -Name 'ContentType'       -Type String -Value 'Mainline'  -Force | Out-Null
-New-ItemProperty -Path $app -Name 'EnablePreviewBuilds' -Type DWord -Value 1 -Force   | Out-Null
-
-Write-Host "✅ Windows Insider channel preference recorded."
-Write-Host "ℹ️ Opening Settings → Windows Insider Program so you can link your Microsoft account (required once)."
-Start-Process "ms-settings:windowsinsider"
-
-# Telemetry for Insider builds
-try {
-  New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Force | Out-Null
-  New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name 'AllowTelemetry' -Type DWord -Value 3 -Force | Out-Null
-} catch { Write-Warning "Could not set AllowTelemetry=3 (Optional). Insider might not offer builds until set." }
-
-# 2) OFFICE INSIDER — BetaChannel
+# 1) OFFICE INSIDER — BetaChannel
 Write-Host "🧩 Office: switching to BetaChannel (Insider Fast)"
 $pol = 'HKLM:\SOFTWARE\Policies\Microsoft\office\16.0\common\officeupdate'
 New-Item -Path $pol -Force | Out-Null
@@ -67,8 +34,27 @@ if (Test-Path $odt) {
 }
 
 # 3) VS CODE INSIDERS
-Write-Host "📝 Installing VS Code Insiders"
+Write-Host "`n📝 VS Code Insiders Setup" -ForegroundColor Cyan
+
+# Remove regular VS Code if present
+Write-Host "  Checking for regular VS Code..."
+$regularVSCode = winget list --id Microsoft.VisualStudioCode --exact 2>$null
+if ($regularVSCode -match "Microsoft.VisualStudioCode") {
+    Write-Host "  ⚠️  Found regular VS Code - removing..." -ForegroundColor Yellow
+    try {
+        winget uninstall Microsoft.VisualStudioCode --silent --accept-source-agreements
+        Write-Host "  ✅ Regular VS Code removed" -ForegroundColor Green
+    } catch {
+        Write-Warning "Could not remove regular VS Code: $_"
+    }
+} else {
+    Write-Host "  ✅ No regular VS Code found" -ForegroundColor Green
+}
+
+# Install Insiders
+Write-Host "  Installing VS Code Insiders..."
 winget install Microsoft.VisualStudioCode.Insiders --source winget --silent --accept-source-agreements --accept-package-agreements
+Write-Host "  ✅ VS Code Insiders installed" -ForegroundColor Green
 
 if ($MakeCodeCLIPointToInsiders) {
   Write-Host "🔗 Pointing 'code' CLI to 'code-insiders'"

@@ -63,22 +63,9 @@ reg add "HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPre
 Write-Host "  ✅ Cortana and voice activation disabled" -ForegroundColor Green
 
 Write-Host "`n☁️ OneDrive & Cloud"
-# Disable OneDrive (optional - prompts user)
-if ($env:DISABLE_ONEDRIVE -eq 'Y') {
-    $disableOneDrive = 'Y'
-} elseif ($env:UNATTENDED_MODE) {
-    $disableOneDrive = 'N'  # Conservative default
-} else {
-    $disableOneDrive = Read-Host "  Disable OneDrive integration? (Y/N) [Default: N]"
-}
-if ([string]::IsNullOrWhiteSpace($disableOneDrive)) { $disableOneDrive = 'N' }
-
-if ($disableOneDrive -eq 'Y') {
-    reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\OneDrive" /v DisableFileSyncNGSC /t REG_DWORD /d 1 /f | Out-Null
-    Write-Host "  ✅ OneDrive disabled" -ForegroundColor Green
-} else {
-    Write-Host "  → OneDrive left enabled" -ForegroundColor Yellow
-}
+# OneDrive is left enabled by default (useful for file backup and sync)
+Write-Host "  ℹ️  OneDrive left enabled (recommended for cloud backup)" -ForegroundColor Gray
+Write-Host "  💡 To manually disable: Settings > Apps > Installed apps > OneDrive > Uninstall" -ForegroundColor Gray
 
 Write-Host "`n🌐 Location & Sensors"
 # Location services left enabled (user may need for apps, navigation, etc.)

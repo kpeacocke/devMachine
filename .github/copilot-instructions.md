@@ -21,7 +21,7 @@ integration. The project focuses on security, performance optimization, and deve
 
 ### Bash Scripts
 
-* Use `#!/usr/bin/env bash` shebang
+* Use shebang with /usr/bin/env bash
 * Always include `set -euo pipefail` for error handling
 * Use `command -v` to check for required tools
 * Prefer `[[` over `[` for conditionals
@@ -33,7 +33,6 @@ integration. The project focuses on security, performance optimization, and deve
 ### General Code Standards
 
 * Follow the conventional commits specification for all changes
-* Run security scans (Snyk Code) on new code before committing
 * Ensure all scripts are cross-platform compatible where applicable
 * Add comprehensive tests for new functionality
 * Update documentation (README.md, CHANGELOG.md) for user-facing changes
@@ -45,8 +44,6 @@ integration. The project focuses on security, performance optimization, and deve
 * Always validate user input and sanitize file paths
 * Use HTTPS for all downloads and API calls
 * Implement proper permission checks before system modifications
-* Scan new code with `snyk_code_scan` tool
-* Fix security issues before proceeding with implementation
 * Document security implications in commit messages
 
 ## Testing Standards
@@ -125,8 +122,7 @@ Include scope in parentheses: `feat(setup): add Dev Drive skip option`
 3. Write corresponding Pester/bash tests
 4. Update main orchestrator (`setup-machine.ps1`) if needed
 5. Document in README.md with usage examples
-6. Run Snyk security scan
-7. Commit with conventional commit message
+6. Commit with conventional commit message
 
 ### Modifying Existing Scripts
 
@@ -167,14 +163,13 @@ Include scope in parentheses: `feat(setup): add Dev Drive skip option`
 
 * **Languages**: PowerShell 7+, Bash 5+
 * **Testing**: Pester 5+, shellcheck, markdownlint
-* **Security**: Snyk, Trivy, GitHub Advanced Security
+* **Security**: PSScriptAnalyzer, GitHub Advanced Security
 * **CI/CD**: GitHub Actions with semantic-release
 * **Package Managers**: winget, chocolatey, apt, npm, pip
 * **Version Control**: Git with conventional commits
 
 ## AI Assistant Behavior
 
-* Always run security scans on generated code
 * Validate syntax before suggesting changes
 * Consider cross-platform compatibility
 * Prefer existing utilities over reinventing

@@ -105,8 +105,7 @@ Describe "Unattended Mode Support" {
         if (Test-Path $privacyScript) {
             $content = Get-Content -Path $privacyScript -Raw
 
-            # Should handle OneDrive setting
-            $content | Should -Match '\$env:DISABLE_ONEDRIVE'
+            # Should handle unattended mode (OneDrive is always left enabled now)
             $content | Should -Match '\$env:UNATTENDED_MODE'
         } else {
             Set-ItResult -Skipped -Because "Privacy script not found"

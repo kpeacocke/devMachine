@@ -13,10 +13,31 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-Write-Host "== Ensure VS Code Insiders is installed"
+Write-Host "== Ensure ONLY VS Code Insiders is installed"
+
+# Remove regular VS Code if present
+Write-Host "  Checking for regular VS Code..."
+$regularVSCode = winget list --id Microsoft.VisualStudioCode --exact 2>$null
+if ($regularVSCode -match "Microsoft.VisualStudioCode") {
+    Write-Host "  ⚠️  Found regular VS Code - removing..." -ForegroundColor Yellow
+    try {
+        winget uninstall Microsoft.VisualStudioCode --silent --accept-source-agreements
+        Write-Host "  ✅ Regular VS Code removed" -ForegroundColor Green
+    } catch {
+        Write-Warning "Could not remove regular VS Code: $_"
+    }
+} else {
+    Write-Host "  ✅ No regular VS Code found" -ForegroundColor Green
+}
+
+# Install Insiders
+Write-Host "  Installing VS Code Insiders..."
 try {
   winget install Microsoft.VisualStudioCode.Insiders --source winget --silent --accept-source-agreements --accept-package-agreements
-} catch {}
+  Write-Host "  ✅ VS Code Insiders installed" -ForegroundColor Green
+} catch {
+  Write-Host "  ℹ️  VS Code Insiders already installed or install in progress" -ForegroundColor Gray
+}
 
 # Profile directory (Insiders)
 $UserDir = Join-Path $env:APPDATA "Code - Insiders\User"

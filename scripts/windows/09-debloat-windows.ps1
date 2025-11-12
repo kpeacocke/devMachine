@@ -96,8 +96,8 @@ if ($failedCount -gt 0) {
     Write-Host "⚠️  $failedCount packages could not be removed (may not be installed)" -ForegroundColor Yellow
 }
 
-# Optional: Remove OneDrive (ask user first - already handled in 35-privacy-telemetry.ps1)
-Write-Host "💡 Note: OneDrive removal is handled in 35-privacy-telemetry.ps1" -ForegroundColor Cyan
+# Note: OneDrive is left enabled (useful for cloud backup and file sync)
+Write-Host "💡 Note: OneDrive is left enabled and available" -ForegroundColor Cyan
 
 # Disable Windows Consumer Features (prevents auto-install of apps like Candy Crush)
 Write-Host "🚫 Disabling Windows Consumer Features (prevents app reinstalls)..."

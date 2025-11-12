@@ -111,7 +111,18 @@ foreach ($adkPath in $adkPaths) {
 }
 
 Write-Host "📝 Editor & Containers"
-winget install Microsoft.VisualStudioCode --source winget --silent --accept-package-agreements --accept-source-agreements
+# Ensure only VS Code Insiders is installed (uninstall regular VS Code if present)
+Write-Host "  Checking for VS Code editions..."
+$regularVSCode = winget list --id Microsoft.VisualStudioCode --exact 2>$null
+if ($regularVSCode -match "Microsoft.VisualStudioCode") {
+    Write-Host "  Removing regular VS Code..." -ForegroundColor Yellow
+    winget uninstall Microsoft.VisualStudioCode --silent --accept-source-agreements
+    Write-Host "  ✅ Regular VS Code removed" -ForegroundColor Green
+}
+Write-Host "  Installing VS Code Insiders..."
+winget install Microsoft.VisualStudioCode.Insiders --source winget --silent --accept-package-agreements --accept-source-agreements
+Write-Host "  ✅ VS Code Insiders installed" -ForegroundColor Green
+
 winget install Docker.DockerDesktop --source winget --silent --accept-package-agreements --accept-source-agreements
 
 Write-Host "🐧 Ubuntu for WSL"

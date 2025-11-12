@@ -649,21 +649,22 @@ if (-not $SkipBackup) {
 # ============================================================================
 
 if (-not $SkipInsiders) {
-    Write-Host "⚠️  Windows Insider Program Setup" -ForegroundColor Yellow
-    Write-Host "   This will configure Canary/Dev channels for Windows, Office, and VS Code" -ForegroundColor Yellow
+    Write-Host "⚠️  Insider Programs Setup (Office & VS Code)" -ForegroundColor Yellow
+    Write-Host "   This will configure Office Beta and VS Code Insiders" -ForegroundColor Yellow
+    Write-Host "   ⚠️  Windows Insider enrollment has been removed (too unreliable)" -ForegroundColor Yellow
 
     if ($UnattendedMode) {
         Write-Host "🤖 Unattended mode: Skipping Insider channels (use -SkipInsiders to avoid this message)" -ForegroundColor Yellow
         $insider = 'N'
     } else {
-        $insider = Read-Host "   Enable Insider channels? (Y/N) [Default: N]"
+        $insider = Read-Host "   Enable Insider channels (Office/VS Code)? (Y/N) [Default: N]"
         if ([string]::IsNullOrWhiteSpace($insider)) { $insider = 'N' }
     }
 
     if ($insider -eq 'Y') {
-        Write-Step "PHASE 10: Insider Channels"
+        Write-Step "PHASE 10: Insider Channels (Office & VS Code)"
         Invoke-Script -Path (Join-Path $WindowsScripts "70-insiders-optin.ps1") `
-            -Description "Windows Canary, Office Beta, VS Code Insiders"
+            -Description "Office Beta, VS Code Insiders (Windows Insider removed)"
 
         Invoke-Script -Path (Join-Path $WindowsScripts "72-vscode-insiders-setup.ps1") `
             -Description "VS Code Insiders profile and extensions"
