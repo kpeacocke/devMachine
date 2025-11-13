@@ -1,3 +1,12 @@
+## [1.9.0](https://github.com/kpeacocke/devMachine/compare/v1.8.1...v1.9.0) (2025-11-13)
+
+
+### 🚀 Features
+
+* enhance developer font installation with system-wide support and verification ([408d0c4](https://github.com/kpeacocke/devMachine/commit/408d0c47303badf94c9769f5301db5828199a4df))
+* enhance SSL/TLS hardening script for compatibility and safety checks ([ddd2fdc](https://github.com/kpeacocke/devMachine/commit/ddd2fdc41059da63c05ef2d5afa8a3a3c6c6d7d4))
+* optimize Windows Search service and indexing for improved performance ([8a4a900](https://github.com/kpeacocke/devMachine/commit/8a4a900dc3853ea71f75d69fef01029f8741d476))
+
 ## [1.8.1](https://github.com/kpeacocke/devMachine/compare/v1.8.0...v1.8.1) (2025-11-12)
 
 
