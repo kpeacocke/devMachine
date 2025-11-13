@@ -127,11 +127,11 @@ winget install Docker.DockerDesktop --source winget --silent --accept-package-ag
 
 Write-Host "🐧 Ubuntu for WSL"
 if (-not $skipWSL) {
-  # Install Ubuntu 24.04 LTS (latest)
-  winget install Canonical.Ubuntu.2404 --source winget --silent --accept-package-agreements --accept-source-agreements
+  # Install Ubuntu (default/latest version)
+  winget install Canonical.Ubuntu --source winget --silent --accept-package-agreements --accept-source-agreements
   # Set WSL 2 as default
   wsl --set-default-version 2
-  Write-Host "  Note: Launch 'Ubuntu 24.04 LTS' from Start Menu to complete first-time setup" -ForegroundColor Yellow
+  Write-Host "  Note: Launch 'Ubuntu' from Start Menu to complete first-time setup" -ForegroundColor Yellow
 } else {
   Write-Host "  → Skipped (WSL not installed)" -ForegroundColor Yellow
 }

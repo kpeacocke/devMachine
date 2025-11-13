@@ -13,6 +13,8 @@
 .PARAMETER SkipLicensedApps
     Skip commercial/licensed applications (1Password, Office, GitKraken, Beyond Compare,
     Scrivener, Obsidian, Backblaze, Malwarebytes, GlassWire).
+    Skip commercial/licensed applications (1Password, Office, GitKraken, Beyond Compare,
+    Scrivener, Obsidian, Backblaze, Malwarebytes, GlassWire).
     Use this for VMs or when you don't have licenses.
 
 .PARAMETER SkipCommunicationsMedia
@@ -169,12 +171,15 @@ function Invoke-Script {
         [hashtable]$Arguments = @{}
     )
 
+
     Write-Step $Description
+
 
     if (-not (Test-Path $Path)) {
         Write-Warning "Script not found: $Path - SKIPPING"
         return
     }
+
 
     try {
         if ($Arguments.Count -gt 0) {
@@ -360,8 +365,7 @@ if (-not $SkipLicensedApps) {
     Write-Host "💰 Commercial/Licensed Applications" -ForegroundColor Yellow
     Write-Host "   These require paid licenses or subscriptions" -ForegroundColor Yellow
     Write-Host "   Estimated cost: ~$315-505 first year, ~$205-395/year after`n" -ForegroundColor Yellow
-    $installLicensed = Read-Host "Install licensed apps? (Y/N) [Default: N]"
-    if ([string]::IsNullOrWhiteSpace($installLicensed)) { $installLicensed = 'N' }
+    $installLicensed = Read-Host "Install licensed apps? (Y/N) [Recommended: N for VMs]"
 
     if ($installLicensed -eq 'Y') {
         Write-Step "PHASE 2.5: Licensed Applications"
@@ -649,22 +653,14 @@ if (-not $SkipBackup) {
 # ============================================================================
 
 if (-not $SkipInsiders) {
-    Write-Host "⚠️  Insider Programs Setup (Office & VS Code)" -ForegroundColor Yellow
-    Write-Host "   This will configure Office Beta and VS Code Insiders" -ForegroundColor Yellow
-    Write-Host "   ⚠️  Windows Insider enrollment has been removed (too unreliable)" -ForegroundColor Yellow
-
-    if ($UnattendedMode) {
-        Write-Host "🤖 Unattended mode: Skipping Insider channels (use -SkipInsiders to avoid this message)" -ForegroundColor Yellow
-        $insider = 'N'
-    } else {
-        $insider = Read-Host "   Enable Insider channels (Office/VS Code)? (Y/N) [Default: N]"
-        if ([string]::IsNullOrWhiteSpace($insider)) { $insider = 'N' }
-    }
+    Write-Host "`n⚠️  Windows Insider Program Setup" -ForegroundColor Yellow
+    Write-Host "   This will configure Canary/Dev channels for Windows, Office, and VS Code" -ForegroundColor Yellow
+    $insider = Read-Host "   Enable Insider channels? (Y/N)"
 
     if ($insider -eq 'Y') {
         Write-Step "PHASE 10: Insider Channels (Office & VS Code)"
         Invoke-Script -Path (Join-Path $WindowsScripts "70-insiders-optin.ps1") `
-            -Description "Office Beta, VS Code Insiders (Windows Insider removed)"
+            -Description "Windows Canary, Office Beta, VS Code Insiders"
 
         Invoke-Script -Path (Join-Path $WindowsScripts "72-vscode-insiders-setup.ps1") `
             -Description "VS Code Insiders profile and extensions"
@@ -685,6 +681,7 @@ try {
     if ($ubuntuStatus) {
         Write-Host "✅ Ubuntu is installed" -ForegroundColor Green
 
+
         # Test if Ubuntu has been initialized
         wsl -d Ubuntu -e whoami 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
@@ -700,11 +697,14 @@ try {
             }
         }
 
+
         Write-Step "PHASE 11: Ubuntu Bootstrap"
         Write-Host "Copying Ubuntu bootstrap script to WSL..." -ForegroundColor Cyan
 
+
         $ubuntuBootstrap = Join-Path $WSLScripts "20-ubuntu-bootstrap.sh"
         $ubuntuTune = Join-Path $WSLScripts "21-wsl-tune.sh"
+
 
         # Copy scripts to WSL
         wsl -d Ubuntu -e mkdir -p /tmp/setup
@@ -713,15 +713,18 @@ try {
         wsl -d Ubuntu -e chmod +x /tmp/setup/20-ubuntu-bootstrap.sh
         wsl -d Ubuntu -e chmod +x /tmp/setup/21-wsl-tune.sh
 
+
         Write-Host "Running Ubuntu bootstrap (this will take 15-30 minutes)..." -ForegroundColor Cyan
         wsl -d Ubuntu -e bash /tmp/setup/20-ubuntu-bootstrap.sh
+
 
         Write-Host "`nRunning WSL tune-ups..." -ForegroundColor Cyan
         wsl -d Ubuntu -e bash /tmp/setup/21-wsl-tune.sh
 
+
         Write-Host "✅ Ubuntu setup complete" -ForegroundColor Green
 
-        Write-Host "⚠️  Shutting down WSL to apply .wslconfig changes..." -ForegroundColor Yellow
+        Write-Host "`n⚠️  Shutting down WSL to apply .wslconfig changes..." -ForegroundColor Yellow
         wsl --shutdown
         Write-Host "✅ WSL shutdown complete. It will restart automatically when needed." -ForegroundColor Green
     }

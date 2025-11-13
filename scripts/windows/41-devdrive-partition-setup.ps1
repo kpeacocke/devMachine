@@ -10,8 +10,17 @@
     ReFS requires a minimum of 2GB per partition. The script automatically adjusts sizes
     to meet these requirements while ensuring 30% free space remains on C:.
 
+    PARTITION DETECTION:
+    The script detects existing Dev Drive partitions by their filesystem labels (DevCache, DevCode).
+    If partitions exist but are not mounted (e.g., after OS reinstall), the script will mount them
+    instead of creating new ones. This prevents duplicate partitions and preserves data.
+
 .EXAMPLE
     .\scripts\windows\41-devdrive-partition-setup.ps1
+
+.NOTES
+    After wiping/reinstalling Windows, existing Dev Drive partitions remain on disk but unmounted.
+    This script intelligently detects them by label and remounts them rather than creating duplicates.
 #>
 #Requires -RunAsAdministrator
 $ErrorActionPreference = 'Stop'
@@ -206,29 +215,58 @@ if ($confirm -ne 'Y') {
     exit 0
 }
 
-# Check if mount points already exist
+# Define mount points
+$cacheMountPoint = "C:\DevCache"
+$codeMountPoint = "C:\Users\$env:USERNAME\code"
+
+Write-Host "`n🔍 Detecting existing Dev Drive partitions..." -ForegroundColor Cyan
+
+# Look for existing unmounted partitions by label (survives OS reinstalls)
+$existingCachePartition = $null
+$existingCodePartition = $null
+
+$allVolumes = Get-Volume | Where-Object { $_.FileSystem -eq 'ReFS' -and $_.FileSystemLabel -in @('DevCache', 'DevCode') }
+foreach ($vol in $allVolumes) {
+    if ($vol.FileSystemLabel -eq 'DevCache') {
+        $existingCachePartition = $vol
+        Write-Host "   Found existing DevCache partition: $([math]::Round($vol.Size / 1GB, 2)) GB (ReFS)" -ForegroundColor Yellow
+    } elseif ($vol.FileSystemLabel -eq 'DevCode') {
+        $existingCodePartition = $vol
+        Write-Host "   Found existing DevCode partition: $([math]::Round($vol.Size / 1GB, 2)) GB (ReFS)" -ForegroundColor Yellow
+    }
+}
+
+# Check if mount points already exist and have volumes mounted
 $cacheMountPoint = "C:\DevCache"
 $codeMountPoint = "C:\Users\$env:USERNAME\code"
 
 # Check if cache mount point exists and has a volume mounted
 $cacheExists = $false
+$cacheMounted = $false
 if (Test-Path $cacheMountPoint) {
     $cacheVolume = Get-Volume | Where-Object { $_.Path -eq "$cacheMountPoint\" }
     if ($cacheVolume) {
-        Write-Host "✅ Cache Dev Drive already exists at $cacheMountPoint" -ForegroundColor Green
+        Write-Host "✅ Cache Dev Drive already mounted at $cacheMountPoint" -ForegroundColor Green
         Write-Host "   Size: $([math]::Round($cacheVolume.Size / 1GB, 2)) GB, FileSystem: $($cacheVolume.FileSystem)" -ForegroundColor Gray
         $cacheExists = $true
+        $cacheMounted = $true
     }
+} elseif ($existingCachePartition) {
+    Write-Host "   Cache partition exists but not mounted - will mount it" -ForegroundColor Yellow
+    $cacheExists = $true
+    $cacheMounted = $false
 }
 
 # Check if code mount point exists and has a volume mounted
 $codeExists = $false
+$codeMounted = $false
 if (Test-Path $codeMountPoint) {
     $codeVolume = Get-Volume | Where-Object { $_.Path -eq "$codeMountPoint\" }
     if ($codeVolume) {
-        Write-Host "✅ Code Dev Drive already exists at $codeMountPoint" -ForegroundColor Green
+        Write-Host "✅ Code Dev Drive already mounted at $codeMountPoint" -ForegroundColor Green
         Write-Host "   Size: $([math]::Round($codeVolume.Size / 1GB, 2)) GB, FileSystem: $($codeVolume.FileSystem)" -ForegroundColor Gray
         $codeExists = $true
+        $codeMounted = $true
     } else {
         # Check if it's a regular directory with contents
         $items = Get-ChildItem $codeMountPoint -ErrorAction SilentlyContinue
@@ -237,11 +275,15 @@ if (Test-Path $codeMountPoint) {
             Write-Host "   This appears to be a regular directory, not a Dev Drive mount point" -ForegroundColor Gray
         }
     }
+} elseif ($existingCodePartition) {
+    Write-Host "   Code partition exists but not mounted - will mount it" -ForegroundColor Yellow
+    $codeExists = $true
+    $codeMounted = $false
 }
 
-# Only skip ALL disk operations if BOTH mount points exist with volumes
-if ($cacheExists -and $codeExists) {
-    Write-Host "🎉 Both Dev Drive mount points already exist - no disk changes needed!" -ForegroundColor Green
+# Only skip ALL operations if BOTH are already mounted
+if ($cacheMounted -and $codeMounted) {
+    Write-Host "`n🎉 Both Dev Drive mount points already exist and mounted - no changes needed!" -ForegroundColor Green
     Write-Host "   Cache: $cacheMountPoint" -ForegroundColor Gray
     Write-Host "   Code:  $codeMountPoint" -ForegroundColor Gray
     Write-Host "📝 Next Steps:" -ForegroundColor Cyan
@@ -251,19 +293,26 @@ if ($cacheExists -and $codeExists) {
     exit 0
 }
 
-# Determine what needs to be created
-if ($cacheExists) {
-    Write-Host "📝 Cache Dev Drive exists, will only create code partition" -ForegroundColor Cyan
+# Determine what needs to be created vs mounted
+Write-Host ""
+if ($cacheExists -and -not $cacheMounted) {
+    Write-Host "📝 Cache Dev Drive partition exists - will mount it" -ForegroundColor Cyan
+    $skipCachePartition = $true  # Skip creation, just mount
+} elseif ($cacheMounted) {
+    Write-Host "📝 Cache Dev Drive already mounted - skipping" -ForegroundColor Cyan
     $skipCachePartition = $true
 } else {
-    Write-Host "📝 Cache Dev Drive missing, will create it" -ForegroundColor Cyan
+    Write-Host "📝 Cache Dev Drive missing - will create and mount it" -ForegroundColor Cyan
 }
 
-if ($codeExists) {
-    Write-Host "📝 Code Dev Drive exists, will only create cache partition" -ForegroundColor Cyan
+if ($codeExists -and -not $codeMounted) {
+    Write-Host "📝 Code Dev Drive partition exists - will mount it" -ForegroundColor Cyan
+    $skipCodePartition = $true  # Skip creation, just mount
+} elseif ($codeMounted) {
+    Write-Host "📝 Code Dev Drive already mounted - skipping" -ForegroundColor Cyan
     $skipCodePartition = $true
 } else {
-    Write-Host "📝 Code Dev Drive missing, will create it" -ForegroundColor Cyan
+    Write-Host "📝 Code Dev Drive missing - will create and mount it" -ForegroundColor Cyan
 }
 
 Write-Host "🔧 Starting partition operations..." -ForegroundColor Cyan
@@ -351,105 +400,161 @@ if (-not $skipCachePartition) {
 }
 
 # Step 3: Create Code partition
-Write-Host "[3/5] Creating Code Dev Drive partition ($codePartitionGB GB)..." -ForegroundColor Yellow
-try {
-    # Check available free space on disk first
-    $diskFreeSpace = Get-WmiObject -Class Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3} | Measure-Object -Property FreeSpace -Sum
-    $availableSpaceGB = [math]::Floor($diskFreeSpace.Sum / 1GB)
-
-    # Check for largest available extent on the disk
-    $maxExtent = Get-Disk -Number $disk.Number | Get-PartitionSupportedSize
-    $maxSizeBytes = if ($maxExtent.SizeMax -is [array]) { $maxExtent.SizeMax[0] } else { $maxExtent.SizeMax }
-    $maxAvailableGB = [math]::Floor($maxSizeBytes / 1GB)
-
-    Write-Host "   Available disk space: $availableSpaceGB GB, Max extent: $maxAvailableGB GB" -ForegroundColor Gray
-
-    if ($maxAvailableGB -lt $codePartitionGB) {
-        Write-Host "   ⚠️  Insufficient contiguous space for $codePartitionGB GB partition" -ForegroundColor Yellow
-        $adjustedCodeGB = [math]::Max(5, [math]::Floor($maxAvailableGB * 0.8)) # Use 80% of available, minimum 5GB
-        Write-Host "   Adjusting code partition to $adjustedCodeGB GB" -ForegroundColor Yellow
-        $codePartitionGB = $adjustedCodeGB
-    }
-
-    $codeSize = $codePartitionGB * 1GB
-    $codePartition = New-Partition -DiskNumber $disk.Number -Size $codeSize -AssignDriveLetter
-    $codeDriveLetter = $codePartition.DriveLetter
-
-    Write-Host "   Formatting as ReFS (Dev Drive)..." -ForegroundColor Gray
-    Format-Volume -DriveLetter $codeDriveLetter -FileSystem ReFS -NewFileSystemLabel "DevCode" -DevDrive -Confirm:$false | Out-Null
-
-    Write-Host "   ✅ Code partition created as $codeDriveLetter`: ($codePartitionGB GB)" -ForegroundColor Green
-} catch {
-    Write-Host "   ❌ Failed to create code partition: $_" -ForegroundColor Red
-    Write-Host "   Trying to create with maximum available space..." -ForegroundColor Yellow
+if (-not $skipCodePartition) {
+    Write-Host "`n[3/5] Creating Code Dev Drive partition ($codePartitionGB GB)..." -ForegroundColor Yellow
     try {
-        # Try with maximum available space
-        $maxSizeInfo = Get-Disk -Number $disk.Number | Get-PartitionSupportedSize
-        $maxSize = if ($maxSizeInfo.SizeMax -is [array]) { $maxSizeInfo.SizeMax[0] } else { $maxSizeInfo.SizeMax }
-        if ($maxSize -gt 2GB) {
-            $fallbackSize = [math]::Min($maxSize, 5GB) # Max 5GB fallback
-            $codePartition = New-Partition -DiskNumber $disk.Number -Size $fallbackSize -AssignDriveLetter
-            $codeDriveLetter = $codePartition.DriveLetter
-            Format-Volume -DriveLetter $codeDriveLetter -FileSystem ReFS -NewFileSystemLabel "DevCode" -DevDrive -Confirm:$false | Out-Null
-            $codePartitionGB = [math]::Round($fallbackSize / 1GB, 1)
-            Write-Host "   ✅ Code partition created as $codeDriveLetter`: ($codePartitionGB GB)" -ForegroundColor Green
-        } else {
-            Write-Host "   ❌ Not enough space for any code partition" -ForegroundColor Red
+        # Check available free space on disk first
+        $diskFreeSpace = Get-WmiObject -Class Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3} | Measure-Object -Property FreeSpace -Sum
+        $availableSpaceGB = [math]::Floor($diskFreeSpace.Sum / 1GB)
+
+        # Check for largest available extent on the disk
+        $maxExtent = Get-Disk -Number $disk.Number | Get-PartitionSupportedSize
+        $maxSizeBytes = if ($maxExtent.SizeMax -is [array]) { $maxExtent.SizeMax[0] } else { $maxExtent.SizeMax }
+        $maxAvailableGB = [math]::Floor($maxSizeBytes / 1GB)
+
+        Write-Host "   Available disk space: $availableSpaceGB GB, Max extent: $maxAvailableGB GB" -ForegroundColor Gray
+
+        if ($maxAvailableGB -lt $codePartitionGB) {
+            Write-Host "   ⚠️  Insufficient contiguous space for $codePartitionGB GB partition" -ForegroundColor Yellow
+            $adjustedCodeGB = [math]::Max(5, [math]::Floor($maxAvailableGB * 0.8)) # Use 80% of available, minimum 5GB
+            Write-Host "   Adjusting code partition to $adjustedCodeGB GB" -ForegroundColor Yellow
+            $codePartitionGB = $adjustedCodeGB
+        }
+
+        $codeSize = $codePartitionGB * 1GB
+        $codePartition = New-Partition -DiskNumber $disk.Number -Size $codeSize -AssignDriveLetter
+        $codeDriveLetter = $codePartition.DriveLetter
+
+        Write-Host "   Formatting as ReFS (Dev Drive)..." -ForegroundColor Gray
+        Format-Volume -DriveLetter $codeDriveLetter -FileSystem ReFS -NewFileSystemLabel "DevCode" -DevDrive -Confirm:$false | Out-Null
+
+        Write-Host "   ✅ Code partition created as $codeDriveLetter`: ($codePartitionGB GB)" -ForegroundColor Green
+    } catch {
+        Write-Host "   ❌ Failed to create code partition: $_" -ForegroundColor Red
+        Write-Host "   Trying to create with maximum available space..." -ForegroundColor Yellow
+        try {
+            # Try with maximum available space
+            $maxSizeInfo = Get-Disk -Number $disk.Number | Get-PartitionSupportedSize
+            $maxSize = if ($maxSizeInfo.SizeMax -is [array]) { $maxSizeInfo.SizeMax[0] } else { $maxSizeInfo.SizeMax }
+            if ($maxSize -gt 2GB) {
+                $fallbackSize = [math]::Min($maxSize, 5GB) # Max 5GB fallback
+                $codePartition = New-Partition -DiskNumber $disk.Number -Size $fallbackSize -AssignDriveLetter
+                $codeDriveLetter = $codePartition.DriveLetter
+                Format-Volume -DriveLetter $codeDriveLetter -FileSystem ReFS -NewFileSystemLabel "DevCode" -DevDrive -Confirm:$false | Out-Null
+                $codePartitionGB = [math]::Round($fallbackSize / 1GB, 1)
+                Write-Host "   ✅ Code partition created as $codeDriveLetter`: ($codePartitionGB GB)" -ForegroundColor Green
+            } else {
+                Write-Host "   ❌ Not enough space for any code partition" -ForegroundColor Red
+                $skipCodePartition = $true
+            }
+        } catch {
+            Write-Host "   ❌ Fallback partition creation also failed: $_" -ForegroundColor Red
             $skipCodePartition = $true
         }
-    } catch {
-        Write-Host "   ❌ Fallback partition creation also failed: $_" -ForegroundColor Red
-        $skipCodePartition = $true
     }
+} else {
+    Write-Host "`n[3/5] Skipping code partition creation (already exists)" -ForegroundColor Yellow
 }
 
 # Step 4: Mount Cache partition
-if (-not $skipCachePartition) {
+if (-not $cacheMounted) {
     Write-Host "`n[4/5] Mounting cache partition at $cacheMountPoint..." -ForegroundColor Yellow
     try {
         if (-not (Test-Path $cacheMountPoint)) {
             New-Item -ItemType Directory -Path $cacheMountPoint -Force | Out-Null
         }
 
-        # Remove drive letter and mount to folder
-        Remove-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $cachePartition.PartitionNumber -AccessPath "$cacheDriveLetter`:\"
-        Add-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $cachePartition.PartitionNumber -AccessPath "$cacheMountPoint\"
-
-        Write-Host "   ✅ Cache partition mounted at $cacheMountPoint" -ForegroundColor Green
+        # If we have an existing partition, find and mount it
+        if ($existingCachePartition -and -not $cachePartition) {
+            Write-Host "   Mounting existing DevCache partition..." -ForegroundColor Gray
+            # Find the partition by matching the volume
+            $allPartitions = Get-Partition | Where-Object { $_.DriveLetter -or $_.AccessPaths }
+            foreach ($part in $allPartitions) {
+                $vol = Get-Volume -Partition $part -ErrorAction SilentlyContinue
+                if ($vol -and $vol.FileSystemLabel -eq 'DevCache') {
+                    # Remove existing drive letter if present
+                    if ($part.DriveLetter) {
+                        Remove-PartitionAccessPath -DiskNumber $part.DiskNumber -PartitionNumber $part.PartitionNumber -AccessPath "$($part.DriveLetter):\" -ErrorAction SilentlyContinue
+                    }
+                    # Mount to folder
+                    Add-PartitionAccessPath -DiskNumber $part.DiskNumber -PartitionNumber $part.PartitionNumber -AccessPath "$cacheMountPoint\"
+                    Write-Host "   ✅ Existing cache partition mounted at $cacheMountPoint" -ForegroundColor Green
+                    break
+                }
+            }
+        } elseif ($cachePartition) {
+            # Mounting newly created partition
+            Remove-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $cachePartition.PartitionNumber -AccessPath "$cacheDriveLetter`:\" -ErrorAction SilentlyContinue
+            Add-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $cachePartition.PartitionNumber -AccessPath "$cacheMountPoint\"
+            Write-Host "   ✅ Cache partition mounted at $cacheMountPoint" -ForegroundColor Green
+        }
     } catch {
         Write-Host "   ❌ Failed to mount cache partition: $_" -ForegroundColor Red
-        Write-Host "      Partition exists as $cacheDriveLetter`: but not mounted" -ForegroundColor Yellow
+        if ($cacheDriveLetter) {
+            Write-Host "      Partition exists as $cacheDriveLetter`: but not mounted" -ForegroundColor Yellow
+        }
     }
+} else {
+    Write-Host "`n[4/5] Cache partition already mounted - skipping" -ForegroundColor Yellow
 }
 
 # Step 5: Mount Code partition
-if (-not $skipCodePartition) {
+if (-not $codeMounted) {
     Write-Host "`n[5/5] Mounting code partition at $codeMountPoint..." -ForegroundColor Yellow
     try {
         if (-not (Test-Path $codeMountPoint)) {
             New-Item -ItemType Directory -Path $codeMountPoint -Force | Out-Null
         }
 
-        # Remove drive letter and mount to folder
-        Remove-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $codePartition.PartitionNumber -AccessPath "$codeDriveLetter`:\"
-        Add-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $codePartition.PartitionNumber -AccessPath "$codeMountPoint\"
-
-        Write-Host "   ✅ Code partition mounted at $codeMountPoint" -ForegroundColor Green
-    } catch {
-        Write-Host "   ❌ Failed to mount code partition: $_" -ForegroundColor Red
-        Write-Host "      Partition exists as $codeDriveLetter`: but not mounted" -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "`n[5/5] Skipping code partition mount (creation failed)" -ForegroundColor Yellow
-    Write-Host "   Creating regular directory for code instead..." -ForegroundColor Gray
-    try {
-        if (-not (Test-Path $codeMountPoint)) {
-            New-Item -ItemType Directory -Path $codeMountPoint -Force | Out-Null
-            Write-Host "   ✅ Created regular directory at $codeMountPoint" -ForegroundColor Green
+        # If we have an existing partition, find and mount it
+        if ($existingCodePartition -and -not $codePartition) {
+            Write-Host "   Mounting existing DevCode partition..." -ForegroundColor Gray
+            # Find the partition by matching the volume
+            $allPartitions = Get-Partition | Where-Object { $_.DriveLetter -or $_.AccessPaths }
+            foreach ($part in $allPartitions) {
+                $vol = Get-Volume -Partition $part -ErrorAction SilentlyContinue
+                if ($vol -and $vol.FileSystemLabel -eq 'DevCode') {
+                    # Remove existing drive letter if present
+                    if ($part.DriveLetter) {
+                        Remove-PartitionAccessPath -DiskNumber $part.DiskNumber -PartitionNumber $part.PartitionNumber -AccessPath "$($part.DriveLetter):\" -ErrorAction SilentlyContinue
+                    }
+                    # Mount to folder
+                    Add-PartitionAccessPath -DiskNumber $part.DiskNumber -PartitionNumber $part.PartitionNumber -AccessPath "$codeMountPoint\"
+                    Write-Host "   ✅ Existing code partition mounted at $codeMountPoint" -ForegroundColor Green
+                    break
+                }
+            }
+        } elseif ($codePartition) {
+            # Mounting newly created partition
+            Remove-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $codePartition.PartitionNumber -AccessPath "$codeDriveLetter`:\" -ErrorAction SilentlyContinue
+            Add-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $codePartition.PartitionNumber -AccessPath "$codeMountPoint\"
+            Write-Host "   ✅ Code partition mounted at $codeMountPoint" -ForegroundColor Green
+        } else {
+            # Fallback: create regular directory if partition creation was skipped/failed
+            Write-Host "   No code partition available - creating regular directory" -ForegroundColor Yellow
+            if (-not (Test-Path $codeMountPoint)) {
+                New-Item -ItemType Directory -Path $codeMountPoint -Force | Out-Null
+                Write-Host "   ✅ Created $codeMountPoint as regular directory" -ForegroundColor Green
+            }
         }
     } catch {
-        Write-Host "   ❌ Failed to create code directory: $_" -ForegroundColor Red
+        Write-Host "   ❌ Failed to mount code partition: $_" -ForegroundColor Red
+        if ($codeDriveLetter) {
+            Write-Host "      Partition exists as $codeDriveLetter`: but not mounted" -ForegroundColor Yellow
+        }
+        # Fallback: create regular directory
+        Write-Host "   Creating regular directory for code instead..." -ForegroundColor Gray
+        try {
+            if (-not (Test-Path $codeMountPoint)) {
+                New-Item -ItemType Directory -Path $codeMountPoint -Force | Out-Null
+                Write-Host "   ✅ Created $codeMountPoint as regular directory" -ForegroundColor Green
+            }
+        } catch {
+            Write-Host "   ❌ Failed to create code directory: $_" -ForegroundColor Red
+        }
     }
+} else {
+    Write-Host "`n[5/5] Code partition already mounted - skipping" -ForegroundColor Yellow
 }
 
 # Verify setup

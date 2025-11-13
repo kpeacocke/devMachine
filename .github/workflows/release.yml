@@ -193,36 +193,48 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path release-artifacts
 
+          # Ensure we're using PowerShell 7+ with better ZIP support
+          $PSVersionTable.PSVersion
+
           # Use generic naming - semantic-release will rename when uploading
           $version = "latest"
 
           # Create Windows scripts archive
-          Compress-Archive -Path `
-            scripts/windows/*.ps1, `
-            setup-machine.ps1, `
-            README.md, `
-            LICENSE `
-            -DestinationPath "release-artifacts/devMachine-windows-scripts-$version.zip" -Force
+          $windowsFiles = @(
+            Get-ChildItem -Path "scripts/windows" -Filter "*.ps1"
+            Get-Item -Path "setup-machine.ps1"
+            Get-Item -Path "README.md"
+            Get-Item -Path "LICENSE"
+          )
+          Compress-Archive -LiteralPath $windowsFiles.FullName `
+            -DestinationPath "release-artifacts/devMachine-windows-scripts-$version.zip" `
+            -CompressionLevel Optimal -Force
 
           # Create WSL scripts archive
-          Compress-Archive -Path `
-            scripts/wsl/*.sh, `
-            README.md, `
-            LICENSE `
-            -DestinationPath "release-artifacts/devMachine-wsl-scripts-$version.zip" -Force
+          $wslFiles = @(
+            Get-ChildItem -Path "scripts/wsl" -Filter "*.sh"
+            Get-Item -Path "README.md"
+            Get-Item -Path "LICENSE"
+          )
+          Compress-Archive -LiteralPath $wslFiles.FullName `
+            -DestinationPath "release-artifacts/devMachine-wsl-scripts-$version.zip" `
+            -CompressionLevel Optimal -Force
 
-          # Create complete archive
-          Compress-Archive -Path `
-            scripts/, `
-            tests/, `
-            setup-machine.ps1, `
-            README.md, `
-            LICENSE, `
-            SECURITY.md, `
-            CONTRIBUTING.md, `
-            CODE_OF_CONDUCT.md, `
-            CHANGELOG.md `
-            -DestinationPath "release-artifacts/devMachine-complete-$version.zip" -Force
+          # Create complete archive with proper structure
+          $completeFiles = @(
+            "scripts"
+            "tests"
+            "setup-machine.ps1"
+            "README.md"
+            "LICENSE"
+            "SECURITY.md"
+            "CONTRIBUTING.md"
+            "CODE_OF_CONDUCT.md"
+            "CHANGELOG.md"
+          )
+          Compress-Archive -Path $completeFiles `
+            -DestinationPath "release-artifacts/devMachine-complete-$version.zip" `
+            -CompressionLevel Optimal -Force
 
           # Generate checksums
           Set-Location release-artifacts

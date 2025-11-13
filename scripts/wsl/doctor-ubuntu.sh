@@ -38,27 +38,63 @@ if need composer; then
     bad "Composer global bin NOT on PATH"
   fi
   for t in phpcs phpstan psalm php-cs-fixer; do
-    if command -v "$t" >/dev/null 2>&1; then ok "$t found"; else bad "$t missing"; fi
+    if command -v "$t" >/dev/null 2>&1; then
+      ok "$t found"
+    else
+      bad "$t missing"
+    fi
   done
-else bad "Composer missing"; fi
+else
+  bad "Composer missing"
+fi
 
-if need ruby; then ok "Ruby found"; else bad "Ruby missing"; fi
+if need ruby; then
+  ok "Ruby found"
+else
+  bad "Ruby missing"
+fi
 for g in bundler rubocop; do
-  if need "$g"; then ok "$g found"; else bad "$g missing"; fi
+  if need "$g"; then
+    ok "$g found"
+  else
+    bad "$g missing"
+  fi
 done
 
-if need node && need npm; then ok "Node & npm found"; else bad "Node/npm missing"; fi
+if need node && need npm; then
+  ok "Node & npm found"
+else
+  bad "Node/npm missing"
+fi
 for n in eslint prettier markdownlint stylelint tsc; do
-  if need "$n"; then ok "$n found"; else bad "$n missing"; fi
+  if need "$n"; then
+    ok "$n found"
+  else
+    bad "$n missing"
+  fi
 done
 
 if need docker; then
-  if docker info >/dev/null 2>&1; then ok "Docker CLI works (WSL integration)"; else bad "Docker CLI cannot reach daemon — enable WSL integration in Docker Desktop"; fi
-else bad "docker missing"; fi
+  if docker info >/dev/null 2>&1; then
+    ok "Docker CLI works (WSL integration)"
+  else
+    bad "Docker CLI cannot reach daemon — enable WSL integration in Docker Desktop"
+  fi
+else
+  bad "docker missing"
+fi
 
-if need tflint; then ok "tflint found"; else bad "tflint missing"; fi
+if need tflint; then
+  ok "tflint found"
+else
+  bad "tflint missing"
+fi
 
-if need shellcheck; then ok "shellcheck found"; else bad "shellcheck missing"; fi
+if need shellcheck; then
+  ok "shellcheck found"
+else
+  bad "shellcheck missing"
+fi
 
 echo
 ok "Doctor check finished"
