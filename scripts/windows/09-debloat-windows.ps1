@@ -9,24 +9,21 @@ Write-Host "[DEBLOAT] Removing Windows bloatware and pre-installed apps..." -For
 
 # List of bloatware apps to remove (using wildcard patterns)
 $bloatwareApps = @(
-    # Gaming
+    # Gaming (keeping Xbox Identity Provider for game logins)
     "*Microsoft.XboxApp*"
     "*Microsoft.XboxGamingOverlay*"
     "*Microsoft.XboxGameOverlay*"
     "*Microsoft.XboxSpeechToTextOverlay*"
     "*Microsoft.Xbox.TCUI*"
-    "*Microsoft.XboxIdentityProvider*"
     "*Microsoft.GamingApp*"
 
-    # Games
-    "*Microsoft.MicrosoftSolitaireCollection*"
+    # Games (keeping Microsoft Solitaire for Xbox login usage)
     "*Microsoft.MicrosoftMahjong*"
     "*king.com.CandyCrush*"
     "*king.com.BubbleWitch3Saga*"
     "*Microsoft.BingNews*"
 
-    # Social/Communication (keeping Mail/Calendar)
-    "*Microsoft.YourPhone*"
+    # Social/Communication (keeping Mail/Calendar and Phone Link)
     "*Microsoft.People*"
 
     # Media
