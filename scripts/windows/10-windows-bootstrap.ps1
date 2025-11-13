@@ -159,18 +159,44 @@ try {
 }
 
 Write-Host "🔤 Developer Fonts (System-Wide Installation)"
-# Install JetBrains Mono Nerd Font system-wide using winget with --scope machine
-winget install DEVCOM.JetBrainsMonoNerdFont --source winget --scope machine `
-  --silent --accept-package-agreements --accept-source-agreements
+# Install JetBrains Mono Nerd Font directly from GitHub (more reliable than winget)
+Write-Host "  Downloading JetBrainsMono Nerd Font from GitHub..."
+$ProgressPreference = 'SilentlyContinue'
+$url = 'https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip'
+$zipPath = Join-Path $env:TEMP 'JetBrainsMono.zip'
+$extractPath = Join-Path $env:TEMP 'JetBrainsMono'
 
-# Verify font installation and make it available to all profiles
-Write-Host "  Verifying font installation..."
-$fontInstalled = Get-ChildItem "C:\Windows\Fonts" -Filter "*JetBrainsMono*" -ErrorAction SilentlyContinue
-if ($fontInstalled) {
-    Write-Host "  ✅ JetBrainsMono Nerd Font installed system-wide" -ForegroundColor Green
-} else {
-    Write-Warning "Font may not have installed correctly - check manually"
+try {
+    Invoke-WebRequest -Uri $url -OutFile $zipPath -ErrorAction Stop
+    Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+
+    Write-Host "  Installing fonts to C:\Windows\Fonts..."
+    $FONTS = 0x14
+    $fontsFolder = (New-Object -ComObject Shell.Application).Namespace($FONTS)
+    $fonts = Get-ChildItem -Path $extractPath -Include '*.ttf' -Recurse | Where-Object { $_.Name -notmatch 'Windows Compatible' }
+
+    $installed = 0
+    $skipped = 0
+    foreach ($font in $fonts) {
+        $targetPath = "C:\Windows\Fonts\$($font.Name)"
+        if (-not (Test-Path $targetPath)) {
+            $fontsFolder.CopyHere($font.FullName, 0x10)
+            $installed++
+        } else {
+            $skipped++
+        }
+    }
+
+    # Cleanup
+    Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+    Remove-Item $extractPath -Recurse -Force -ErrorAction SilentlyContinue
+
+    Write-Host "  ✅ JetBrainsMono Nerd Font installed ($installed new, $skipped already present)" -ForegroundColor Green
+} catch {
+    Write-Warning "Font installation failed: $_"
+    Write-Host "  You can manually install from: https://www.nerdfonts.com/font-downloads" -ForegroundColor Yellow
 }
+$ProgressPreference = 'Continue'
 
 # Note: Cascadia Code comes with Windows Terminal
 
