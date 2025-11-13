@@ -56,15 +56,26 @@ try {
   Write-Warning "Component cleanup failed: $_"
 }
 
-Write-Host "== Disable Windows Search service (install Everything for faster search)"
+Write-Host "== Optimize Windows Search indexing"
 try {
-  Stop-Service WSearch -Force -ErrorAction SilentlyContinue
-  Set-Service WSearch -StartupType Disabled
-  Write-Host "→ Windows Search disabled"
+  # Ensure Windows Search is running and set to automatic (delayed start)
+  Set-Service WSearch -StartupType Automatic
+  Start-Service WSearch -ErrorAction SilentlyContinue
+  
+  # Optimize indexing scope - exclude common non-essential locations
+  $searchKey = "HKLM:\SOFTWARE\Microsoft\Windows Search"
+  if (!(Test-Path $searchKey)) { New-Item -Path $searchKey -Force | Out-Null }
+  
+  # Reduce indexer throttling for faster indexing during idle
+  Set-ItemProperty -Path $searchKey -Name "ThrottleQueueSizeInKB" -Value 8192 -Type DWord -ErrorAction SilentlyContinue
+  
+  # Optimize for performance on SSD
+  Set-ItemProperty -Path $searchKey -Name "UseGathererService" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+  
+  Write-Host "→ Windows Search optimized for performance" -ForegroundColor Green
 } catch {
-  Write-Warning "Could not disable Windows Search: $_"
+  Write-Warning "Could not optimize Windows Search: $_"
 }
-winget install voidtools.Everything --silent --accept-source-agreements --accept-package-agreements
 
 Write-Host "== Disable Superfetch/Prefetch (SSD optimization)"
 try {
