@@ -1,3 +1,10 @@
+## [1.10.0](https://github.com/kpeacocke/devMachine/compare/v1.9.0...v1.10.0) (2025-11-13)
+
+
+### 🚀 Features
+
+* add GPG installation to bootstrap script and configure GPG signing in SSH setup ([7262837](https://github.com/kpeacocke/devMachine/commit/726283778a12eae064ba67221be969c438dfd1b7))
+
 ## [1.9.0](https://github.com/kpeacocke/devMachine/compare/v1.8.1...v1.9.0) (2025-11-13)
 
 
