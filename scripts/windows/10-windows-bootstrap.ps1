@@ -141,6 +141,7 @@ winget install Git.Git --source winget --silent --accept-package-agreements --ac
 winget install GitHub.GitLFS --source winget --silent --accept-package-agreements --accept-source-agreements
 winget install GitHub.cli --source winget --silent --accept-package-agreements --accept-source-agreements
 winget install Git.GCM --source winget --silent --accept-package-agreements --accept-source-agreements
+winget install GnuPG.GnuPG --source winget --silent --accept-package-agreements --accept-source-agreements
 try { Install-Module posh-git -Scope AllUsers -Force -Confirm:$false } catch {}
 
 Write-Host "🧪 Testing Framework"

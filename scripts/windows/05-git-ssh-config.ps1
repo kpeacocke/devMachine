@@ -155,4 +155,89 @@ try {
     Write-Warning "SSH agent configuration skipped: $_"
 }
 
-Write-Host "[OK] Git and SSH configuration complete!" -ForegroundColor Green
+# GPG Signing Setup
+Write-Host "`n[GPG] Configuring GPG commit signing..."
+
+# Ensure GPG is installed (should be from 10-windows-bootstrap.ps1)
+if (-not (Get-Command gpg -ErrorAction SilentlyContinue)) {
+    Write-Host "  Installing GnuPG..." -ForegroundColor Cyan
+    winget install GnuPG.GnuPG --source winget --silent --accept-package-agreements --accept-source-agreements
+    # Refresh PATH
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+}
+
+# Get Git user info
+$userName = git config --global user.name
+$userEmail = git config --global user.email
+
+if (-not [string]::IsNullOrWhiteSpace($userName) -and -not [string]::IsNullOrWhiteSpace($userEmail)) {
+    # Check if GPG key already exists
+    $existingKey = gpg --list-secret-keys --keyid-format=long $userEmail 2>$null
+
+    if ($existingKey) {
+        Write-Host "  ✅ GPG key already exists for $userEmail" -ForegroundColor Green
+        $keyId = ($existingKey | Select-String -Pattern "sec\s+\w+/(\w+)" | ForEach-Object { $_.Matches.Groups[1].Value }) | Select-Object -First 1
+    } else {
+        Write-Host "  Generating GPG key for $userName <$userEmail>..." -ForegroundColor Cyan
+
+        # Create GPG key generation config (no passphrase for convenience)
+        $keyGenConfig = @"
+%no-protection
+Key-Type: RSA
+Key-Length: 4096
+Subkey-Type: RSA
+Subkey-Length: 4096
+Name-Real: $userName
+Name-Email: $userEmail
+Expire-Date: 0
+"@
+
+        $configPath = Join-Path $env:TEMP "gpg-keygen.txt"
+        $keyGenConfig | Out-File -FilePath $configPath -Encoding ASCII
+
+        # Generate key
+        gpg --batch --generate-key $configPath 2>$null
+        Remove-Item $configPath -Force
+
+        # Get the key ID
+        Start-Sleep -Seconds 2
+        $keyOutput = gpg --list-secret-keys --keyid-format=long $userEmail
+        $keyId = ($keyOutput | Select-String -Pattern "sec\s+\w+/(\w+)" | ForEach-Object { $_.Matches.Groups[1].Value }) | Select-Object -First 1
+
+        Write-Host "  ✅ Generated GPG key: $keyId" -ForegroundColor Green
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($keyId)) {
+        # Configure Git to use the key
+        git config --global user.signingkey $keyId
+        git config --global commit.gpgsign true
+        git config --global tag.gpgsign true
+
+        # Configure GPG program for Git (Windows path)
+        $gpgPath = (Get-Command gpg -ErrorAction SilentlyContinue).Source
+        if ($gpgPath) {
+            $gpgPath = $gpgPath -replace '\\', '/'
+            git config --global gpg.program $gpgPath
+        }
+
+        Write-Host "  ✅ GPG commit signing enabled" -ForegroundColor Green
+        Write-Host "  Key ID: $keyId" -ForegroundColor Cyan
+
+        # Export public key
+        Write-Host "`n[GPG] Your GPG public key:" -ForegroundColor Cyan
+        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+        $gpgPublicKey = gpg --armor --export $keyId
+        Write-Host $gpgPublicKey -ForegroundColor Yellow
+        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+
+        # Copy to clipboard
+        $gpgPublicKey | Set-Clipboard
+        Write-Host "  📋 GPG public key copied to clipboard!" -ForegroundColor Green
+        Write-Host "  Add to GitHub: https://github.com/settings/keys" -ForegroundColor Yellow
+        Write-Host "  (Choose 'New GPG key' option)" -ForegroundColor Gray
+    }
+} else {
+    Write-Host "  ⚠️  Skipping GPG setup - Git user.name/email not configured" -ForegroundColor Yellow
+}
+
+Write-Host "`n[OK] Git, SSH, and GPG configuration complete!" -ForegroundColor Green
