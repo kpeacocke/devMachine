@@ -1,3 +1,10 @@
+## [1.11.0](https://github.com/kpeacocke/devMachine/compare/v1.10.0...v1.11.0) (2025-11-13)
+
+
+### 🚀 Features
+
+* update bloatware removal list to keep Xbox Identity Provider and Microsoft Solitaire ([f2ab86b](https://github.com/kpeacocke/devMachine/commit/f2ab86bd8d4dc26c9880f915d5ea887df5d4af23))
+
 ## [1.10.0](https://github.com/kpeacocke/devMachine/compare/v1.9.0...v1.10.0) (2025-11-13)
 
 
