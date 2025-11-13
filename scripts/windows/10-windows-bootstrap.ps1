@@ -158,9 +158,20 @@ try {
   Install-Module -Name Pester -Force -Scope AllUsers -SkipPublisherCheck -MinimumVersion 5.0 -AllowClobber
 }
 
-Write-Host "🔤 Developer Fonts"
-winget install DEVCOM.JetBrainsMonoNerdFont --source winget `
+Write-Host "🔤 Developer Fonts (System-Wide Installation)"
+# Install JetBrains Mono Nerd Font system-wide using winget with --scope machine
+winget install DEVCOM.JetBrainsMonoNerdFont --source winget --scope machine `
   --silent --accept-package-agreements --accept-source-agreements
+
+# Verify font installation and make it available to all profiles
+Write-Host "  Verifying font installation..."
+$fontInstalled = Get-ChildItem "C:\Windows\Fonts" -Filter "*JetBrainsMono*" -ErrorAction SilentlyContinue
+if ($fontInstalled) {
+    Write-Host "  ✅ JetBrainsMono Nerd Font installed system-wide" -ForegroundColor Green
+} else {
+    Write-Warning "Font may not have installed correctly - check manually"
+}
+
 # Note: Cascadia Code comes with Windows Terminal
 
 Write-Host "💡 Note: Licensed apps (1Password, Office, GitKraken, etc.) moved to 11-licensed-apps.ps1"
