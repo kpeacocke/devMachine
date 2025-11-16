@@ -10,24 +10,21 @@ Write-Host "[DEBLOAT] Removing Windows bloatware and pre-installed apps..." -For
 
 # List of bloatware apps to remove (using wildcard patterns)
 $bloatwareApps = @(
-    # Gaming (Xbox Live components preserved for Solitaire and other Xbox-enabled games)
-    "*Microsoft.XboxApp*"  # Xbox Console Companion (legacy, safe to remove)
-    # "*Microsoft.XboxGamingOverlay*"      # Xbox Game Bar - KEEP for Xbox Live integration
-    # "*Microsoft.XboxGameOverlay*"        # Xbox Game Overlay - KEEP for Xbox Live features
-    "*Microsoft.XboxSpeechToTextOverlay*"  # Xbox Speech overlay (safe to remove)
-    # "*Microsoft.Xbox.TCUI*"              # Xbox Live Title Callable UI - KEEP for Xbox Live UI
-    # "*Microsoft.XboxIdentityProvider*"   # Xbox Identity Provider - KEEP for Xbox Live auth
-    # "*Microsoft.GamingApp*"              # Xbox Gaming App - KEEP for Xbox Live services
+    # Gaming (keeping Xbox Identity Provider for game logins)
+    "*Microsoft.XboxApp*"
+    "*Microsoft.XboxGamingOverlay*"
+    "*Microsoft.XboxGameOverlay*"
+    "*Microsoft.XboxSpeechToTextOverlay*"
+    "*Microsoft.Xbox.TCUI*"
+    "*Microsoft.GamingApp*"
 
-    # Games (Microsoft Solitaire preserved as it's commonly used and requires Xbox Live)
-    # "*Microsoft.MicrosoftSolitaireCollection*"  # Microsoft Solitaire - KEEP (popular game)
+    # Games (keeping Microsoft Solitaire for Xbox login usage)
     "*Microsoft.MicrosoftMahjong*"
     "*king.com.CandyCrush*"
     "*king.com.BubbleWitch3Saga*"
     "*Microsoft.BingNews*"
 
-    # Social/Communication (keeping Mail/Calendar)
-    "*Microsoft.YourPhone*"
+    # Social/Communication (keeping Mail/Calendar and Phone Link)
     "*Microsoft.People*"
 
     # Media

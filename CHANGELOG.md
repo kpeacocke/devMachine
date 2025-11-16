@@ -1,3 +1,17 @@
+## [1.11.0](https://github.com/kpeacocke/devMachine/compare/v1.10.0...v1.11.0) (2025-11-13)
+
+
+### 🚀 Features
+
+* update bloatware removal list to keep Xbox Identity Provider and Microsoft Solitaire ([f2ab86b](https://github.com/kpeacocke/devMachine/commit/f2ab86bd8d4dc26c9880f915d5ea887df5d4af23))
+
+## [1.10.0](https://github.com/kpeacocke/devMachine/compare/v1.9.0...v1.10.0) (2025-11-13)
+
+
+### 🚀 Features
+
+* add GPG installation to bootstrap script and configure GPG signing in SSH setup ([7262837](https://github.com/kpeacocke/devMachine/commit/726283778a12eae064ba67221be969c438dfd1b7))
+
 ## [1.9.0](https://github.com/kpeacocke/devMachine/compare/v1.8.1...v1.9.0) (2025-11-13)
 
 
