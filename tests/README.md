@@ -30,11 +30,14 @@ This directory contains comprehensive tests for the Windows development machine 
 ## Prerequisites
 
 ### Required Software
-- **PowerShell 7+** (pwsh.exe)
-- **Pester 5.0+** module
-- **WSL 2** with Ubuntu (for bash tests)
+
+* **PowerShell 7+** (pwsh.exe)
+
+* **Pester 5.0+** module
+* **WSL 2** with Ubuntu (for bash tests)
 
 ### Installation
+
 ```powershell
 # Install Pester (if not already installed)
 Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
@@ -46,6 +49,7 @@ Get-Module -Name Pester -MinimumVersion 5.0
 ## Running Tests
 
 ### Run All Tests
+
 ```powershell
 # PowerShell (recommended)
 .\tests\run-all-tests.ps1
@@ -60,32 +64,38 @@ Get-Module -Name Pester -MinimumVersion 5.0
 ### Run Specific Test Categories
 
 #### Syntax Validation Only (Fast)
+
 ```powershell
 # Critical - run this first
 Invoke-Pester -Path .\tests\syntax-validation.Tests.ps1
 ```
 
 #### Unattended Mode Tests
+
 ```powershell
 Invoke-Pester -Path .\tests\unattended-mode.Tests.ps1
 ```
 
 #### Windows Environment Tests
+
 ```powershell
 Invoke-Pester -Path .\tests\pester.Windows.Tests.ps1
 ```
 
 #### Skip Windows Tests (WSL only)
+
 ```powershell
 .\tests\run-all-tests.ps1 -SkipWindowsTests
 ```
 
 #### Skip Ubuntu Tests (Windows only)
+
 ```powershell
 .\tests\run-all-tests.ps1 -SkipUbuntuTests
 ```
 
 #### Fast Mode (Skip syntax validation)
+
 ```powershell
 .\tests\run-all-tests.ps1 -SkipSyntaxValidation
 ```
@@ -102,19 +112,24 @@ Invoke-Pester -Path .\tests\ci-friendly.Tests.ps1 -CI
 ## Test Results Interpretation
 
 ### Test States
-- **✅ Passed**: Test completed successfully
-- **❌ Failed**: Test found an issue that needs fixing
-- **⏭️ Skipped**: Test was skipped (prerequisite not met, optional feature)
+
+* **✅ Passed**: Test completed successfully
+
+* **❌ Failed**: Test found an issue that needs fixing
+* **⏭️ Skipped**: Test was skipped (prerequisite not met, optional feature)
 
 ### Common Skip Reasons
-- Component not installed (e.g., "Git not installed")
-- Administrative privileges required
-- Optional licensed software not present
-- WSL not available
+
+* Component not installed (e.g., "Git not installed")
+
+* Administrative privileges required
+* Optional licensed software not present
+* WSL not available
 
 ## Troubleshooting
 
 ### Pester Not Found
+
 ```powershell
 # Install Pester
 Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
@@ -124,23 +139,30 @@ Install-Module -Name Pester -MinimumVersion 5.0 -Force
 ```
 
 ### WSL Tests Failing
-- Ensure WSL 2 is installed and Ubuntu is set as default
-- Run `wsl --list --verbose` to check WSL status
-- Ensure Ubuntu is fully set up with required tools
+
+* Ensure WSL 2 is installed and Ubuntu is set as default
+
+* Run `wsl --list --verbose` to check WSL status
+* Ensure Ubuntu is fully set up with required tools
 
 ### Permission Issues
+
 Some tests require administrative privileges:
-- Run PowerShell as Administrator
-- Or use `Start-Process pwsh -Verb RunAs` to elevate
+
+* Run PowerShell as Administrator
+* Or use `Start-Process pwsh -Verb RunAs` to elevate
 
 ### Test Timeouts
+
 Some tests may take time for network operations:
-- Increase timeout: `Invoke-Pester -Timeout 300`
-- Run individual slow tests separately
+
+* Increase timeout: `Invoke-Pester -Timeout 300`
+* Run individual slow tests separately
 
 ## Development Workflow
 
 ### Before Committing
+
 ```powershell
 # Always run syntax validation
 Invoke-Pester -Path .\tests\syntax-validation.Tests.ps1
@@ -150,12 +172,14 @@ Invoke-Pester -Path .\tests\unattended-mode.Tests.ps1
 ```
 
 ### After Setup Script Changes
+
 ```powershell
 # Full test suite
 .\tests\run-all-tests.ps1
 ```
 
 ### CI/CD Integration
+
 ```yaml
 # Example GitHub Actions workflow
 - name: Run Tests
@@ -168,25 +192,30 @@ Invoke-Pester -Path .\tests\unattended-mode.Tests.ps1
 ## Test Coverage
 
 ### What Gets Tested
-- ✅ PowerShell script syntax validation
-- ✅ Unattended mode functionality
-- ✅ Windows environment configuration
-- ✅ WSL Ubuntu environment setup
-- ✅ Security settings and hardening
-- ✅ Development tool installations
-- ✅ Dev Drive configuration
-- ✅ Git and SSH configuration
-- ✅ Performance optimizations
-- ✅ Backup and restore functionality
+
+* ✅ PowerShell script syntax validation
+
+* ✅ Unattended mode functionality
+* ✅ Windows environment configuration
+* ✅ WSL Ubuntu environment setup
+* ✅ Security settings and hardening
+* ✅ Development tool installations
+* ✅ Dev Drive configuration
+* ✅ Git and SSH configuration
+* ✅ Performance optimizations
+* ✅ Backup and restore functionality
 
 ### Test Statistics
-- **Total Test Files**: 13 PowerShell + 1 Bash
-- **Estimated Runtime**: 2-5 minutes (full suite)
-- **Fast Validation**: < 30 seconds (syntax only)
+
+* **Total Test Files**: 13 PowerShell + 1 Bash
+
+* **Estimated Runtime**: 2-5 minutes (full suite)
+* **Fast Validation**: < 30 seconds (syntax only)
 
 ## Contributing
 
 When adding new tests:
+
 1. Follow Pester 5+ conventions
 2. Use descriptive test names
 3. Include proper setup/cleanup in `BeforeAll`/`AfterAll`
