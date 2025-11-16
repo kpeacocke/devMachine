@@ -15,13 +15,36 @@
     If partitions exist but are not mounted (e.g., after OS reinstall), the script will mount them
     instead of creating new ones. This prevents duplicate partitions and preserves data.
 
+.PARAMETER WhatIf
+    Shows what would be done without making any changes
+
 .EXAMPLE
     .\scripts\windows\41-devdrive-partition-setup.ps1
+
+.EXAMPLE
+    .\scripts\windows\41-devdrive-partition-setup.ps1 -WhatIf
 
 .NOTES
     After wiping/reinstalling Windows, existing Dev Drive partitions remain on disk but unmounted.
     This script intelligently detects them by label and remounts them rather than creating duplicates.
 #>
+
+[CmdletBinding(SupportsShouldProcess)]
+param(
+    [Parameter(HelpMessage = "Shows what would be done without making any changes")]
+    [ValidateNotNull()]
+    [switch]$WhatIf,
+
+    [Parameter(HelpMessage = "Override minimum cache partition size in GB")]
+    [ValidateRange(2, 500)]
+    [int]$MinCacheGB = 2,
+
+    [Parameter(HelpMessage = "Override minimum code partition size in GB")]
+    [ValidateRange(3, 100)]
+    [int]$MinCodeGB = 3
+)
+
+#Requires -Version 5.1
 #Requires -RunAsAdministrator
 $ErrorActionPreference = 'Stop'
 
@@ -33,6 +56,61 @@ if ($env:DEVMACHINE_UNATTENDED -eq "true" -and $env:DEVMACHINE_OVERRIDE_PATH -an
 # Initialize skip flags
 $skipCachePartition = $false
 $skipCodePartition = $false
+
+# Function to set proper ownership on mounted Dev Drives
+function Set-DevDriveOwnership {
+    param(
+        [string]$MountPath,
+        [string]$PartitionType
+    )
+
+    Write-Host "    Setting ownership for $PartitionType partition..." -ForegroundColor Gray
+
+    try {
+        # Get current user
+        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+
+        # For cache partition, set ownership to current user
+        if ($PartitionType -eq "Cache") {
+            # Set ownership to current user for cache directories
+            $acl = Get-Acl $MountPath
+            $acl.SetOwner([System.Security.Principal.NTAccount]$currentUser)
+
+            # Grant full control to current user
+            $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                $currentUser,
+                "FullControl",
+                "ContainerInherit,ObjectInherit",
+                "None",
+                "Allow"
+            )
+            $acl.SetAccessRule($accessRule)
+            Set-Acl -Path $MountPath -AclObject $acl
+            Write-Host "      ✅ Cache ownership set to: $currentUser" -ForegroundColor Green
+        }
+
+        # For code partition, set ownership to current user
+        if ($PartitionType -eq "Code") {
+            $acl = Get-Acl $MountPath
+            $acl.SetOwner([System.Security.Principal.NTAccount]$currentUser)
+
+            # Grant full control to current user
+            $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                $currentUser,
+                "FullControl",
+                "ContainerInherit,ObjectInherit",
+                "None",
+                "Allow"
+            )
+            $acl.SetAccessRule($accessRule)
+            Set-Acl -Path $MountPath -AclObject $acl
+            Write-Host "      ✅ Code ownership set to: $currentUser" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "      ⚠️  Failed to set ownership: $_" -ForegroundColor Yellow
+        Write-Host "      You may need to run 'takeown /f \"$MountPath\" /r' if you encounter permission issues" -ForegroundColor Gray
+    }
+}
 
 Write-Host "🔧 Dev Drive Partition Setup" -ForegroundColor Cyan
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
@@ -197,6 +275,21 @@ Write-Host "   • Backup important data before proceeding" -ForegroundColor Yel
 Write-Host "   • This operation cannot be easily reversed" -ForegroundColor Yellow
 Write-Host "   • The process may take 10-15 minutes" -ForegroundColor Yellow
 
+# Check WhatIf mode first
+if ($WhatIf) {
+    Write-Host "`n🔍 WHAT-IF MODE: No changes will be made" -ForegroundColor Cyan
+    Write-Host "   This would shrink C: drive and create Dev Drive partitions as shown above." -ForegroundColor Gray
+    Write-Host "   Run without -WhatIf to perform actual partition operations." -ForegroundColor Gray
+    exit 0
+}
+
+# Implement ShouldProcess pattern for destructive operations
+if (-not $PSCmdlet.ShouldProcess("C: drive partitions", "Create Dev Drive partitions")) {
+    Write-Host "❌ Operation cancelled by ShouldProcess" -ForegroundColor Red
+    exit 0
+}
+
+# Use proper confirmation for destructive operations
 if ($env:CREATE_DEV_DRIVE -eq 'Y') {
     Write-Host "→ Proceeding with partition creation (CREATE_DEV_DRIVE=Y)" -ForegroundColor Green
     $confirm = 'Y'
@@ -479,14 +572,20 @@ if (-not $cacheMounted) {
                     # Mount to folder
                     Add-PartitionAccessPath -DiskNumber $part.DiskNumber -PartitionNumber $part.PartitionNumber -AccessPath "$cacheMountPoint\"
                     Write-Host "   ✅ Existing cache partition mounted at $cacheMountPoint" -ForegroundColor Green
+
+                    # Set proper ownership for existing partition
+                    Set-DevDriveOwnership -MountPath $cacheMountPoint -PartitionType "Cache"
                     break
                 }
             }
         } elseif ($cachePartition) {
             # Mounting newly created partition
-            Remove-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $cachePartition.PartitionNumber -AccessPath "$cacheDriveLetter`:\" -ErrorAction SilentlyContinue
+            Remove-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $cachePartition.PartitionNumber -AccessPath "$cacheDriveLetter`:" -ErrorAction SilentlyContinue
             Add-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $cachePartition.PartitionNumber -AccessPath "$cacheMountPoint\"
             Write-Host "   ✅ Cache partition mounted at $cacheMountPoint" -ForegroundColor Green
+
+            # Set proper ownership for new partition
+            Set-DevDriveOwnership -MountPath $cacheMountPoint -PartitionType "Cache"
         }
     } catch {
         Write-Host "   ❌ Failed to mount cache partition: $_" -ForegroundColor Red
@@ -521,14 +620,20 @@ if (-not $codeMounted) {
                     # Mount to folder
                     Add-PartitionAccessPath -DiskNumber $part.DiskNumber -PartitionNumber $part.PartitionNumber -AccessPath "$codeMountPoint\"
                     Write-Host "   ✅ Existing code partition mounted at $codeMountPoint" -ForegroundColor Green
+
+                    # Set proper ownership for existing partition
+                    Set-DevDriveOwnership -MountPath $codeMountPoint -PartitionType "Code"
                     break
                 }
             }
         } elseif ($codePartition) {
             # Mounting newly created partition
-            Remove-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $codePartition.PartitionNumber -AccessPath "$codeDriveLetter`:\" -ErrorAction SilentlyContinue
+            Remove-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $codePartition.PartitionNumber -AccessPath "$codeMountPoint\"
             Add-PartitionAccessPath -DiskNumber $disk.Number -PartitionNumber $codePartition.PartitionNumber -AccessPath "$codeMountPoint\"
             Write-Host "   ✅ Code partition mounted at $codeMountPoint" -ForegroundColor Green
+
+            # Set proper ownership for new partition
+            Set-DevDriveOwnership -MountPath $codeMountPoint -PartitionType "Code"
         } else {
             # Fallback: create regular directory if partition creation was skipped/failed
             Write-Host "   No code partition available - creating regular directory" -ForegroundColor Yellow

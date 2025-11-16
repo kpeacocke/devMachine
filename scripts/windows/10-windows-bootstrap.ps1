@@ -125,6 +125,11 @@ Write-Host "  ✅ VS Code Insiders installed" -ForegroundColor Green
 
 winget install Docker.DockerDesktop --source winget --silent --accept-package-agreements --accept-source-agreements
 
+# Container development tools
+Write-Host "  Installing container development tools..."
+winget install hadolint --source winget --silent --accept-package-agreements --accept-source-agreements
+Write-Host "  → hadolint (Dockerfile linter) installed" -ForegroundColor Green
+
 Write-Host "🐧 Ubuntu for WSL"
 if (-not $skipWSL) {
   # Install Ubuntu (default/latest version)
@@ -160,42 +165,155 @@ try {
 }
 
 Write-Host "🔤 Developer Fonts (System-Wide Installation)"
-# Install JetBrains Mono Nerd Font directly from GitHub (more reliable than winget)
-Write-Host "  Downloading JetBrainsMono Nerd Font from GitHub..."
-$ProgressPreference = 'SilentlyContinue'
-$url = 'https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip'
-$zipPath = Join-Path $env:TEMP 'JetBrainsMono.zip'
-$extractPath = Join-Path $env:TEMP 'JetBrainsMono'
+# Check if JetBrainsMono Nerd Font is already installed (idempotent)
+$existingFonts = Get-ChildItem -Path "$env:windir\Fonts" -Filter "*JetBrains*" -ErrorAction SilentlyContinue
+if ($existingFonts.Count -gt 5) {
+    Write-Host "  ✅ JetBrainsMono Nerd Font already installed ($($existingFonts.Count) font files)" -ForegroundColor Green
+    $existingFonts | Select-Object -First 3 | ForEach-Object { Write-Host "    • $($_.Name)" -ForegroundColor Gray }
+    if ($existingFonts.Count -gt 3) { Write-Host "    • ... and $($existingFonts.Count - 3) more" -ForegroundColor Gray }
+} else {
+    # Enhanced JetBrains Mono Nerd Font installation with multiple fallback methods
+    Write-Host "  Installing JetBrainsMono Nerd Font with enhanced reliability..." -ForegroundColor Yellow
+    $ProgressPreference = 'SilentlyContinue'
+    $url = 'https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip'
+    $zipPath = Join-Path $env:TEMP 'JetBrainsMono.zip'
+    $extractPath = Join-Path $env:TEMP 'JetBrainsMono'
 
-try {
-    Invoke-WebRequest -Uri $url -OutFile $zipPath -ErrorAction Stop
-    Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+    try {
+        # Clean up any previous downloads
+        Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+        Remove-Item $extractPath -Recurse -Force -ErrorAction SilentlyContinue
 
-    Write-Host "  Installing fonts to C:\Windows\Fonts..."
-    $FONTS = 0x14
-    $fontsFolder = (New-Object -ComObject Shell.Application).Namespace($FONTS)
-    $fonts = Get-ChildItem -Path $extractPath -Include '*.ttf' -Recurse | Where-Object { $_.Name -notmatch 'Windows Compatible' }
+        # Download and extract
+        Write-Host "  Downloading from GitHub..." -ForegroundColor Gray
+        Invoke-WebRequest -Uri $url -OutFile $zipPath -ErrorAction Stop
+        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
 
-    $installed = 0
-    $skipped = 0
-    foreach ($font in $fonts) {
-        $targetPath = "C:\Windows\Fonts\$($font.Name)"
-        if (-not (Test-Path $targetPath)) {
-            $fontsFolder.CopyHere($font.FullName, 0x10)
-            $installed++
-        } else {
-            $skipped++
+        # Get font files (exclude Windows Compatible versions)
+        $fonts = Get-ChildItem -Path $extractPath -Include '*.ttf' -Recurse | Where-Object {
+            $_.Name -notmatch 'Windows Compatible'
         }
+
+        if ($fonts.Count -eq 0) {
+            throw "No suitable TTF font files found in downloaded archive"
+        }
+
+        Write-Host "  Installing $($fonts.Count) font files..." -ForegroundColor Gray
+        $installed = 0
+        $skipped = 0
+        $failed = 0
+
+        foreach ($font in $fonts) {
+            $targetPath = Join-Path $env:windir "Fonts\$($font.Name)"
+            try {
+                if (-not (Test-Path $targetPath)) {
+                    # Method 1: Registry-based installation (works better in admin context)
+                    Copy-Item -Path $font.FullName -Destination $targetPath -Force
+
+                    # Enhanced registry registration for better compatibility
+                    $regPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
+                    $regName = "$($font.BaseName) (TrueType)"
+                    Set-ItemProperty -Path $regPath -Name $regName -Value $font.Name -Force -ErrorAction SilentlyContinue
+
+                    # Additional registry entry for console applications
+                    $consoleFontPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Console\TrueTypeFont"
+                    if (-not (Test-Path $consoleFontPath)) {
+                        New-Item -Path $consoleFontPath -Force | Out-Null
+                    }
+
+                    # Register font for console use (important for PowerShell 7)
+                    if ($font.BaseName -match "JetBrainsMono.*NF.*Regular|JetBrainsMono.*Nerd.*Font.*Regular") {
+                        Set-ItemProperty -Path $consoleFontPath -Name "00" -Value $font.BaseName -Force -ErrorAction SilentlyContinue
+                    }
+
+                    $installed++
+                    Write-Host "    ✅ Installed: $($font.BaseName)" -ForegroundColor Green
+                } else {
+                    $skipped++
+                }
+            } catch {
+                # Fallback to COM method if registry method fails
+                try {
+                    $FONTS = 0x14
+                    $fontsFolder = (New-Object -ComObject Shell.Application).Namespace($FONTS)
+                    $fontsFolder.CopyHere($font.FullName, 0x10)
+                    $installed++
+                    Write-Host "    ✅ Installed (COM): $($font.BaseName)" -ForegroundColor Green
+                } catch {
+                    Write-Warning "Failed to install font $($font.Name): $_"
+                    $failed++
+                }
+            }
+        }
+
+        # Cleanup
+        Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+        Remove-Item $extractPath -Recurse -Force -ErrorAction SilentlyContinue
+
+        # Force font cache refresh (makes fonts immediately available)
+        Write-Host "  Refreshing font cache..." -ForegroundColor Gray
+        try {
+            # Notify system of font changes
+            Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class Win32 { [DllImport("gdi32.dll")] public static extern int AddFontResource(string lpFileName); [DllImport("user32.dll")] public static extern int SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam); }' -ErrorAction SilentlyContinue
+
+            # Refresh font cache by broadcasting system change
+            $HWND_BROADCAST = [IntPtr]0xFFFF
+            $WM_FONTCHANGE = 0x1D
+            [Win32]::SendMessage($HWND_BROADCAST, $WM_FONTCHANGE, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+
+            Write-Host "    ✅ Font cache refreshed" -ForegroundColor Green
+        } catch {
+            Write-Host "    → Font cache refresh failed, fonts will be available after restart" -ForegroundColor Yellow
+        }
+
+        if ($failed -gt 0) {
+            Write-Host "  ⚠️  JetBrainsMono Nerd Font partially installed ($installed new, $skipped existed, $failed failed)" -ForegroundColor Yellow
+            Write-Host "     Some font files may require different installation method" -ForegroundColor Gray
+        } else {
+            Write-Host "  ✅ JetBrainsMono Nerd Font installed ($installed new, $skipped already present)" -ForegroundColor Green
+        }
+
+        # Configure PowerShell 7 console font (important for admin prompts)
+        Write-Host "  Configuring PowerShell 7 console font..." -ForegroundColor Gray
+        try {
+            # Find the best JetBrainsMono font name
+            $installedFonts = Get-ChildItem "$env:windir\Fonts" -Filter "*JetBrains*" | Where-Object { $_.Name -match "NF.*Regular\.ttf$|Nerd.*Font.*Regular\.ttf$" }
+
+            if ($installedFonts) {
+                $bestFont = $installedFonts | Select-Object -First 1
+                $fontBaseName = $bestFont.BaseName
+
+                # PowerShell 7 console registry paths
+                $ps7ConsolePaths = @(
+                    "HKCU:\Console\%SystemRoot%_System32_WindowsPowerShell_v1.0_powershell.exe",
+                    "HKCU:\Console\PowerShell_7",
+                    "HKCU:\Console\%SystemRoot%_System32_WindowsPowerShell_v1.0_powershell_ise.exe"
+                )
+
+                foreach ($path in $ps7ConsolePaths) {
+                    if (-not (Test-Path $path)) {
+                        New-Item -Path $path -Force | Out-Null
+                    }
+
+                    # Set font properties for PowerShell console
+                    Set-ItemProperty -Path $path -Name "FaceName" -Value $fontBaseName -Type String -ErrorAction SilentlyContinue
+                    Set-ItemProperty -Path $path -Name "FontFamily" -Value 54 -Type DWord -ErrorAction SilentlyContinue  # Modern font family
+                    Set-ItemProperty -Path $path -Name "FontSize" -Value 0x000C0000 -Type DWord -ErrorAction SilentlyContinue  # Size 12
+                    Set-ItemProperty -Path $path -Name "FontWeight" -Value 400 -Type DWord -ErrorAction SilentlyContinue  # Normal weight
+                }
+
+                Write-Host "    ✅ PowerShell console font configured: $fontBaseName" -ForegroundColor Green
+                Write-Host "    💡 Restart PowerShell to see new font in admin prompts" -ForegroundColor Yellow
+            } else {
+                Write-Warning "Could not find suitable JetBrainsMono Nerd Font for console configuration"
+            }
+        } catch {
+            Write-Warning "PowerShell console font configuration failed: $_"
+        }
+    } catch {
+        Write-Warning "Font installation failed: $_"
+        Write-Host "  💡 Try manually installing from: https://www.nerdfonts.com/font-downloads" -ForegroundColor Yellow
     }
-
-    # Cleanup
-    Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
-    Remove-Item $extractPath -Recurse -Force -ErrorAction SilentlyContinue
-
-    Write-Host "  ✅ JetBrainsMono Nerd Font installed ($installed new, $skipped already present)" -ForegroundColor Green
-} catch {
-    Write-Warning "Font installation failed: $_"
-    Write-Host "  You can manually install from: https://www.nerdfonts.com/font-downloads" -ForegroundColor Yellow
 }
 $ProgressPreference = 'Continue'
 

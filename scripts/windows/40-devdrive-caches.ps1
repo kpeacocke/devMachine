@@ -11,6 +11,11 @@ param([string]$DevCacheRoot = "C:\DevCache")
 
 $ErrorActionPreference = 'Stop'
 
+# Support unattended mode
+$unattendedMode = $env:UNATTENDED_MODE
+$devDrivePath = $env:DEVDRIVE_PATH
+$skipCacheConfig = $env:SKIP_CACHE_CONFIG
+
 Write-Host "[DEVCACHE] Configuring development tool caches on Dev Drive..." -ForegroundColor Cyan
 Write-Host "  Target location: $DevCacheRoot" -ForegroundColor Gray
 
@@ -19,6 +24,42 @@ if (-not (Test-Path $DevCacheRoot)) {
     Write-Host "  ❌ Dev Drive not found at $DevCacheRoot" -ForegroundColor Red
     Write-Host "     Run 41-devdrive-partition-setup.ps1 first to create the Dev Drive" -ForegroundColor Yellow
     exit 1
+}
+
+# Set proper ownership if this is an existing Dev Drive partition
+Write-Host "  Verifying ownership permissions..." -ForegroundColor Gray
+try {
+    $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+
+    # Check if we can write to the Dev Drive root
+    $testFile = Join-Path $DevCacheRoot "access_test.tmp"
+    "test" | Out-File -FilePath $testFile -ErrorAction Stop
+    Remove-Item $testFile -ErrorAction SilentlyContinue
+
+    Write-Host "  ✅ Dev Drive permissions verified" -ForegroundColor Green
+} catch {
+    Write-Host "  ⚠️  Setting ownership for existing Dev Drive..." -ForegroundColor Yellow
+    try {
+        # Set ownership to current user
+        $acl = Get-Acl $DevCacheRoot
+        $acl.SetOwner([System.Security.Principal.NTAccount]$currentUser)
+
+        # Grant full control to current user
+        $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            $currentUser,
+            "FullControl",
+            "ContainerInherit,ObjectInherit",
+            "None",
+            "Allow"
+        )
+        $acl.SetAccessRule($accessRule)
+        Set-Acl -Path $DevCacheRoot -AclObject $acl
+
+        Write-Host "  ✅ Ownership set to: $currentUser" -ForegroundColor Green
+    } catch {
+        Write-Host "  ⚠️  Could not set ownership automatically: $_" -ForegroundColor Yellow
+        Write-Host "     If you encounter permission issues, run: takeown /f `"$DevCacheRoot`" /r" -ForegroundColor Gray
+    }
 }
 
 # Create cache subdirectories

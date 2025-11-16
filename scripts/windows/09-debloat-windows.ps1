@@ -1,6 +1,7 @@
 <#
 Windows Debloat Script
-Removes pre-installed bloatware: Solitaire, Spotify, Xbox, Candy Crush, etc.
+Removes pre-installed bloatware: Spotify, Candy Crush, etc.
+Preserves Xbox Live components (Game Bar, Solitaire) for Xbox-enabled games.
 Removes Microsoft Store apps that come pre-installed on Surface and other devices.
 #>
 $ErrorActionPreference = 'Stop'
@@ -9,17 +10,17 @@ Write-Host "[DEBLOAT] Removing Windows bloatware and pre-installed apps..." -For
 
 # List of bloatware apps to remove (using wildcard patterns)
 $bloatwareApps = @(
-    # Gaming
-    "*Microsoft.XboxApp*"
-    "*Microsoft.XboxGamingOverlay*"
-    "*Microsoft.XboxGameOverlay*"
-    "*Microsoft.XboxSpeechToTextOverlay*"
-    "*Microsoft.Xbox.TCUI*"
-    "*Microsoft.XboxIdentityProvider*"
-    "*Microsoft.GamingApp*"
+    # Gaming (Xbox Live components preserved for Solitaire and other Xbox-enabled games)
+    "*Microsoft.XboxApp*"  # Xbox Console Companion (legacy, safe to remove)
+    # "*Microsoft.XboxGamingOverlay*"      # Xbox Game Bar - KEEP for Xbox Live integration
+    # "*Microsoft.XboxGameOverlay*"        # Xbox Game Overlay - KEEP for Xbox Live features
+    "*Microsoft.XboxSpeechToTextOverlay*"  # Xbox Speech overlay (safe to remove)
+    # "*Microsoft.Xbox.TCUI*"              # Xbox Live Title Callable UI - KEEP for Xbox Live UI
+    # "*Microsoft.XboxIdentityProvider*"   # Xbox Identity Provider - KEEP for Xbox Live auth
+    # "*Microsoft.GamingApp*"              # Xbox Gaming App - KEEP for Xbox Live services
 
-    # Games
-    "*Microsoft.MicrosoftSolitaireCollection*"
+    # Games (Microsoft Solitaire preserved as it's commonly used and requires Xbox Live)
+    # "*Microsoft.MicrosoftSolitaireCollection*"  # Microsoft Solitaire - KEEP (popular game)
     "*Microsoft.MicrosoftMahjong*"
     "*king.com.CandyCrush*"
     "*king.com.BubbleWitch3Saga*"
@@ -134,7 +135,8 @@ if (Test-Path "C:\Windows.old") {
 
 Write-Host "[OK] Windows debloat complete!" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-Write-Host "✅ Removed: Xbox apps, games (Solitaire, etc.), Spotify, bloatware" -ForegroundColor Green
+Write-Host "✅ Removed: Spotify, Candy Crush, and other bloatware" -ForegroundColor Green
+Write-Host "✅ Preserved: Xbox Live components (Game Bar, Solitaire) for Xbox functionality" -ForegroundColor Green
 Write-Host "✅ Disabled: Consumer features (prevents reinstall)" -ForegroundColor Green
 Write-Host "✅ Kept: Microsoft Store, Photos, Calculator, Camera, Snipping Tool" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan

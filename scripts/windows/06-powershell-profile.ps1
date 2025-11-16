@@ -294,9 +294,21 @@ try {
         }
     }
 
-    # Font settings for JetBrains Mono Nerd Font
+    # Font settings for JetBrains Mono Nerd Font with auto-detection
+    $installedJetBrainsFonts = Get-ChildItem "$env:windir\Fonts" -Filter "*JetBrains*" -ErrorAction SilentlyContinue | Where-Object {
+        $_.Name -match "NF.*Regular\.ttf$|Nerd.*Font.*Regular\.ttf$"
+    }
+
+    $fontName = if ($installedJetBrainsFonts) {
+        $installedJetBrainsFonts[0].BaseName
+    } else {
+        "JetBrainsMono NF"  # Fallback
+    }
+
+    Write-Host "    Using font: $fontName" -ForegroundColor Gray
+
     $fontSettings = @{
-        "FaceName" = "JetBrainsMono NF"
+        "FaceName" = $fontName
         "FontFamily" = 54  # Modern font family
         "FontSize" = 0x000C0000  # Size 12 (high word = height, low word = width)
         "FontWeight" = 400  # Normal weight

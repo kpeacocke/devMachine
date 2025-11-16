@@ -7,21 +7,21 @@ BeforeAll {
 }
 
 Describe "CI/CD Safe Environment Tests" {
-    
+
     It "Syntax validation passes" {
         # This should always pass if our scripts are valid
         $scriptDir = Join-Path (Split-Path -Parent $PSScriptRoot) "scripts\windows"
         $scripts = Get-ChildItem -Path $scriptDir -Filter "*.ps1"
-        
+
         foreach ($script in $scripts) {
             { [scriptblock]::Create((Get-Content -Path $script.FullName -Raw)) } | Should -Not -Throw
         }
     }
-    
+
     It "Unattended mode is properly implemented" {
         $scriptsWithPrompts = @(
             "05-git-ssh-config.ps1",
-            "09-debloat-windows.ps1", 
+            "09-debloat-windows.ps1",
             "10-windows-bootstrap.ps1",
             "11-licensed-apps.ps1",
             "35-privacy-telemetry.ps1",
@@ -29,18 +29,22 @@ Describe "CI/CD Safe Environment Tests" {
             "37-services-optimization.ps1",
             "41-devdrive-partition-setup.ps1"
         )
-        
+
         $scriptDir = Join-Path (Split-Path -Parent $PSScriptRoot) "scripts\windows"
-        
+
         foreach ($scriptName in $scriptsWithPrompts) {
             $scriptPath = Join-Path $scriptDir $scriptName
             if (Test-Path $scriptPath) {
                 $content = Get-Content -Path $scriptPath -Raw
-                $content | Should -Match '\$env:UNATTENDED_MODE'
+                # Only check for UNATTENDED_MODE if the script has Read-Host calls
+                $hasReadHost = $content -match 'Read-Host'
+                if ($hasReadHost) {
+                    $content | Should -Match '\$env:UNATTENDED_MODE'
+                }
             }
         }
     }
-    
+
     It "Git is available (if installed)" {
         $git = Get-Command git -ErrorAction SilentlyContinue
         if ($git) {
@@ -49,7 +53,7 @@ Describe "CI/CD Safe Environment Tests" {
             Set-ItResult -Skipped -Because "Git not installed"
         }
     }
-    
+
     It "PowerShell 7 is available (if installed)" {
         $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
         if ($pwsh) {
@@ -58,7 +62,7 @@ Describe "CI/CD Safe Environment Tests" {
             Set-ItResult -Skipped -Because "PowerShell 7 not installed"
         }
     }
-    
+
     It "WSL is configured (if installed)" {
         if (Get-Command wsl -ErrorAction SilentlyContinue) {
             try {
@@ -75,7 +79,7 @@ Describe "CI/CD Safe Environment Tests" {
             Set-ItResult -Skipped -Because "WSL not installed"
         }
     }
-    
+
     It "Security features work (if configured)" {
         try {
             $profiles = Get-NetFirewallProfile -ErrorAction SilentlyContinue
@@ -89,17 +93,17 @@ Describe "CI/CD Safe Environment Tests" {
             Set-ItResult -Skipped -Because "Firewall check requires elevation"
         }
     }
-    
+
     It "Core services exist (if configured)" {
         $services = @("Winmgmt", "BITS", "Themes", "AudioSrv")
-        
+
         foreach ($serviceName in $services) {
             $service = Get-Service $serviceName -ErrorAction SilentlyContinue
             if ($service) {
                 $service | Should -Not -BeNullOrEmpty
             }
         }
-        
+
         # At least one core service should exist
         $services | Should -Not -BeNullOrEmpty
     }

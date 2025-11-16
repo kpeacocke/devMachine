@@ -1,8 +1,26 @@
 <#
 Purpose: Install latest PowerShell 7 and make it the default shell/terminal.
-Run:  PowerShell (Admin) → Set-ExecutionPolicy Bypass -Scope Process -Force; .\00-pwsh-first.ps1
+Run:  PowerShell (Admin) → .\00-pwsh-first.ps1
+      (Script will handle execution policy automatically)
 #>
 $ErrorActionPreference = 'Stop'
+
+# Ensure script execution is allowed for subsequent scripts
+Write-Host "[PWSH] Checking PowerShell execution policy..." -ForegroundColor Cyan
+$currentPolicy = Get-ExecutionPolicy -Scope CurrentUser
+if ($currentPolicy -eq 'Restricted' -or $currentPolicy -eq 'Undefined') {
+    Write-Host "  Setting execution policy to RemoteSigned for CurrentUser scope..." -ForegroundColor Yellow
+    try {
+        Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
+        Write-Host "  ✅ Execution policy set to RemoteSigned" -ForegroundColor Green
+    } catch {
+        Write-Warning "Could not set execution policy. You may need to run as Administrator."
+        Write-Host "  💡 Manual fix: Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned" -ForegroundColor Yellow
+        Write-Host "  💡 Or run this script as: PowerShell (Admin) → Set-ExecutionPolicy Bypass -Scope Process -Force; .\00-pwsh-first.ps1" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "  ✅ Execution policy is already permissive: $currentPolicy" -ForegroundColor Green
+}
 
 Write-Host "[SETUP] Installing latest PowerShell 7..."
 winget install Microsoft.PowerShell --silent --accept-source-agreements --accept-package-agreements

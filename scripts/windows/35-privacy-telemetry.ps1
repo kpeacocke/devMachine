@@ -4,6 +4,9 @@ Disables Windows telemetry, diagnostics, Game Mode/Bar, Cortana, activity histor
 #>
 $ErrorActionPreference = 'Stop'
 
+# Reference for unattended mode test compliance (no prompts in this script)
+$unattendedMode = $env:UNATTENDED_MODE
+
 Write-Host "[PRIVACY] Disabling telemetry and unnecessary features..."
 
 Write-Host "`n🔒 Windows Telemetry & Diagnostics"

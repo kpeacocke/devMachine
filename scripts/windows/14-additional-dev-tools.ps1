@@ -25,6 +25,10 @@ winget install WiresharkFoundation.Wireshark --source winget --silent --accept-p
 Write-Host "  Installing nmap..."
 winget install Insecure.Nmap --source winget --silent --accept-package-agreements --accept-source-agreements
 
+Write-Host "📋 File Comparison & Merge Tools"
+Write-Host "  Installing WinMerge (free diff/merge tool)..."
+winget install WinMerge.WinMerge --source winget --silent --accept-package-agreements --accept-source-agreements
+
 Write-Host "🎥 Screen Recording"
 Write-Host "  Installing OBS Studio (screen recording/streaming)..."
 winget install OBSProject.OBSStudio --source winget --silent --accept-package-agreements --accept-source-agreements
@@ -37,8 +41,7 @@ Write-Host "  Installing QuickLook (file preview)..."
 winget install QL-Win.QuickLook --source winget --silent --accept-package-agreements --accept-source-agreements
 
 Write-Host "🔐 Security & Password Management"
-Write-Host "  Installing 1Password CLI (for developers and automation)..."
-winget install AgileBits.1Password.CLI --source winget --silent --accept-package-agreements --accept-source-agreements
+Write-Host "  → 1Password CLI installed with 1Password in licensed apps" -ForegroundColor Yellow
 
 Write-Host "🎮 3D & Game Development"
 Write-Host "  Installing Blender (3D modeling/animation)..."
@@ -52,8 +55,9 @@ Write-Host "━━━━━━━━━━━━━━━━━━━━━━�
 Write-Host "✅ API Testing:      Insomnia" -ForegroundColor Green
 Write-Host "✅ Databases:        DBeaver, SSMS" -ForegroundColor Green
 Write-Host "✅ Network:          Wireshark, nmap" -ForegroundColor Green
+Write-Host "✅ File Comparison:  WinMerge (free diff/merge)" -ForegroundColor Green
 Write-Host "✅ Screen Recording: OBS Studio" -ForegroundColor Green
 Write-Host "✅ 3D & Game Dev:    Blender, Godot Engine" -ForegroundColor Green
 Write-Host "✅ Utilities:        PowerToys, QuickLook" -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-Write-Host "💡 NOTE: Paid tools (Typora) available in 11-licensed-apps.ps1" -ForegroundColor Yellow
+Write-Host "💡 NOTE: Paid tools (Beyond Compare, Typora) available in 11-licensed-apps.ps1" -ForegroundColor Yellow

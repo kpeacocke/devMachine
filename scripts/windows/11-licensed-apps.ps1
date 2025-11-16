@@ -25,8 +25,10 @@ Write-Host "1Password..."
 if ($env:UNATTENDED_MODE) {
     Write-Host "  → Skipped in unattended mode (requires account setup)" -ForegroundColor Gray
 } else {
+    # 1Password GUI includes CLI - install main package only
     winget install AgileBits.1Password --source winget --silent --accept-package-agreements --accept-source-agreements
-    winget install AgileBits.1Password.CLI --source winget --silent --accept-package-agreements --accept-source-agreements
+    # CLI is bundled with 1Password GUI installation
+    Write-Host "  → 1Password CLI bundled with GUI installation" -ForegroundColor Green
 }
 
 Write-Host "Microsoft 365..."
@@ -41,7 +43,10 @@ Write-Host "GitKraken..."
 if ($env:UNATTENDED_MODE) {
     Write-Host "  → Skipped in unattended mode (requires account setup)" -ForegroundColor Gray
 } else {
+    # GitKraken GUI includes CLI - install main package only
     winget install Axosoft.GitKraken --source winget --silent --accept-package-agreements --accept-source-agreements
+    # CLI is bundled with GitKraken GUI installation
+    Write-Host "  → GitKraken CLI bundled with GUI installation" -ForegroundColor Green
 }
 
 Write-Host "Beyond Compare..."
