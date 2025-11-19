@@ -1,0 +1,42 @@
+services:
+  windows-powershell-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.windows
+    image: windows-powershell-dev:latest
+    container_name: ps-dev-env
+    platform: windows/amd64
+    volumes:
+      # Mount entire workspace for DevContainer support
+      - type: bind
+        source: '${WORKSPACE_PATH:-C:\\Users\\kpeac\\code\\Cloud Dev Ops}'
+        target: C:\\workspace
+      # Mount packer scripts for testing
+      - type: bind
+        source: '${WORKSPACE_PATH:-C:\\Users\\kpeac\\code\\Cloud Dev Ops}\\\\packer\\\\common'
+        target: C:\\hardening\\common
+      # Mount docker directory (contains test-results and run-tests.ps1)
+      - type: bind
+        source: '${WORKSPACE_PATH:-C:\\Users\\kpeac\\code\\Cloud Dev Ops}\\\\docker'
+        target: C:\\docker
+    environment:
+      - PSModulePath=C:\\Program Files\\PowerShell\\Modules;C:\\hardening\\modules
+    stdin_open: true
+    tty: true
+    # Keep container running
+    command: pwsh -NoExit -Command "Write-Host 'PowerShell Development Environment Ready (Windows)' -ForegroundColor Green"
+
+  linux-powershell-dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.linux
+      network: default
+    image: linux-powershell-dev:latest
+    container_name: ps-dev-env-linux
+    environment:
+      - PSModulePath=/opt/microsoft/powershell/7/Modules:/hardening/modules
+      - WORKSPACE_PATH=C:/Users/kpeac/code/devmachine
+    working_dir: /workspaces/devmachine
+    stdin_open: true
+    tty: true
+    command: sleep infinity

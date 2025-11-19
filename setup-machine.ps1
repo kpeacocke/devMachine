@@ -12,9 +12,7 @@
 
 .PARAMETER SkipLicensedApps
     Skip commercial/licensed applications (1Password, Office, GitKraken, Beyond Compare,
-    Scrivener, Obsidian, Backblaze, Malwarebytes, GlassWire).
-    Skip commercial/licensed applications (1Password, Office, GitKraken, Beyond Compare,
-    Scrivener, Obsidian, Backblaze, Malwarebytes, GlassWire).
+    Scrivener, Obsidian, Backblaze, GlassWire).
     Use this for VMs or when you don't have licenses.
 
 .PARAMETER SkipCommunicationsMedia
@@ -129,8 +127,8 @@ if (-not $SkipRestorePoint) {
     Write-Host "`n[SETUP] Creating system restore point..." -ForegroundColor Cyan
     try {
         # Check if System Restore is enabled
-        $restoreEnabled = (Get-ComputerRestorePoint -ErrorAction SilentlyContinue) -ne $null -or
-                         (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" -Name "RPSessionInterval" -ErrorAction SilentlyContinue) -ne $null
+        $restoreEnabled = $null -ne (Get-ComputerRestorePoint -ErrorAction SilentlyContinue) -or
+                         $null -ne (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" -Name "RPSessionInterval" -ErrorAction SilentlyContinue)
 
         if (-not $restoreEnabled) {
             Write-Host "  Enabling System Restore on system drive..." -ForegroundColor Yellow
@@ -427,6 +425,23 @@ if ($configurePowerShell -eq 'Y') {
         -Description "Create comprehensive PowerShell profile with productivity enhancements"
 } else {
     Write-Host "   ⭐  Skipped PowerShell profile configuration" -ForegroundColor Yellow
+}
+
+# ============================================================================
+# PHASE 2.3: FONT INSTALLATION
+# ============================================================================
+
+Write-Step "PHASE 2.3: Font Installation"
+Write-Host "🎨 JetBrainsMono Nerd Font Installation" -ForegroundColor Yellow
+Write-Host "   Installs JetBrainsMono Nerd Font for VS Code and terminals`n" -ForegroundColor Yellow
+$installFonts = Read-Host "Install JetBrainsMono Nerd Font? (Y/N) [Default: Y]"
+if ([string]::IsNullOrWhiteSpace($installFonts)) { $installFonts = 'Y' }
+
+if ($installFonts -eq 'Y') {
+    Invoke-Script -Path (Join-Path $WindowsScripts "97-fix-font-installation.ps1") `
+        -Description "Install JetBrainsMono Nerd Font and configure for applications"
+} else {
+    Write-Host "   ⭐  Skipped font installation" -ForegroundColor Yellow
 }
 
 # ============================================================================
@@ -918,7 +933,6 @@ Write-Host "  Final user PATH entries: $($cleanUserPaths.Count)" -ForegroundColo
 Write-Step "PHASE 12: Final Configuration"
 
 Write-Host "📋 Post-Setup Checklist:" -ForegroundColor Cyan
-Write-Host "  [ ] Configure Malwarebytes exclusions (see README Post-Setup section)" -ForegroundColor Yellow
 Write-Host "  [ ] Configure GlassWire firewall rules (see README Post-Setup section)" -ForegroundColor Yellow
 Write-Host "  [ ] Sign into Backblaze and configure exclusions (see README)" -ForegroundColor Yellow
 Write-Host "  [ ] Restart Docker Desktop (Settings -> data-root change)" -ForegroundColor Yellow
@@ -953,112 +967,6 @@ if ($reboot -eq 'Y') {
 } else {
     Write-Host "Remember to reboot before running production workloads!" -ForegroundColor Yellow
 }
-
-# ============================================================================
-# ANTIVIRUS OPTIMIZATION GUIDANCE
-# ============================================================================
-
-Write-Host "`n🛡️  ANTIVIRUS OPTIMIZATION RECOMMENDATIONS" -ForegroundColor Cyan
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-Write-Host "`n✅ Windows Defender exclusions have been automatically configured!" -ForegroundColor Green
-Write-Host "   These exclude development folders, caches, and build processes for optimal performance." -ForegroundColor Gray
-
-# Check if Malwarebytes is installed
-$malwarebytesInstalled = $false
-$mbPaths = @(
-    "$env:ProgramFiles\Malwarebytes",
-    "$env:ProgramFiles(x86)\Malwarebytes",
-    "$env:ProgramData\Malwarebytes"
-)
-
-foreach ($path in $mbPaths) {
-    if (Test-Path $path) {
-        $malwarebytesInstalled = $true
-        break
-    }
-}
-
-if ($malwarebytesInstalled) {
-    Write-Host "`n⚠️  MALWAREBYTES DETECTED - Manual exclusions recommended:" -ForegroundColor Yellow
-    Write-Host "   Open Malwarebytes → Settings → Security → Exclusions and add:" -ForegroundColor Gray
-    Write-Host ""
-
-    Write-Host "   📁 FOLDER EXCLUSIONS:" -ForegroundColor Cyan
-    $mbFolderExclusions = @(
-        "C:\DevCache",
-        "$env:USERPROFILE\code",
-        "$env:USERPROFILE\source",
-        "$env:USERPROFILE\repos",
-        "$env:USERPROFILE\projects",
-        "$env:USERPROFILE\.cargo",
-        "$env:USERPROFILE\.rustup",
-        "$env:USERPROFILE\go",
-        "$env:USERPROFILE\.gradle",
-        "$env:USERPROFILE\.m2",
-        "$env:USERPROFILE\.nuget",
-        "$env:USERPROFILE\.dotnet",
-        "$env:USERPROFILE\AppData\Roaming\npm",
-        "$env:USERPROFILE\AppData\Local\pip",
-        "$env:USERPROFILE\AppData\Local\Programs\Microsoft VS Code",
-        "$env:TEMP",
-        "$env:ProgramFiles\JetBrains",
-        "$env:ProgramFiles\Microsoft Visual Studio"
-    )
-
-    foreach ($exclusion in $mbFolderExclusions) {
-        if (Test-Path $exclusion) {
-            Write-Host "   • $exclusion" -ForegroundColor White
-        } else {
-            Write-Host "   • $exclusion (when created)" -ForegroundColor Gray
-        }
-    }
-
-    Write-Host "`n   🔧 PROCESS EXCLUSIONS:" -ForegroundColor Cyan
-    $mbProcessExclusions = @(
-        "node.exe", "npm.exe", "yarn.exe", "pnpm.exe",
-        "cargo.exe", "rustc.exe", "git.exe",
-        "go.exe", "python.exe", "dotnet.exe",
-        "code.exe", "code-insiders.exe",
-        "msbuild.exe", "devenv.exe",
-        "java.exe", "gradle.exe", "mvn.exe"
-    )
-
-    foreach ($process in $mbProcessExclusions) {
-        Write-Host "   • $process" -ForegroundColor White
-    }
-
-    Write-Host "`n   📄 FILE EXTENSION EXCLUSIONS:" -ForegroundColor Cyan
-    $mbExtensionExclusions = @(
-        ".tmp", ".temp", ".log", ".cache", ".lock",
-        ".pid", ".swp", ".pdb", ".ilk", ".idb"
-    )
-
-    foreach ($ext in $mbExtensionExclusions) {
-        Write-Host "   • $ext" -ForegroundColor White
-    }
-
-    Write-Host "`n   💡 Why exclude these? Development tools create many temporary files and processes" -ForegroundColor Yellow
-    Write-Host "      that can trigger false positives and slow down builds significantly." -ForegroundColor Gray
-    Write-Host "`n   📖 Guide: https://support.malwarebytes.com/hc/en-us/articles/360038479234" -ForegroundColor Cyan
-} else {
-    Write-Host "`n💡 If you install Malwarebytes later:" -ForegroundColor Yellow
-    Write-Host "   Add development folders, processes, and file extensions to exclusions" -ForegroundColor Gray
-    Write-Host "   This prevents interference with development tools and build processes" -ForegroundColor Gray
-}
-
-Write-Host "`n🎯 THIRD-PARTY ANTIVIRUS USERS:" -ForegroundColor Cyan
-Write-Host "   If using Norton, McAfee, Avast, AVG, or others, exclude the same paths!" -ForegroundColor Gray
-Write-Host "   Focus on: development folders, package caches, build outputs, and dev tools" -ForegroundColor Gray
-
-Write-Host "`n🚀 PERFORMANCE IMPACT:" -ForegroundColor Green
-Write-Host "   Proper exclusions can improve build times by 30-70%" -ForegroundColor White
-Write-Host "   • npm install: 40-60% faster" -ForegroundColor Gray
-Write-Host "   • cargo build: 30-50% faster" -ForegroundColor Gray
-Write-Host "   • .NET compilation: 25-45% faster" -ForegroundColor Gray
-Write-Host "   • Git operations: 20-40% faster" -ForegroundColor Gray
-
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 
 Write-Host "========================================================================" -ForegroundColor Green
 Write-Host "" -ForegroundColor Green

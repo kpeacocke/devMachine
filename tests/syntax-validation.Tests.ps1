@@ -125,8 +125,6 @@ Describe "Setup Orchestrator Script" {
 
     It "setup-machine.ps1 includes antivirus guidance" {
         $content = Get-Content -Path $script:setupScript -Raw
-        # Should include Malwarebytes detection and guidance
-        $content | Should -Match "Malwarebytes" -Because "Should detect and provide guidance for Malwarebytes"
         # Should reference antivirus optimization (either inline or via script)
         ($content -match "43-antivirus-exclusions" -or $content -match "Add-MpPreference") | Should -BeTrue -Because "Should include antivirus optimization guidance"
     }

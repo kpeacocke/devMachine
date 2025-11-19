@@ -1,0 +1,91 @@
+# syntax=docker/dockerfile:1.7
+
+###############################################################################
+# Multi-arch Debian 12 + PowerShell (tarball) + Pester & PSScriptAnalyzer
+# - Installs pwsh for the detected TARGETARCH (amd64/arm64/armhf)
+# - Installs Pester & PSScriptAnalyzer for all users
+# - Uses non-root runtime user
+###############################################################################
+
+# Versions (override at build: --build-arg PWSH_VER=7.5.4 ...)
+ARG PWSH_VER=7.5.4
+ARG TZ=Australia/Sydney
+# Optional, pin module versions:
+#   --build-arg PESTER_VERSION=5.7.1
+#   --build-arg PSSA_VERSION=1.22.0
+ARG PESTER_VERSION=
+ARG PSSA_VERSION=
+
+FROM debian:12-slim
+
+# Re-declare build args in this stage
+ARG PWSH_VER
+ARG TZ
+ARG PESTER_VERSION
+ARG PSSA_VERSION
+ARG TARGETARCH
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    POWERSHELL_TELEMETRY_OPTOUT=1
+
+# Base OS deps + pwsh runtime deps + timezone setup
+# hadolint ignore=DL3008
+RUN set -eux; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends \
+    ca-certificates curl git jq libgssapi-krb5-2 libicu72 \
+    libssl3 nano tzdata vim zlib1g; \
+  rm -rf /var/lib/apt/lists/*; \
+  ln -fs /usr/share/zoneinfo/"$TZ" /etc/localtime; \
+  dpkg-reconfigure -f noninteractive tzdata
+
+# Install PowerShell from GitHub tarball (handles multi-arch)
+# Expose the (optional) pinned module versions to pwsh during build
+ENV PESTER_VERSION="${PESTER_VERSION}" \
+    PSSA_VERSION="${PSSA_VERSION}"
+
+# Install PowerShell, ensure module paths, install Pester & PSScriptAnalyzer, and create non-root user (single RUN to reduce layers)
+RUN set -eux; \
+  ARCH="${TARGETARCH:-$(dpkg --print-architecture)}"; \
+  case "$ARCH" in \
+    amd64|x86_64)  PS_ARCH=x64 ;; \
+    arm64|aarch64) PS_ARCH=arm64 ;; \
+    arm|armhf)     PS_ARCH=arm32 ;; \
+    *) echo "Unsupported arch: $ARCH" >&2; exit 1 ;; \
+  esac; \
+  curl -fL -o /tmp/pwsh.tgz \
+    "https://github.com/PowerShell/PowerShell/releases/download/v${PWSH_VER}/powershell-${PWSH_VER}-linux-${PS_ARCH}.tar.gz"; \
+  mkdir -p /opt/microsoft/powershell/7; \
+  tar -xzf /tmp/pwsh.tgz -C /opt/microsoft/powershell/7; \
+  chmod +x /opt/microsoft/powershell/7/pwsh; \
+  ln -sf /opt/microsoft/powershell/7/pwsh /usr/local/bin/pwsh; \
+  rm -f /tmp/pwsh.tgz; \
+  mkdir -p /usr/local/share/powershell/Modules; \
+  echo "export PATH=\"/opt/microsoft/powershell/7:/usr/local/bin:\$PATH\"" >> /root/.bashrc; \
+  echo "export PATH=\"/opt/microsoft/powershell/7:/usr/local/bin:\$PATH\"" >> /root/.profile; \
+  /usr/local/bin/pwsh -NoLogo -NoProfile -Command " \
+    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; \
+    \$ErrorActionPreference='Stop'; \
+    if (\$env:PESTER_VERSION -and \$env:PESTER_VERSION.Trim()) { \
+      Install-Module Pester -Scope AllUsers -Force -AcceptLicense -RequiredVersion \$env:PESTER_VERSION \
+    } else { \
+      Install-Module Pester -Scope AllUsers -Force -AcceptLicense \
+    }; \
+    if (\$env:PSSA_VERSION -and \$env:PSSA_VERSION.Trim()) { \
+      Install-Module PSScriptAnalyzer -Scope AllUsers -Force -AcceptLicense -RequiredVersion \$env:PSSA_VERSION \
+    } else { \
+      Install-Module PSScriptAnalyzer -Scope AllUsers -Force -AcceptLicense \
+    }; \
+    Get-Module -ListAvailable Pester,PSScriptAnalyzer | Format-Table Name,Version,ModuleBase -AutoSize"; \
+  useradd -m -s /bin/bash -u 1000 vscode; \
+  echo "export PATH=\"/opt/microsoft/powershell/7:/usr/local/bin:\$PATH\"" >> /home/vscode/.bashrc; \
+  echo "export PATH=\"/opt/microsoft/powershell/7:/usr/local/bin:\$PATH\"" >> /home/vscode/.profile
+
+# Set working directory
+WORKDIR /workspaces/devmachine
+
+# Switch to non-root user
+USER vscode
+
+# Default entry: keep container running
+CMD ["sleep", "infinity"]

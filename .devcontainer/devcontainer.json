@@ -1,0 +1,25 @@
+{
+  "name": "PowerShell Development",
+  "dockerComposeFile": "${localWorkspaceFolder}/docker/docker-compose.yml",
+  "service": "linux-powershell-dev",
+  "runServices": ["linux-powershell-dev"],
+  "workspaceFolder": "/workspaces/devmachine",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspaces/devmachine,type=bind,consistency=cached"
+  ],
+  "overrideCommand": true,
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.powershell",
+        "pspester.pester-test",
+        "ryanluker.vscode-coverage-gutters"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "pwsh"
+      }
+    }
+  },
+  "postCreateCommand": "pwsh -Command \"Write-Host 'DevContainer Ready!' -ForegroundColor Green\""
+}

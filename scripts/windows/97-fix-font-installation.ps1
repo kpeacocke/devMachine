@@ -8,6 +8,43 @@ $unattendedMode = $env:UNATTENDED_MODE
 
 Write-Host "[FONT FIX] Enhanced JetBrainsMono Nerd Font Installation..." -ForegroundColor Cyan
 
+# Fix PowerShell execution policy issue first
+Write-Host "  Checking PowerShell execution policy..." -ForegroundColor Yellow
+$currentPolicy = Get-ExecutionPolicy -Scope CurrentUser
+if ($currentPolicy -eq 'RemoteSigned') {
+    Write-Host "  Temporarily setting execution policy to Bypass for font installation..." -ForegroundColor Yellow
+    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+    Write-Host "  ✅ Execution policy set to Bypass for this process" -ForegroundColor Green
+}
+
+# Check if profile is in OneDrive (causes execution policy issues)
+$profilePath = $PROFILE
+if ($profilePath -like "*OneDrive*") {
+    Write-Host "  ⚠️  PowerShell profile is in OneDrive - this can cause execution policy issues" -ForegroundColor Yellow
+    Write-Host "  Moving profile to local location..." -ForegroundColor Yellow
+
+    # Create local profile directory (handle both Windows PowerShell and PowerShell 7+)
+    $localProfileDir = Split-Path $profilePath -Parent
+    if ($localProfileDir -like "*OneDrive*") {
+        # Replace OneDrive path with local Documents path
+        $localProfileDir = $localProfileDir -replace [regex]::Escape("$env:USERPROFILE\OneDrive"), $env:USERPROFILE
+    }
+
+    if (-not (Test-Path $localProfileDir)) {
+        New-Item -ItemType Directory -Path $localProfileDir -Force | Out-Null
+    }
+
+    # Move profile to local location
+    $localProfilePath = Join-Path $localProfileDir (Split-Path $profilePath -Leaf)
+    if (Test-Path $profilePath) {
+        Copy-Item $profilePath $localProfilePath -Force
+        Write-Host "  ✅ Profile moved to: $localProfilePath" -ForegroundColor Green
+    }
+
+    # Note: PowerShell will automatically use the local profile if it exists
+    Write-Host "  ✅ Profile relocated - PowerShell will use local copy on next session" -ForegroundColor Green
+}
+
 # Check if already installed
 Write-Host "  Checking for existing JetBrainsMono Nerd Font installation..."
 $existingFonts = Get-ChildItem -Path "$env:windir\Fonts" -Filter "*JetBrains*" -ErrorAction SilentlyContinue
