@@ -1,3 +1,10 @@
+## [1.11.1](https://github.com/kpeacocke/devMachine/compare/v1.11.0...v1.11.1) (2025-11-16)
+
+
+### 📚 Documentation
+
+* improve formatting and clarity in test suite documentation ([f5947be](https://github.com/kpeacocke/devMachine/commit/f5947be02f35cb20906c7665729bbe572c1af567))
+
 ## [1.11.0](https://github.com/kpeacocke/devMachine/compare/v1.10.0...v1.11.0) (2025-11-13)
 
 
