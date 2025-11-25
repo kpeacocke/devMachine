@@ -59,6 +59,17 @@ Write-Host "  This may take 5-10 minutes..." -ForegroundColor Yellow
 winget install Microsoft.VisualStudio.2022.BuildTools --source winget --silent --accept-package-agreements --accept-source-agreements --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 Write-Host "  Build Tools installed - refreshing environment..." -ForegroundColor Green
 
+# Add MSBuild to PATH
+$msbuildPath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin"
+if (Test-Path $msbuildPath) {
+    $currentPath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+    if ($currentPath -notlike "*$msbuildPath*") {
+        [Environment]::SetEnvironmentVariable('Path', "$currentPath;$msbuildPath", 'Machine')
+        $env:Path = "$msbuildPath;$env:Path"
+        Write-Host "  ✅ MSBuild added to PATH" -ForegroundColor Green
+    }
+}
+
 # Windows Assessment and Deployment Kit (ADK) - includes oscdimg.exe for creating ISO images
 Write-Host "  Installing Windows ADK (Assessment and Deployment Kit)..."
 Write-Host "  Provides oscdimg.exe, Windows imaging tools, and deployment utilities..." -ForegroundColor Yellow
@@ -326,6 +337,25 @@ Write-Host "🌐 Runtimes (latest channels)"
 # Python latest (3.13 line)
 winget install Python.Python.3.13 --source winget --silent --accept-package-agreements --accept-source-agreements
 
+# Additional Python package managers
+Write-Host "  Installing additional Python package managers..."
+try {
+  # Ensure pip is available and refresh environment
+  $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+  # Install pipenv and poetry
+  pip install --user pipenv
+  pip install --user poetry
+
+  # Verify installations
+  if (Get-Command pipenv -ErrorAction SilentlyContinue) { Write-Host "  ✅ pipenv installed" -ForegroundColor Green }
+  if (Get-Command poetry -ErrorAction SilentlyContinue) { Write-Host "  ✅ poetry installed" -ForegroundColor Green }
+
+  Write-Host "  [OK] Additional Python package managers installed" -ForegroundColor Green
+} catch {
+  Write-Warning "Additional Python package managers installation failed: $_"
+}
+
 # Upgrade pip to latest version
 Write-Host "  Upgrading pip to latest version..."
 try {
@@ -347,6 +377,26 @@ try {
 
 # Node current (not LTS)
 winget install OpenJS.NodeJS --source winget -e --silent --accept-package-agreements --accept-source-agreements
+
+# Additional Node.js package managers
+Write-Host "  Installing additional Node.js package managers..."
+try {
+  # Ensure npm is available and refresh environment
+  $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+  # Install yarn, pnpm, bun globally
+  npm install -g yarn pnpm
+  npm install -g @oven/bun  # bun is installed as @oven/bun
+
+  # Verify installations
+  if (Get-Command yarn -ErrorAction SilentlyContinue) { Write-Host "  ✅ yarn installed" -ForegroundColor Green }
+  if (Get-Command pnpm -ErrorAction SilentlyContinue) { Write-Host "  ✅ pnpm installed" -ForegroundColor Green }
+  if (Get-Command bun -ErrorAction SilentlyContinue) { Write-Host "  ✅ bun installed" -ForegroundColor Green }
+
+  Write-Host "  [OK] Additional Node.js package managers installed" -ForegroundColor Green
+} catch {
+  Write-Warning "Additional Node.js package managers installation failed: $_"
+}
 # Go + Rust + .NET (latest SDK channels)
 winget install GoLang.Go --source winget --silent --accept-package-agreements --accept-source-agreements
 winget install Rustlang.Rustup --source winget --silent --accept-package-agreements --accept-source-agreements
@@ -397,6 +447,13 @@ try {
   mise use -g kotlin@latest 2>$null
   mise use -g gradle@latest 2>$null
   mise use -g maven@latest 2>$null
+
+  # Add mise shims to PATH for immediate access
+  $miseShims = "$env:USERPROFILE\.local\share\mise\shims"
+  if (Test-Path $miseShims) {
+    $env:Path = "$miseShims;$env:Path"
+  }
+
   Write-Host "  [OK] Kotlin, Gradle, Maven installed via mise" -ForegroundColor Green
 } catch {
   Write-Warning "  mise tool installation will complete on next shell restart"

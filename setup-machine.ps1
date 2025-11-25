@@ -980,5 +980,3 @@ if (-not $SkipRestorePoint) {
     Write-Host "   To rollback changes: Control Panel → System Protection → System Restore" -ForegroundColor Gray
     Write-Host "   Or run: rstrui.exe" -ForegroundColor Gray
 }
-
-
