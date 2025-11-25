@@ -1,3 +1,10 @@
+## [1.13.0](https://github.com/kpeacocke/devMachine/compare/v1.12.0...v1.13.0) (2025-11-25)
+
+
+### 🚀 Features
+
+* add MSBuild and additional Python/Node.js package managers to bootstrap script ([5ebb166](https://github.com/kpeacocke/devMachine/commit/5ebb166dd2aa4d617f55034de8881d91f649ecc5))
+
 ## [1.12.0](https://github.com/kpeacocke/devMachine/compare/v1.11.1...v1.12.0) (2025-11-19)
 
 
