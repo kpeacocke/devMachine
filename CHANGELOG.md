@@ -1,3 +1,10 @@
+## [1.12.0](https://github.com/kpeacocke/devMachine/compare/v1.11.1...v1.12.0) (2025-11-19)
+
+
+### 🚀 Features
+
+* add Docker support for PowerShell development environment and enhance font installation process ([4e1b64d](https://github.com/kpeacocke/devMachine/commit/4e1b64d757d6b50b5e4e9000fcc7955f2f3f146d))
+
 ## [1.11.1](https://github.com/kpeacocke/devMachine/compare/v1.11.0...v1.11.1) (2025-11-16)
 
 
