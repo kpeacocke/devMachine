@@ -73,6 +73,7 @@
         "featurename",
         "Flipboard",
         "flushdns",
+        "FONTCHANGE",
         "friendsofphp",
         "fscache",
         "fsutil",

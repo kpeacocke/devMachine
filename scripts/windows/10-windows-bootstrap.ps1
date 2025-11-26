@@ -384,9 +384,19 @@ try {
   # Ensure npm is available and refresh environment
   $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
-  # Install yarn, pnpm, bun globally
+  # Install yarn, pnpm globally
   npm install -g yarn pnpm
-  npm install -g @oven/bun  # bun is installed as @oven/bun
+
+  # Install bun using official installer (npm package doesn't work on Windows)
+  if (-not (Get-Command bun -ErrorAction SilentlyContinue)) {
+    Write-Host "  Installing bun via official installer..."
+    try {
+      irm bun.sh/install.ps1 | iex
+      Write-Host "  ✅ bun installed" -ForegroundColor Green
+    } catch {
+      Write-Warning "bun installation failed - install manually from https://bun.sh"
+    }
+  }
 
   # Verify installations
   if (Get-Command yarn -ErrorAction SilentlyContinue) { Write-Host "  ✅ yarn installed" -ForegroundColor Green }
