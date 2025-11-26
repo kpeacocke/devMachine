@@ -1,3 +1,10 @@
+## [1.15.0](https://github.com/kpeacocke/devMachine/compare/v1.14.0...v1.15.0) (2025-11-26)
+
+
+### 🚀 Features
+
+* enhance WSL setup scripts with additional tools and configurations ([242e745](https://github.com/kpeacocke/devMachine/commit/242e745e53fc9f72f1966a80e5b7811edf782de2))
+
 ## [1.14.0](https://github.com/kpeacocke/devMachine/compare/v1.13.0...v1.14.0) (2025-11-26)
 
 
