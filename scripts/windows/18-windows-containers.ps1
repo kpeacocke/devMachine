@@ -51,6 +51,7 @@ function Test-ContainerFeature {
 }
 
 function Enable-ContainerFeature {
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$FeatureName,
         [string]$DisplayName
