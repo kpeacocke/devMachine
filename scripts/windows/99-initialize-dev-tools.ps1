@@ -141,13 +141,23 @@ if (Test-CommandExists "pip") {
 Write-Host ""
 Write-Host "☕ JVM Build Tools (mise)" -ForegroundColor Cyan
 if (Test-CommandExists "mise") {
-    # Ensure mise shims are in PATH
-    $miseShims = "$env:USERPROFILE\.local\share\mise\shims"
-    if (Test-Path $miseShims) {
-        if ($env:Path -notlike "*$miseShims*") {
-            $env:Path = "$miseShims;$env:Path"
-            Write-Host "  ✅ mise shims added to current session PATH" -ForegroundColor Green
+    # Activate mise in current session (simpler than shims approach)
+    Write-Host "  Activating mise in current session..." -ForegroundColor Gray
+    try {
+        $miseEnv = mise env
+        if ($miseEnv -match '\$Env:Path=''([^'']+)''') {
+            $misePath = $matches[1]
+            # Extract just the mise-managed paths (first part before existing PATH)
+            $miseOnlyPaths = ($misePath -split ';' | Select-Object -First 5) -join ';'
+            if ($env:Path -notlike "*$miseOnlyPaths*") {
+                $env:Path = "$miseOnlyPaths;$env:Path"
+                Write-Host "  ✅ mise tools activated in current session" -ForegroundColor Green
+            } else {
+                Write-Host "  ✅ mise already activated" -ForegroundColor Green
+            }
         }
+    } catch {
+        Write-Warning "mise activation failed: $_"
     }
 
     # Check gradle
@@ -196,6 +206,57 @@ if (Test-CommandExists "msbuild") {
 }
 
 # 6. Final Summary
+Write-Host ""
+Write-Host "💡 PowerShell Profile Check" -ForegroundColor Cyan
+# Check multiple possible profile locations
+$profilePaths = @(
+    $PROFILE,
+    "$env:USERPROFILE\Documents\PowerShell\Microsoft.PowerShell_profile.ps1",
+    "$env:USERPROFILE\OneDrive\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
+)
+
+$foundProfile = $false
+foreach ($profilePath in $profilePaths) {
+    if (Test-Path $profilePath) {
+        $foundProfile = $true
+        $profileContent = Get-Content $profilePath -Raw
+        if ($profileContent -match 'mise activate') {
+            Write-Host "  ✅ mise activation configured in profile" -ForegroundColor Green
+            Write-Host "    Profile: $profilePath" -ForegroundColor Gray
+            Write-Host "    💡 New PowerShell sessions will have mise tools in PATH" -ForegroundColor Yellow
+        } else {
+            Write-Host "  ⚠️  mise not configured in profile" -ForegroundColor Yellow
+            Write-Host "    Profile: $profilePath" -ForegroundColor Gray
+            Write-Host "    💡 Run .\scripts\windows\06-powershell-profile.ps1 to configure" -ForegroundColor Yellow
+        }
+        break
+    }
+}
+
+if (-not $foundProfile) {
+    Write-Host "  ⚠️  PowerShell profile not found" -ForegroundColor Yellow
+    Write-Host "    Expected: $($profilePaths[0])" -ForegroundColor Gray
+    Write-Host "    💡 Run .\scripts\windows\06-powershell-profile.ps1 to create" -ForegroundColor Yellow
+}
+
+# 7. VS Code Shell Integration Note
+Write-Host ""
+Write-Host "💡 VS Code Integration" -ForegroundColor Cyan
+$vscodeSettings = "$env:APPDATA\Code - Insiders\User\settings.json"
+if (Test-Path $vscodeSettings) {
+    $settings = Get-Content $vscodeSettings -Raw
+    if ($settings -match '"terminal\.integrated\.shellIntegration\.enabled"\s*:\s*false') {
+        Write-Host "  ✅ VS Code shell integration disabled (clean profile loading)" -ForegroundColor Green
+    } else {
+        Write-Host "  ⚠️  VS Code shell integration enabled (may cause harmless errors)" -ForegroundColor Yellow
+        Write-Host "    To disable: Settings → search 'shellIntegration' → uncheck 'Terminal › Integrated: Shell Integration'" -ForegroundColor Gray
+        Write-Host "    Or add to settings.json: `"terminal.integrated.shellIntegration.enabled`": false" -ForegroundColor Gray
+    }
+} else {
+    Write-Host "  ℹ️  VS Code Insiders settings not found" -ForegroundColor Gray
+}
+
+# 8. Final Summary
 Write-Host ""
 Write-Host "📊 Initialization Summary" -ForegroundColor Cyan
 Write-Host ""
