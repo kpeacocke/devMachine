@@ -1,3 +1,11 @@
+## [1.14.0](https://github.com/kpeacocke/devMachine/compare/v1.13.0...v1.14.0) (2025-11-26)
+
+
+### 🚀 Features
+
+* add VS Code shell integration check and improve mise activation in initialization script ([8458aad](https://github.com/kpeacocke/devMachine/commit/8458aad373a7f567f64de13e7caa0c988ea59fcf))
+* enhance development tool initialization and add bun installation ([82531a3](https://github.com/kpeacocke/devMachine/commit/82531a31ce034281582f6f76a25c4499ee27fb63))
+
 ## [1.13.0](https://github.com/kpeacocke/devMachine/compare/v1.12.0...v1.13.0) (2025-11-25)
 
 
