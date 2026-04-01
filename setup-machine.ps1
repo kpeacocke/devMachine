@@ -276,6 +276,35 @@ function Test-AdminPrivileges {
     return $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+function Test-IsSurfaceDevice {
+    try {
+        $computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
+        $bios = Get-CimInstance -ClassName Win32_BIOS
+
+        $manufacturer = [string]$computerSystem.Manufacturer
+        $model = [string]$computerSystem.Model
+        $biosVersionText = @($bios.BIOSVersion) -join ' '
+
+        $surfaceMatch = $false
+        if ($manufacturer -match 'Microsoft') { $surfaceMatch = $true }
+        if ($model -match 'Surface') { $surfaceMatch = $true }
+        if ($biosVersionText -match 'Surface') { $surfaceMatch = $true }
+
+        return @{
+            IsSurface = $surfaceMatch
+            Manufacturer = if ([string]::IsNullOrWhiteSpace($manufacturer)) { 'Unknown' } else { $manufacturer }
+            Model = if ([string]::IsNullOrWhiteSpace($model)) { 'Unknown' } else { $model }
+        }
+    } catch {
+        Write-Host "⚠️  Could not detect device model. Assuming non-Surface for hardware-specific steps." -ForegroundColor Yellow
+        return @{
+            IsSurface = $false
+            Manufacturer = 'Unknown'
+            Model = 'Unknown'
+        }
+    }
+}
+
 # ============================================================================
 # PRE-FLIGHT CHECKS
 # ============================================================================
@@ -299,6 +328,16 @@ if (-not (Test-AdminPrivileges)) {
 }
 
 Write-Host "✅ Running with Administrator privileges`n" -ForegroundColor Green
+
+# Detect device type to gate hardware-specific setup steps
+$deviceInfo = Test-IsSurfaceDevice
+$isSurfaceDevice = [bool]$deviceInfo.IsSurface
+Write-Host "🖥️  Detected hardware: $($deviceInfo.Manufacturer) / $($deviceInfo.Model)" -ForegroundColor Cyan
+if ($isSurfaceDevice) {
+    Write-Host "   ✅ Surface device detected: hardware-specific optimizations enabled" -ForegroundColor Green
+} else {
+    Write-Host "   ℹ️  Non-Surface device detected: hardware-specific partition/mount steps will be skipped" -ForegroundColor Yellow
+}
 
 # Estimate time
 Write-Host "⏱️  Estimated time: 45-90 minutes (depending on download speeds)" -ForegroundColor Yellow
@@ -578,7 +617,7 @@ Invoke-Script -Path (Join-Path $WindowsScripts "32-powerplan-auto-toggle.ps1") `
 # PHASE 6: DEV DRIVE PARTITION SETUP & CACHE RELOCATION
 # ============================================================================
 
-if (-not $SkipDevDrive) {
+if (-not $SkipDevDrive -and $isSurfaceDevice) {
     Write-Step "PHASE 6: Dev Drive Setup"
 
     # Check if Dev Drive partitions already exist
@@ -624,8 +663,10 @@ if (-not $SkipDevDrive) {
         Write-Host "   ⚠️  C:\DevCache not found - skipping cache relocation" -ForegroundColor Yellow
         Write-Host "      Run 41-devdrive-partition-setup.ps1 to create it" -ForegroundColor Gray
     }
-} else {
+} elseif ($SkipDevDrive) {
     Write-Host "`n⏭️  Skipping Dev Drive setup (use for single-drive systems or VMs)" -ForegroundColor Yellow
+} else {
+    Write-Host "`n⏭️  Skipping Dev Drive partition/mount setup on non-Surface hardware" -ForegroundColor Yellow
 }
 
 # ============================================================================
@@ -970,7 +1011,7 @@ if ($reboot -eq 'Y') {
 
 Write-Host "========================================================================" -ForegroundColor Green
 Write-Host "" -ForegroundColor Green
-Write-Host "     Setup Complete! Your Surface Pro is ready for development" -ForegroundColor Green
+Write-Host "     Setup Complete! Your development machine is ready" -ForegroundColor Green
 Write-Host "" -ForegroundColor Green
 Write-Host "========================================================================" -ForegroundColor Green
 

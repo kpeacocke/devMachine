@@ -3,7 +3,10 @@
     "terminal.integrated.fontSize": 12,
     "terminal.integrated.shellIntegration.enabled": true,
     "terminal.integrated.shellIntegration.decorationsEnabled": true,
-    "powershell.powerShellDefaultVersion": "PowerShell",
+    "powershell.powerShellDefaultVersion": "PowerShell 7 (Devcontainer)",
+    "powershell.powerShellAdditionalExePaths": {
+        "PowerShell 7 (Devcontainer)": "/opt/microsoft/powershell/7/pwsh"
+    },
     "terminal.integrated.shellIntegration.showExitStatus": true,
     "cSpell.words": [
         "adoptium",
