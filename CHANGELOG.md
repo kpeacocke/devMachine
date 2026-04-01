@@ -1,3 +1,10 @@
+## [1.16.0](https://github.com/kpeacocke/devMachine/compare/v1.15.0...v1.16.0) (2026-04-01)
+
+
+### 🚀 Features
+
+* enhance setup script with Surface device detection and optimizations ([e3b9564](https://github.com/kpeacocke/devMachine/commit/e3b9564247643c349be7200a66aabf2dad498d9b))
+
 ## [1.15.0](https://github.com/kpeacocke/devMachine/compare/v1.14.0...v1.15.0) (2025-11-26)
 
 
