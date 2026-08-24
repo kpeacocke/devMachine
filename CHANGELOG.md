@@ -1,3 +1,10 @@
+## [1.16.1](https://github.com/kpeacocke/devMachine/compare/v1.16.0...v1.16.1) (2026-08-24)
+
+
+### 🐛 Bug Fixes
+
+* harden Windows bootstrap compatibility ([4d7b503](https://github.com/kpeacocke/devMachine/commit/4d7b50323a5d7a01c42ceb32fdc6ebf0c72b957d))
+
 ## [1.16.0](https://github.com/kpeacocke/devMachine/compare/v1.15.0...v1.16.0) (2026-04-01)
 
 
