@@ -53,10 +53,11 @@ Describe 'Bootstrap compatibility boundary' {
         $content | Should -Match 'UNATTENDED_MODE'
     }
 
-    It 'honours SkipWSL across legacy child scripts' {
-        $launcher = Get-Content $script:Launcher -Raw
+    It 'honours SkipWSL across both environment and legacy parent-scope conventions' {
+        $content = Get-Content $script:Launcher -Raw
         $compat = Get-Content $script:Compat -Raw
-        $launcher | Should -Match 'DEVMACHINE_SKIP_WSL'
+        $content | Should -Match 'DEVMACHINE_SKIP_WSL'
+        $content | Should -Match '\$skipWSL\s*=\s*\$true'
         $compat | Should -Match 'DEVMACHINE_SKIP_WSL'
     }
 

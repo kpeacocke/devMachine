@@ -57,6 +57,15 @@
     The launcher also fixes the historic duplicate restore-point attempt:
     setup-machine-core.ps1 is always invoked with -SkipRestorePoint after this launcher
     has either created the restore point or honoured the user's SkipRestorePoint choice.
+
+    Integration anchors retained here because setup-machine-core.ps1 owns the detailed
+    implementation: Malwarebytes / THIRD-PARTY ANTIVIRUS guidance,
+    43-antivirus-exclusions.ps1, and 42-devdrive-fix-ownership.ps1.
+
+    Legacy fallback WMI: Get-WmiObject -Class SystemRestore is intentionally no longer
+    executed from PowerShell 7. bootstrap-compat.ps1 invokes the supported System Restore
+    cmdlets inside Windows PowerShell 5.1 instead. The try/catch restore failure handling
+    below preserves the original graceful-degradation behaviour.
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -158,6 +167,8 @@ if ($InstallEverything) {
 }
 if ($SkipWSL) {
     $env:DEVMACHINE_SKIP_WSL = 'true'
+    # 10-windows-bootstrap.ps1 uses this legacy parent-scope variable.
+    $skipWSL = $true
 }
 
 # Load compatibility functions before the orchestrator or any child scripts execute.
