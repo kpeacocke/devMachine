@@ -28,14 +28,15 @@ Describe 'Bootstrap compatibility boundary' {
         $content | Should -Match '\$coreParameters\[''SkipRestorePoint''\]\s*=\s*\$true'
     }
 
-    It 'routes DISM through Windows PowerShell compatibility with a native fallback' {
+    It 'forces Windows servicing through native DISM rather than the PowerShell DISM module' {
         $content = Get-Content $script:Compat -Raw
-        $content | Should -Match 'Import-Module Dism -UseWindowsPowerShell'
+        $content | Should -Not -Match '^\s*Import-Module\s+Dism\s+-UseWindowsPowerShell' -Because 'the DISM compatibility proxy can still throw Class not registered on affected Windows 11 builds'
         $content | Should -Match 'dism\.exe'
-        $content | Should -Match 'Get-WindowsOptionalFeature'
-        $content | Should -Match 'Enable-WindowsOptionalFeature'
-        $content | Should -Match 'Disable-WindowsOptionalFeature'
-        $content | Should -Match 'Add-WindowsCapability'
+        $content | Should -Match 'function Get-WindowsOptionalFeature'
+        $content | Should -Match 'function Enable-WindowsOptionalFeature'
+        $content | Should -Match 'function Disable-WindowsOptionalFeature'
+        $content | Should -Match 'function Add-WindowsCapability'
+        $content | Should -Match 'Windows servicing forced through native dism\.exe'
     }
 
     It 'provides PowerShell 7 replacements for legacy WMI and restore commands' {
@@ -68,12 +69,14 @@ Describe 'Bootstrap compatibility boundary' {
 }
 
 Describe 'Known PowerShell 7 compatibility traps in the repository' {
-    It 'documents every current WindowsOptionalFeature call site behind the launcher' {
+    It 'keeps every current Windows servicing call site behind the native wrapper' {
         $matches = Get-ChildItem (Join-Path $script:RepoRoot 'scripts\windows') -Filter '*.ps1' |
             Select-String -Pattern '(Get|Enable|Disable)-WindowsOptionalFeature|Add-WindowsCapability'
 
         $matches.Count | Should -BeGreaterThan 0
-        (Get-Content $script:Compat -Raw) | Should -Match 'Dism'
+        $compat = Get-Content $script:Compat -Raw
+        $compat | Should -Match 'Invoke-NativeDism'
+        $compat | Should -Not -Match '^\s*Import-Module\s+Dism\s+-UseWindowsPowerShell'
     }
 
     It 'documents every current Get-WmiObject call site behind a CIM replacement' {
