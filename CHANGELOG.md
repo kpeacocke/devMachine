@@ -1,3 +1,10 @@
+## [1.16.2](https://github.com/kpeacocke/devMachine/compare/v1.16.1...v1.16.2) (2026-08-25)
+
+
+### 🐛 Bug Fixes
+
+* force native DISM under PowerShell 7 ([99b9937](https://github.com/kpeacocke/devMachine/commit/99b99378a82e23c081b12b67ab02b00a9a3666db))
+
 ## [1.16.1](https://github.com/kpeacocke/devMachine/compare/v1.16.0...v1.16.1) (2026-08-24)
 
 
