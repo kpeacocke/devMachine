@@ -3,14 +3,14 @@ PowerShell 7 compatibility layer for the devMachine bootstrap.
 
 Loaded by setup-machine.ps1 for the lifetime of the bootstrap only.
 
-Why this exists:
-- The inbox DISM PowerShell cmdlets can fail from PowerShell 7 on current
-  Windows 11 builds with "Class not registered".
-- Get-WmiObject and the System Restore cmdlets are Windows PowerShell-era APIs.
-- Some Appx/DISM commands are safest behind the Windows PowerShell compatibility
-  boundary.
-- setup-machine-core.ps1 contains one WSL cp call with a raw C:\ path; Linux cp
-  needs a Linux path.
+Rules:
+- Windows servicing (optional features/capabilities) ALWAYS uses dism.exe.
+  Do not use Import-Module Dism -UseWindowsPowerShell here: on affected
+  Windows 11 builds that proxy can still fail with "Class not registered".
+- Appx uses the Windows PowerShell compatibility proxy where available.
+- Get-WmiObject is mapped to Get-CimInstance for legacy repo call sites.
+- System Restore operations are explicitly executed in Windows PowerShell 5.1.
+- WSL cp calls have Windows source paths translated to /mnt/<drive>/... paths.
 
 Normal development commands continue to run in PowerShell 7.
 #>
@@ -57,143 +57,192 @@ function Invoke-NativeDism {
         [int[]]$SuccessExitCodes = @(0, 3010)
     )
 
+    if (-not (Test-Path $script:DismExe)) {
+        throw "DISM executable not found at $script:DismExe"
+    }
+
     $output = & $script:DismExe @Arguments 2>&1
     $exitCode = $LASTEXITCODE
+
     if ($exitCode -notin $SuccessExitCodes) {
         throw "DISM failed with exit code $exitCode.`n$(($output | Out-String).Trim())"
     }
+
     return $output
 }
 
-# Prefer Microsoft's supported Windows PowerShell compatibility boundary for
-# inbox modules. Fall back to native DISM wrappers if the compatibility import
-# is unavailable or disabled in PowerShell configuration.
-$script:DismCompatLoaded = $false
-try {
-    Import-Module Dism -UseWindowsPowerShell -Force -WarningAction SilentlyContinue -ErrorAction Stop
-    $script:DismCompatLoaded = $true
-    Write-Host "[COMPAT] DISM module routed through Windows PowerShell 5.1" -ForegroundColor DarkGray
+function Get-NativeWindowsFeatureState {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$FeatureName
+    )
+
+    $output = Invoke-NativeDism -Arguments @(
+        '/Online',
+        '/English',
+        '/Get-FeatureInfo',
+        "/FeatureName:$FeatureName"
+    ) -SuccessExitCodes @(0)
+
+    $state = 'Unknown'
+    foreach ($line in $output) {
+        if ([string]$line -match '^\s*State\s*:\s*(.+?)\s*$') {
+            $state = $Matches[1].Trim()
+            break
+        }
+    }
+
+    return $state
 }
-catch {
-    Write-Warning "[COMPAT] Could not import DISM through Windows PowerShell compatibility. Using dism.exe fallback: $($_.Exception.Message)"
+
+# ---------------------------------------------------------------------------
+# DISM compatibility
+# ---------------------------------------------------------------------------
+# These functions are deliberately defined unconditionally. PowerShell function
+# command precedence ensures the repo never reaches the DISM module cmdlets while
+# this bootstrap compatibility layer is loaded.
+
+function Get-WindowsOptionalFeature {
+    [CmdletBinding()]
+    param(
+        [switch]$Online,
+        [Parameter(Mandatory)]
+        [string]$FeatureName
+    )
+
+    $state = Get-NativeWindowsFeatureState -FeatureName $FeatureName
+
+    [pscustomobject]@{
+        FeatureName = $FeatureName
+        State = $state
+        Online = $true
+    }
 }
 
-if (-not $script:DismCompatLoaded) {
-    function Get-WindowsOptionalFeature {
-        [CmdletBinding()]
-        param(
-            [switch]$Online,
-            [Parameter(Mandatory)]
-            [string]$FeatureName
-        )
+function Enable-WindowsOptionalFeature {
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [switch]$Online,
+        [Parameter(Mandatory)]
+        [string]$FeatureName,
+        [switch]$All,
+        [switch]$NoRestart
+    )
 
-        $output = Invoke-NativeDism -Arguments @(
-            '/Online',
-            '/English',
-            '/Get-FeatureInfo',
-            "/FeatureName:$FeatureName"
-        ) -SuccessExitCodes @(0)
-
-        $state = 'Unknown'
-        foreach ($line in $output) {
-            if ([string]$line -match '^\s*State\s*:\s*(.+?)\s*$') {
-                $state = $Matches[1].Trim()
-                break
+    try {
+        if ((Get-NativeWindowsFeatureState -FeatureName $FeatureName) -eq 'Enabled') {
+            return [pscustomobject]@{
+                FeatureName = $FeatureName
+                State = 'Enabled'
+                Online = $true
+                RestartNeeded = $false
             }
         }
+    }
+    catch {
+        Write-Verbose "Could not pre-query feature $FeatureName; DISM enable will determine the result: $($_.Exception.Message)"
+    }
 
-        [pscustomobject]@{
+    if ($PSCmdlet.ShouldProcess($FeatureName, 'Enable Windows optional feature')) {
+        $arguments = @('/Online', '/Enable-Feature', "/FeatureName:$FeatureName", '/Quiet')
+        if ($All) { $arguments += '/All' }
+        if ($NoRestart) { $arguments += '/NoRestart' }
+
+        Invoke-NativeDism -Arguments $arguments | Out-Null
+
+        return [pscustomobject]@{
             FeatureName = $FeatureName
-            State = $state
+            State = 'Enabled'
             Online = $true
-        }
-    }
-
-    function Enable-WindowsOptionalFeature {
-        [CmdletBinding(SupportsShouldProcess)]
-        param(
-            [switch]$Online,
-            [Parameter(Mandatory)]
-            [string]$FeatureName,
-            [switch]$All,
-            [switch]$NoRestart
-        )
-
-        if ($PSCmdlet.ShouldProcess($FeatureName, 'Enable Windows optional feature')) {
-            $arguments = @('/Online', '/Enable-Feature', "/FeatureName:$FeatureName", '/Quiet')
-            if ($All) { $arguments += '/All' }
-            if ($NoRestart) { $arguments += '/NoRestart' }
-
-            $output = Invoke-NativeDism -Arguments $arguments
-            [pscustomobject]@{
-                FeatureName = $FeatureName
-                Online = $true
-                Output = $output
-            }
-        }
-    }
-
-    function Disable-WindowsOptionalFeature {
-        [CmdletBinding(SupportsShouldProcess)]
-        param(
-            [switch]$Online,
-            [Parameter(Mandatory)]
-            [string]$FeatureName,
-            [switch]$NoRestart
-        )
-
-        if ($PSCmdlet.ShouldProcess($FeatureName, 'Disable Windows optional feature')) {
-            $arguments = @('/Online', '/Disable-Feature', "/FeatureName:$FeatureName", '/Quiet')
-            if ($NoRestart) { $arguments += '/NoRestart' }
-
-            $output = Invoke-NativeDism -Arguments $arguments
-            [pscustomobject]@{
-                FeatureName = $FeatureName
-                Online = $true
-                Output = $output
-            }
-        }
-    }
-
-    function Add-WindowsCapability {
-        [CmdletBinding(SupportsShouldProcess)]
-        param(
-            [switch]$Online,
-            [Parameter(Mandatory)]
-            [string]$Name,
-            [string[]]$Source,
-            [switch]$LimitAccess
-        )
-
-        if ($PSCmdlet.ShouldProcess($Name, 'Add Windows capability')) {
-            $arguments = @('/Online', '/Add-Capability', "/CapabilityName:$Name", '/NoRestart', '/Quiet')
-            foreach ($sourcePath in @($Source)) {
-                if ($sourcePath) { $arguments += "/Source:$sourcePath" }
-            }
-            if ($LimitAccess) { $arguments += '/LimitAccess' }
-
-            $output = Invoke-NativeDism -Arguments $arguments
-            [pscustomobject]@{
-                Name = $Name
-                Online = $true
-                Output = $output
-            }
+            RestartNeeded = $false
         }
     }
 }
 
-# Appx objects are used in pipelines in 09-debloat-windows.ps1, so use the
-# built-in compatibility proxy rather than reimplementing those object types.
+function Disable-WindowsOptionalFeature {
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [switch]$Online,
+        [Parameter(Mandatory)]
+        [string]$FeatureName,
+        [switch]$NoRestart
+    )
+
+    try {
+        $currentState = Get-NativeWindowsFeatureState -FeatureName $FeatureName
+        if ($currentState -match '^Disabled') {
+            return [pscustomobject]@{
+                FeatureName = $FeatureName
+                State = $currentState
+                Online = $true
+                RestartNeeded = $false
+            }
+        }
+    }
+    catch {
+        Write-Verbose "Could not pre-query feature $FeatureName; DISM disable will determine the result: $($_.Exception.Message)"
+    }
+
+    if ($PSCmdlet.ShouldProcess($FeatureName, 'Disable Windows optional feature')) {
+        $arguments = @('/Online', '/Disable-Feature', "/FeatureName:$FeatureName", '/Quiet')
+        if ($NoRestart) { $arguments += '/NoRestart' }
+
+        Invoke-NativeDism -Arguments $arguments | Out-Null
+
+        return [pscustomobject]@{
+            FeatureName = $FeatureName
+            State = 'Disabled'
+            Online = $true
+            RestartNeeded = $false
+        }
+    }
+}
+
+function Add-WindowsCapability {
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [switch]$Online,
+        [Parameter(Mandatory)]
+        [string]$Name,
+        [string[]]$Source,
+        [switch]$LimitAccess
+    )
+
+    if ($PSCmdlet.ShouldProcess($Name, 'Add Windows capability')) {
+        $arguments = @('/Online', '/Add-Capability', "/CapabilityName:$Name", '/NoRestart', '/Quiet')
+        foreach ($sourcePath in @($Source)) {
+            if ($sourcePath) { $arguments += "/Source:$sourcePath" }
+        }
+        if ($LimitAccess) { $arguments += '/LimitAccess' }
+
+        Invoke-NativeDism -Arguments $arguments | Out-Null
+
+        return [pscustomobject]@{
+            Name = $Name
+            State = 'Installed'
+            Online = $true
+            RestartNeeded = $false
+        }
+    }
+}
+
+Write-Host '[COMPAT] Windows servicing forced through native dism.exe' -ForegroundColor DarkGray
+
+# ---------------------------------------------------------------------------
+# Appx compatibility
+# ---------------------------------------------------------------------------
 try {
     Import-Module Appx -UseWindowsPowerShell -Force -WarningAction SilentlyContinue -ErrorAction Stop
-    Write-Host "[COMPAT] Appx module routed through Windows PowerShell 5.1" -ForegroundColor DarkGray
+    Write-Host '[COMPAT] Appx module routed through Windows PowerShell 5.1' -ForegroundColor DarkGray
 }
 catch {
-    Write-Warning "[COMPAT] Appx compatibility import failed. Windows may still autoload the inbox module: $($_.Exception.Message)"
+    Write-Warning "[COMPAT] Appx compatibility import failed. Debloat operations may be skipped: $($_.Exception.Message)"
 }
 
-# Get-WmiObject was removed from PowerShell 7. The repo only uses it for
-# property queries; Get-CimInstance is the supported replacement.
+# ---------------------------------------------------------------------------
+# WMI compatibility
+# ---------------------------------------------------------------------------
 function Get-WmiObject {
     [CmdletBinding()]
     param(
@@ -215,8 +264,9 @@ function Get-WmiObject {
     Get-CimInstance @parameters
 }
 
-# System Restore cmdlets are Windows PowerShell-era commands. Keep their public
-# names so existing scripts do not need to know which host is executing them.
+# ---------------------------------------------------------------------------
+# System Restore compatibility
+# ---------------------------------------------------------------------------
 function Enable-ComputerRestore {
     [CmdletBinding()]
     param(
@@ -274,8 +324,9 @@ if (`$null -ne `$items) {
     $json | ConvertFrom-Json
 }
 
-# The preserved orchestrator has one raw Windows path passed to Linux `cp`.
-# Intercept wsl.exe calls only to translate those cp source arguments.
+# ---------------------------------------------------------------------------
+# WSL compatibility
+# ---------------------------------------------------------------------------
 function wsl {
     $nativeArguments = @($args | ForEach-Object { [string]$_ })
 
