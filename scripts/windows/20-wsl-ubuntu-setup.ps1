@@ -11,9 +11,21 @@ if ($env:DEVMACHINE_UNATTENDED -eq "true" -and $env:DEVMACHINE_OVERRIDE_PATH -an
 
 Write-Host "[WSL] Setting up Ubuntu in WSL..."
 
-# Check if WSL is enabled
-$wslFeature = Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux
-if ($wslFeature.State -ne 'Enabled') {
+# Check if WSL is enabled. The DISM PowerShell cmdlets can fail with
+# "Class not registered" in current PowerShell 7 builds, so Windows servicing
+# is queried in the inbox Windows PowerShell 5.1 host.
+$windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+if (-not (Test-Path $windowsPowerShell)) {
+    throw "Windows PowerShell 5.1 not found at $windowsPowerShell"
+}
+
+$wslFeatureState = (& $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command `
+    "(Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux -ErrorAction Stop).State" | Out-String).Trim()
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to query the WSL Windows feature using Windows PowerShell 5.1 (exit code $LASTEXITCODE)"
+}
+
+if ($wslFeatureState -ne 'Enabled') {
     Write-Host "  ❌ WSL feature not enabled. Run the main setup script first." -ForegroundColor Red
     return
 }
@@ -56,7 +68,7 @@ try {
 
 # Handle Ubuntu initialization
 if (-not $ubuntuInitialized) {
-    if ($env:UNATTENDED_MODE -eq "true") {
+    if ($env:UNATTENDED_MODE -eq "true" -or $env:DEVMACHINE_UNATTENDED -eq "true") {
         Write-Host "  🤖 Unattended mode: Attempting automated Ubuntu setup..." -ForegroundColor Cyan
 
         # Try to create default user non-interactively
@@ -136,7 +148,8 @@ if ($ubuntuInitialized) {
     }
 
     try {
-        # Copy scripts to WSL using Windows paths
+        # Copy scripts to WSL using stdin so Windows path syntax is never passed
+        # to Linux utilities.
         wsl -d Ubuntu -e mkdir -p /tmp/setup
         $ubuntuBootstrapContent = Get-Content $ubuntuBootstrap -Raw
         $ubuntuTuneContent = Get-Content $ubuntuTune -Raw
