@@ -39,11 +39,29 @@ if (-not $SkipFileHistory) {
 
 Write-Host "🔄 Enabling System Protection (Restore Points) for C:"
 try {
-  Enable-ComputerRestore -Drive "C:\"
+  $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+  if (-not (Test-Path $windowsPowerShell)) {
+    throw "Windows PowerShell 5.1 not found at $windowsPowerShell"
+  }
+
+  & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command `
+    "Enable-ComputerRestore -Drive 'C:\' -ErrorAction Stop"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Enable-ComputerRestore failed with exit code $LASTEXITCODE"
+  }
+
   # Set max usage to 5% of disk (on 512GB = ~25GB)
   vssadmin Resize ShadowStorage /For=C: /On=C: /MaxSize=25GB | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "vssadmin Resize ShadowStorage failed with exit code $LASTEXITCODE"
+  }
+
   Write-Host "✅ System Protection enabled. Creating initial restore point..."
-  Checkpoint-Computer -Description "Backup-Setup-Complete" -RestorePointType "MODIFY_SETTINGS"
+  & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command `
+    "Checkpoint-Computer -Description 'Backup-Setup-Complete' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Checkpoint-Computer failed with exit code $LASTEXITCODE"
+  }
 } catch {
   Write-Warning "System Protection setup failed: $_"
 }
