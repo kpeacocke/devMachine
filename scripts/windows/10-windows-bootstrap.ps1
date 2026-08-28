@@ -14,10 +14,10 @@ function Test-CommandExists {
 Write-Host "🐧 WSL Foundation"
 # Check if running in a VM (nested virtualization often unsupported)
 try {
-  $vmInfo = Get-WmiObject -Class Win32_ComputerSystem
+  $vmInfo = Get-CimInstance -ClassName Win32_ComputerSystem
   if ($vmInfo.Model -match "Virtual|VMware|Parallels|VirtualBox|QEMU|Hyper-V") {
     Write-Host "  ⚠️  VM detected ($($vmInfo.Model)) - WSL may not work with nested virtualization" -ForegroundColor Yellow
-    if ($env:UNATTENDED_MODE -or $env:INSTALL_WSL_IN_VM -eq 'Y') {
+    if ($env:UNATTENDED_MODE -eq 'true' -or $env:DEVMACHINE_UNATTENDED -eq 'true' -or $env:INSTALL_WSL_IN_VM -eq 'Y') {
       if ($env:INSTALL_WSL_IN_VM -eq 'Y') {
         Write-Host "  → Installing WSL in VM (INSTALL_WSL_IN_VM=Y)" -ForegroundColor Green
       } else {
