@@ -40,12 +40,26 @@ $ErrorActionPreference = 'Stop'
 
 function Test-Command($n){ $null -ne (Get-Command $n -ErrorAction SilentlyContinue) }
 
+# Current Windows 11 builds can fail with "Class not registered" when the DISM
+# PowerShell cmdlets run inside PowerShell 7. Keep this script usable from pwsh,
+# but execute Windows feature servicing in the inbox Windows PowerShell 5.1 host.
+$windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+if (-not (Test-Path $windowsPowerShell)) {
+    throw "Windows PowerShell 5.1 not found at $windowsPowerShell"
+}
+
 function Test-ContainerFeature {
     param([string]$FeatureName)
     try {
-        $feature = Get-WindowsOptionalFeature -Online -FeatureName $FeatureName -ErrorAction Stop
-        return $feature.State -eq 'Enabled'
+        $escapedFeatureName = $FeatureName.Replace("'", "''")
+        $state = (& $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command `
+            "(Get-WindowsOptionalFeature -Online -FeatureName '$escapedFeatureName' -ErrorAction Stop).State" | Out-String).Trim()
+        if ($LASTEXITCODE -ne 0) {
+            throw "Windows PowerShell exited with code $LASTEXITCODE"
+        }
+        return $state -eq 'Enabled'
     } catch {
+        Write-Host "  ⚠️  Could not query Windows feature '$FeatureName': $_" -ForegroundColor Yellow
         return $false
     }
 }
@@ -69,7 +83,12 @@ function Enable-ContainerFeature {
 
     if ($PSCmdlet.ShouldProcess($DisplayName, "Enable Windows Feature")) {
         try {
-            Enable-WindowsOptionalFeature -Online -FeatureName $FeatureName -All -NoRestart | Out-Null
+            $escapedFeatureName = $FeatureName.Replace("'", "''")
+            & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command `
+                "Enable-WindowsOptionalFeature -Online -FeatureName '$escapedFeatureName' -All -NoRestart -ErrorAction Stop | Out-Null"
+            if ($LASTEXITCODE -ne 0) {
+                throw "Windows PowerShell exited with code $LASTEXITCODE"
+            }
             Write-Host "  ✅ $DisplayName enabled" -ForegroundColor Green
             return $true
         } catch {
