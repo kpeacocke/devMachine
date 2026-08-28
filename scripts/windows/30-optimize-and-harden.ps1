@@ -10,15 +10,31 @@ NOTE: Basic hardening (firewall, UAC, Defender) is done in 01-early-hardening.ps
 $ErrorActionPreference = 'Stop'
 function Test-Command($n){ $null -ne (Get-Command $n -ErrorAction SilentlyContinue) }
 
-# Support unattended mode
-$unattendedMode = $env:UNATTENDED_MODE
+# Support unattended mode. The repo historically used both names; honour both.
+$unattendedMode = ($env:UNATTENDED_MODE -eq 'true') -or ($env:DEVMACHINE_UNATTENDED -eq 'true')
 $skipDefenderConfig = $env:SKIP_DEFENDER_CONFIG
+
+# Windows servicing/System Restore cmdlets can fail or be unavailable when this
+# script is launched from PowerShell 7. Use the inbox Windows PowerShell 5.1
+# process explicitly for those operations only.
+$windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+if (-not (Test-Path $windowsPowerShell)) {
+  throw "Windows PowerShell 5.1 not found at $windowsPowerShell"
+}
 
 Write-Host "[ADVANCED HARDENING] Applying advanced security and optimization..." -ForegroundColor Cyan
 Write-Host "   Note: This script applies settings that require a reboot" -ForegroundColor Yellow
 
 Write-Host "`n== Create a system restore point (best-effort)"
-try { Checkpoint-Computer -Description "Pre-Advanced-Harden" -RestorePointType "MODIFY_SETTINGS" } catch { }
+try {
+  & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command `
+    "Checkpoint-Computer -Description 'Pre-Advanced-Harden' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Windows PowerShell exited with code $LASTEXITCODE"
+  }
+} catch {
+  Write-Host "   ⚠️  Restore point creation skipped: $_" -ForegroundColor Yellow
+}
 
 # PERFORMANCE / QUALITY OF LIFE
 Write-Host "`n== WSL Configuration"
@@ -345,7 +361,11 @@ try {
 
 Write-Host "`n== OpenSSH Server: Enable with key-only authentication"
 try {
-  Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0 | Out-Null
+  & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command `
+    "Add-WindowsCapability -Online -Name 'OpenSSH.Server~~~~0.0.1.0' -ErrorAction Stop | Out-Null"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Windows PowerShell exited with code $LASTEXITCODE"
+  }
   Set-Service -Name sshd -StartupType Automatic
   Start-Service sshd
   Write-Host "   ✅ OpenSSH Server enabled" -ForegroundColor Green
