@@ -8,6 +8,14 @@ $ErrorActionPreference = 'Stop'
 
 Write-Host "[DEBLOAT] Removing Windows bloatware and pre-installed apps..." -ForegroundColor Cyan
 
+# Appx/provisioning cmdlets are inbox Windows modules and can be unreliable when
+# called from PowerShell 7 on current Windows builds. Run this servicing work in
+# the actual Windows PowerShell 5.1 process rather than through compatibility shims.
+$windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+if (-not (Test-Path $windowsPowerShell)) {
+    throw "Windows PowerShell 5.1 not found at $windowsPowerShell"
+}
+
 # List of bloatware apps to remove (using wildcard patterns)
 $bloatwareApps = @(
     # Gaming (keeping Xbox Identity Provider for game logins)
@@ -66,22 +74,41 @@ $failedCount = 0
 
 foreach ($app in $bloatwareApps) {
     try {
-        $packages = Get-AppxPackage -AllUsers $app -ErrorAction SilentlyContinue
-        if ($packages) {
-            foreach ($package in $packages) {
-                Write-Host "  Removing: $($package.Name)" -ForegroundColor Gray
-                Remove-AppxPackage -Package $package.PackageFullName -AllUsers -ErrorAction Stop | Out-Null
-                $removedCount++
-            }
+        $escapedApp = $app.Replace("'", "''")
+        $command = @"
+`$ErrorActionPreference = 'Stop'
+`$removed = 0
+
+Get-AppxPackage -AllUsers '$escapedApp' -ErrorAction SilentlyContinue | ForEach-Object {
+    Remove-AppxPackage -Package `$_.PackageFullName -AllUsers -ErrorAction Stop | Out-Null
+    `$removed++
+}
+
+Get-AppxProvisionedPackage -Online -ErrorAction Stop |
+    Where-Object { `$_.DisplayName -like '$escapedApp' } |
+    ForEach-Object {
+        Remove-AppxProvisionedPackage -Online -PackageName `$_.PackageName -ErrorAction Stop | Out-Null
+        `$removed++
+    }
+
+Write-Output `$removed
+"@
+
+        $output = & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command $command 2>&1
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -ne 0) {
+            throw "Windows PowerShell exited with code $exitCode`: $(($output | Out-String).Trim())"
         }
 
-        # Also remove provisioned packages (prevents reinstall on new user profiles)
-        $provisionedPackages = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -like $app }
-        if ($provisionedPackages) {
-            foreach ($provPackage in $provisionedPackages) {
-                Write-Host "  Removing provisioned: $($provPackage.DisplayName)" -ForegroundColor Gray
-                Remove-AppxProvisionedPackage -Online -PackageName $provPackage.PackageName -ErrorAction Stop | Out-Null
-            }
+        $countText = [string]($output | Select-Object -Last 1)
+        $count = 0
+        if (-not [int]::TryParse($countText.Trim(), [ref]$count)) {
+            throw "Unexpected Appx removal result for $app`: $(($output | Out-String).Trim())"
+        }
+
+        if ($count -gt 0) {
+            Write-Host "  Removed $count package(s) matching: $app" -ForegroundColor Gray
+            $removedCount += $count
         }
     } catch {
         Write-Host "  ⚠️  Could not remove $app : $_" -ForegroundColor Yellow
@@ -91,7 +118,7 @@ foreach ($app in $bloatwareApps) {
 
 Write-Host "✅ Removed $removedCount bloatware packages" -ForegroundColor Green
 if ($failedCount -gt 0) {
-    Write-Host "⚠️  $failedCount packages could not be removed (may not be installed)" -ForegroundColor Yellow
+    Write-Host "⚠️  $failedCount package patterns could not be processed" -ForegroundColor Yellow
 }
 
 # Note: OneDrive is left enabled (useful for cloud backup and file sync)
@@ -111,7 +138,7 @@ Write-Host "🧹 Checking for Windows.old folder..."
 if (Test-Path "C:\Windows.old") {
     if ($env:REMOVE_WINDOWS_OLD -eq 'N') {
         Write-Host "  → Keeping Windows.old folder (REMOVE_WINDOWS_OLD=N)" -ForegroundColor Yellow
-    } elseif ($env:UNATTENDED_MODE -or $env:REMOVE_WINDOWS_OLD -eq 'Y') {
+    } elseif ($env:UNATTENDED_MODE -eq 'true' -or $env:DEVMACHINE_UNATTENDED -eq 'true' -or $env:REMOVE_WINDOWS_OLD -eq 'Y') {
         Write-Host "  → Removing Windows.old folder (unattended mode)" -ForegroundColor Yellow
         $response = 'Y'
     } else {
