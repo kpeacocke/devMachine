@@ -23,9 +23,22 @@ Set-MpPreference -PUAProtection Enabled -MAPSReporting Advanced -SubmitSamplesCo
 Write-Host "   ✅ PUA protection, network protection, and cloud-delivered protection enabled" -ForegroundColor Green
 
 Write-Host "`n🚫 Disable legacy/risky protocols"
-# Disable SMBv1 (WannaCry vulnerability)
+# Disable SMBv1 (WannaCry vulnerability).
+# Current Windows 11 builds can throw "Class not registered" when the DISM
+# PowerShell cmdlets are invoked from PowerShell 7. Run this Windows servicing
+# operation in the inbox Windows PowerShell 5.1 host, where Microsoft confirms
+# the cmdlet continues to work.
 Write-Host "   Disabling SMBv1..."
-Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -ErrorAction SilentlyContinue | Out-Null
+$windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+if (-not (Test-Path $windowsPowerShell)) {
+    throw "Windows PowerShell 5.1 not found at $windowsPowerShell"
+}
+
+& $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command `
+    "Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -ErrorAction Stop | Out-Null"
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to disable SMBv1 using Windows PowerShell 5.1 (exit code $LASTEXITCODE)"
+}
 
 # Disable RDP (not needed on development machine, security risk if exposed)
 Write-Host "   Disabling Remote Desktop..."
