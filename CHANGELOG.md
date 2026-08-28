@@ -1,3 +1,17 @@
+## [1.16.3](https://github.com/kpeacocke/devMachine/compare/v1.16.2...v1.16.3) (2026-08-28)
+
+
+### 🐛 Bug Fixes
+
+* isolate advanced Windows servicing from PowerShell 7 ([61e099f](https://github.com/kpeacocke/devMachine/commit/61e099fe215435f23845bc9f1d4a74d5ade4fbc3))
+* isolate Appx servicing from PowerShell 7 ([b28fca5](https://github.com/kpeacocke/devMachine/commit/b28fca59e6467ff8720570c765b0acded7d2bff6))
+* isolate Windows container servicing from PowerShell 7 ([07d95ec](https://github.com/kpeacocke/devMachine/commit/07d95ec846b0640ea1f6a68954ebc174f12cc7c8))
+* keep PowerShell 7 current from winget source ([015e350](https://github.com/kpeacocke/devMachine/commit/015e3508927f68f7f49f2475c425fce0ddf474f4))
+* remove legacy WMI dependency from Windows bootstrap ([c2ed8e1](https://github.com/kpeacocke/devMachine/commit/c2ed8e1b793dbaf663683481569a7893cdae9bf1))
+* restore bootstrap and isolate Windows servicing ([7b8910e](https://github.com/kpeacocke/devMachine/commit/7b8910ece2ebba302447e6a136e4ad173999ab5d))
+* run system restore operations in Windows PowerShell ([dbf4015](https://github.com/kpeacocke/devMachine/commit/dbf401592bc5363be20f3bfd13265578d232cd23))
+* run WSL feature check in Windows PowerShell ([ac52fcd](https://github.com/kpeacocke/devMachine/commit/ac52fcd8fbbd0232c8eec76448c69afd1cab778a))
+
 ## [1.16.2](https://github.com/kpeacocke/devMachine/compare/v1.16.1...v1.16.2) (2026-08-25)
 
 
