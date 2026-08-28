@@ -1,5 +1,5 @@
 <#
-Purpose: Install latest PowerShell 7 and make it the default shell/terminal.
+Purpose: Install/upgrade latest PowerShell 7 and make it the default shell/terminal.
 Run:  PowerShell (Admin) → .\00-pwsh-first.ps1
       (Script will handle execution policy automatically)
 #>
@@ -22,16 +22,39 @@ if ($currentPolicy -eq 'Restricted' -or $currentPolicy -eq 'Undefined') {
     Write-Host "  ✅ Execution policy is already permissive: $currentPolicy" -ForegroundColor Green
 }
 
-Write-Host "[SETUP] Installing latest PowerShell 7..."
-winget install Microsoft.PowerShell --silent --accept-source-agreements --accept-package-agreements
+Write-Host "[SETUP] Ensuring latest PowerShell 7 from the winget source..."
+$existingPwsh = Get-Command pwsh -ErrorAction SilentlyContinue
+if ($existingPwsh) {
+    Write-Host "  Existing PowerShell 7: $($existingPwsh.Source)" -ForegroundColor Gray
+    # `winget install` does not reliably upgrade an existing installation. Use
+    # upgrade explicitly, and pin the source so we get the normal winget/MSI
+    # package rather than relying on source selection.
+    winget upgrade --id Microsoft.PowerShell --exact --source winget --silent --accept-source-agreements --accept-package-agreements
+    if ($LASTEXITCODE -ne 0) {
+        # A non-zero result commonly means there is no applicable upgrade. Do not
+        # fail bootstrap solely for that; verify pwsh exists after PATH refresh.
+        Write-Host "  ℹ️  PowerShell upgrade returned exit code $LASTEXITCODE; continuing with installed version" -ForegroundColor Gray
+    }
+} else {
+    winget install --id Microsoft.PowerShell --exact --source winget --silent --accept-source-agreements --accept-package-agreements
+    if ($LASTEXITCODE -ne 0) {
+        throw "PowerShell 7 installation failed with winget exit code $LASTEXITCODE"
+    }
+}
 
 # Refresh PATH in-session
 $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' +
              [Environment]::GetEnvironmentVariable('Path','User')
 
+$pwshCommand = Get-Command pwsh -ErrorAction SilentlyContinue
+if (-not $pwshCommand) {
+    throw "PowerShell 7 installation completed but pwsh.exe is not available in PATH"
+}
+Write-Host "  ✅ PowerShell 7 available: $($pwshCommand.Source)" -ForegroundColor Green
+
 # Ensure Windows Terminal is installed (as default terminal host)
 Write-Host "[SETUP] Ensuring Windows Terminal is present..."
-try { winget install Microsoft.WindowsTerminal --silent --accept-source-agreements --accept-package-agreements } catch {}
+try { winget install --id Microsoft.WindowsTerminal --exact --source winget --silent --accept-source-agreements --accept-package-agreements } catch {}
 
 # Make Windows Terminal the default terminal application (Windows 11 setting)
 try {
@@ -54,7 +77,7 @@ $json = Get-Content $settingsPath -Raw | ConvertFrom-Json
 if (-not $json.profiles) { $json | Add-Member -Name profiles -MemberType NoteProperty -Value (@{ list = @() }) }
 
 # Find/create a pwsh profile entry
-$pwshPath = (Get-Command pwsh).Source
+$pwshPath = $pwshCommand.Source
 $pwshId   = [guid]::NewGuid().Guid
 $pwshProf = @{
   name = "PowerShell 7"
