@@ -157,17 +157,19 @@ $cVolume = Get-Volume -DriveLetter C
 # Do not mistake a ReFS volume with our label for a valid Dev Drive. Windows requires
 # a minimum 50 GB allocation at creation time. Older versions of this script could
 # have created smaller ReFS volumes; they must be cleaned up explicitly.
-$invalidVolumes = @(
-    @($cacheVolumeCandidate, 'DevCache')
-    @($codeVolumeCandidate, 'DevCode')
-) | Where-Object { $_[0] -and $_[0].Size -lt $minimumDevDriveBytes }
+$legacyVolumes = @()
+if ($cacheVolumeCandidate -and $cacheVolumeCandidate.Size -lt $minimumDevDriveBytes) {
+    $legacyVolumes += [pscustomobject]@{ Label = 'DevCache'; Volume = $cacheVolumeCandidate }
+}
+if ($codeVolumeCandidate -and $codeVolumeCandidate.Size -lt $minimumDevDriveBytes) {
+    $legacyVolumes += [pscustomobject]@{ Label = 'DevCode'; Volume = $codeVolumeCandidate }
+}
 
-if ($invalidVolumes.Count -gt 0) {
+if ($legacyVolumes.Count -gt 0) {
     Write-Host "`n❌ Undersized legacy Dev Drive volumes detected:" -ForegroundColor Red
-    foreach ($entry in $invalidVolumes) {
-        $volume = $entry[0]
-        $label = $entry[1]
-        Write-Host "   • $label: $([math]::Round($volume.Size / 1GB, 1)) GB (minimum is $minimumDevDriveGB GB)" -ForegroundColor Red
+    foreach ($entry in $legacyVolumes) {
+        $volume = $entry.Volume
+        Write-Host "   • $($entry.Label): $([math]::Round($volume.Size / 1GB, 1)) GB (minimum is $minimumDevDriveGB GB)" -ForegroundColor Red
     }
     Write-Host "`n   These volumes will NOT be reused or deleted automatically." -ForegroundColor Yellow
     Write-Host "   Run 99-repair-partial-setup.ps1 to inspect them before removal." -ForegroundColor Yellow
