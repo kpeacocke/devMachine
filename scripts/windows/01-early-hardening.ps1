@@ -13,7 +13,7 @@ Write-Host "[EARLY HARDENING] Applying basic security before app installation...
 # directories. Restore them before invoking Windows command-line utilities.
 $requiredWindowsPaths = @(
     (Join-Path $env:SystemRoot 'System32'),
-    (Join-Path $env:SystemRoot),
+    $env:SystemRoot,
     (Join-Path $env:SystemRoot 'System32\Wbem'),
     (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0')
 )
