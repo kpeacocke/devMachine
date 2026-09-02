@@ -9,12 +9,27 @@ $ErrorActionPreference = 'Stop'
 
 Write-Host "[EARLY HARDENING] Applying basic security before app installation..." -ForegroundColor Cyan
 
+# PowerShell 7 can inherit a PATH that is missing the standard Windows system
+# directories. Restore them before invoking Windows command-line utilities.
+$requiredWindowsPaths = @(
+    (Join-Path $env:SystemRoot 'System32'),
+    (Join-Path $env:SystemRoot),
+    (Join-Path $env:SystemRoot 'System32\Wbem'),
+    (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0')
+)
+$currentPathEntries = @($env:Path -split ';' | Where-Object { $_ })
+foreach ($requiredPath in $requiredWindowsPaths) {
+    if ((Test-Path $requiredPath) -and ($currentPathEntries -notcontains $requiredPath)) {
+        $env:Path = "$requiredPath;$env:Path"
+    }
+}
+
+Write-Host "   Windows system command paths verified" -ForegroundColor DarkGray
+
 Write-Host "`n🔥 Firewall: Enable on all profiles (block inbound, allow outbound)"
 Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True -DefaultInboundAction Block -DefaultOutboundAction Allow
 Write-Host "   ✅ Firewall enabled - all inbound connections blocked by default" -ForegroundColor Green
 
-# PowerShell 7 on this Surface can inherit a PATH without the Windows System32
-# directory. Do not rely on PATH for Windows servicing executables.
 $regExe = Join-Path $env:SystemRoot 'System32\reg.exe'
 if (-not (Test-Path $regExe)) {
     throw "Windows Registry utility not found at $regExe"
