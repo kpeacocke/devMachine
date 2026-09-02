@@ -21,6 +21,13 @@ $reg = Join-Path $systemRoot 'System32\reg.exe'
 $netsh = Join-Path $systemRoot 'System32\netsh.exe'
 $dism = Join-Path $systemRoot 'System32\Dism.exe'
 
+# The orchestrator historically passed D:\dev\caches. Normalise that legacy value
+# when the current single-Dev-Drive layout is present.
+if ($DevCachePath -ieq 'D:\dev\caches' -and (Test-Path 'C:\DevCache')) {
+  $DevCachePath = 'C:\DevCache'
+  Write-Host "→ Normalised legacy Dev Drive path to $DevCachePath"
+}
+
 Write-Host "== Power plan: expose Ultimate Performance"
 try { & $powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 | Out-Null } catch {}
 if ($PSBoundParameters.ContainsKey('SetUltimateNow')) {
