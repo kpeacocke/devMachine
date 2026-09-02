@@ -43,17 +43,22 @@ function Get-PartitionForDevVolume {
     param($Volume)
     if (-not $Volume) { return $null }
 
+    # Prefer the volume's drive letter when one exists.
     if ($Volume.DriveLetter) {
         return Get-Partition -DriveLetter $Volume.DriveLetter -ErrorAction SilentlyContinue
     }
 
-    $partitions = Get-Partition -DiskNumber $disk.Number -ErrorAction SilentlyContinue
-    foreach ($candidate in $partitions) {
+    # Otherwise resolve the partition by matching the volume label. Do not rely on
+    # the global $disk variable because this function is also used before $disk is set.
+    foreach ($candidate in @(Get-Partition -ErrorAction SilentlyContinue)) {
         $candidateVolume = Get-Volume -Partition $candidate -ErrorAction SilentlyContinue
-        if ($candidateVolume -and $candidateVolume.FileSystemLabel -eq $Volume.FileSystemLabel) {
+        if ($candidateVolume -and
+            $candidateVolume.FileSystem -eq 'ReFS' -and
+            $candidateVolume.FileSystemLabel -eq $Volume.FileSystemLabel) {
             return $candidate
         }
     }
+
     return $null
 }
 
@@ -133,7 +138,7 @@ function New-DevPartition {
         Write-Host "   ✅ $Label formatted as trusted Dev Drive" -ForegroundColor Green
         Mount-DevVolume -Partition (Get-Partition -DriveLetter $letter) -MountPoint $MountPoint -Label $Label
     } catch {
-        throw "Failed creating $Label: $($_.Exception.Message)"
+        throw "Failed creating ${Label}: $($_.Exception.Message)"
     }
 }
 
