@@ -5,31 +5,38 @@ Surface Pro (ARM64) — Performance tuning (safe)
 - Indexing exclusions for Dev Drive caches
 - File Explorer dev-friendly toggles
 - Optional: Visual Effects = “Best performance” (commented)
+
+The standard DevMachine Dev Drive is mounted at C:\DevCache.
 #>
 
 param(
-  [switch]$SetUltimateNow,      # if passed, switches to Ultimate immediately
-  [string]$DevCachePath = "D:\dev\caches"  # adjust if your Dev Drive letter differs
+  [switch]$SetUltimateNow,
+  [string]$DevCachePath = "C:\DevCache"
 )
 
 $ErrorActionPreference = 'Stop'
+$systemRoot = $env:SystemRoot
+$powercfg = Join-Path $systemRoot 'System32\powercfg.exe'
+$reg = Join-Path $systemRoot 'System32\reg.exe'
+$netsh = Join-Path $systemRoot 'System32\netsh.exe'
+$dism = Join-Path $systemRoot 'System32\Dism.exe'
 
 Write-Host "== Power plan: expose Ultimate Performance"
-try { powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 | Out-Null } catch {}
+try { & $powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 | Out-Null } catch {}
 if ($PSBoundParameters.ContainsKey('SetUltimateNow')) {
   Write-Host "→ Activating Ultimate Performance"
-  $guid = (powercfg -l | Select-String -Pattern "Ultimate Performance").ToString().Split()[3]
-  powercfg -setactive $guid
+  $guid = (& $powercfg -l | Select-String -Pattern "Ultimate Performance").ToString().Split()[3]
+  & $powercfg -setactive $guid
 } else {
   Write-Host "→ Keeping current plan (pass -SetUltimateNow to switch)"
 }
 
 Write-Host "== Storage Sense automation"
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 01 /t REG_DWORD /d 1 /f | Out-Null
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 02 /t REG_DWORD /d 2 /f | Out-Null
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 08 /t REG_DWORD /d 1 /f | Out-Null
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 32 /t REG_DWORD /d 1 /f | Out-Null
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 33 /t REG_DWORD /d 30 /f | Out-Null
+& $reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 01 /t REG_DWORD /d 1 /f | Out-Null
+& $reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 02 /t REG_DWORD /d 2 /f | Out-Null
+& $reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 08 /t REG_DWORD /d 1 /f | Out-Null
+& $reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 32 /t REG_DWORD /d 1 /f | Out-Null
+& $reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v 33 /t REG_DWORD /d 30 /f | Out-Null
 
 Write-Host "== Search indexing: exclude Dev Drive caches"
 if (Test-Path $DevCachePath) {
@@ -44,13 +51,14 @@ if (Test-Path $DevCachePath) {
 }
 
 Write-Host "== File Explorer: dev-friendly toggles"
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v HideFileExt /t REG_DWORD /d 0 /f | Out-Null
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Hidden /t REG_DWORD /d 1 /f | Out-Null
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState" /v FullPath /t REG_DWORD /d 1 /f | Out-Null
+& $reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v HideFileExt /t REG_DWORD /d 0 /f | Out-Null
+& $reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Hidden /t REG_DWORD /d 1 /f | Out-Null
+& $reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\CabinetState" /v FullPath /t REG_DWORD /d 1 /f | Out-Null
 
 Write-Host "== Clean Windows component store (WinSxS) — save ~2-5GB"
 try {
-  Dism.exe /Online /Cleanup-Image /StartComponentCleanup /ResetBase
+  & $dism /Online /Cleanup-Image /StartComponentCleanup /ResetBase
+  if ($LASTEXITCODE -ne 0) { throw "DISM exited with code $LASTEXITCODE" }
   Write-Host "→ Component cleanup complete"
 } catch {
   Write-Warning "Component cleanup failed: $_"
@@ -58,20 +66,14 @@ try {
 
 Write-Host "== Optimize Windows Search indexing"
 try {
-  # Ensure Windows Search is running and set to automatic (delayed start)
   Set-Service WSearch -StartupType Automatic
   Start-Service WSearch -ErrorAction SilentlyContinue
-  
-  # Optimize indexing scope - exclude common non-essential locations
+
   $searchKey = "HKLM:\SOFTWARE\Microsoft\Windows Search"
   if (!(Test-Path $searchKey)) { New-Item -Path $searchKey -Force | Out-Null }
-  
-  # Reduce indexer throttling for faster indexing during idle
   Set-ItemProperty -Path $searchKey -Name "ThrottleQueueSizeInKB" -Value 8192 -Type DWord -ErrorAction SilentlyContinue
-  
-  # Optimize for performance on SSD
   Set-ItemProperty -Path $searchKey -Name "UseGathererService" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-  
+
   Write-Host "→ Windows Search optimized for performance" -ForegroundColor Green
 } catch {
   Write-Warning "Could not optimize Windows Search: $_"
@@ -87,15 +89,13 @@ try {
 }
 
 Write-Host "== Network optimizations"
-# Disable bandwidth throttling
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 0xffffffff /f | Out-Null
-# Optimize TCP/IP stack
-netsh int tcp set global autotuninglevel=normal | Out-Null
-netsh int tcp set global chimney=enabled | Out-Null
-netsh int tcp set global rss=enabled | Out-Null
+& $reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 0xffffffff /f | Out-Null
+& $netsh int tcp set global autotuninglevel=normal | Out-Null
+& $netsh int tcp set global chimney=enabled | Out-Null
+& $netsh int tcp set global rss=enabled | Out-Null
 Write-Host "→ Network stack optimized"
 
 # OPTIONAL: Visual Effects → Best performance
-# reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f | Out-Null
+# & $reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f | Out-Null
 
 Write-Host "✅ Performance tuning complete."
