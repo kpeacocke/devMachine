@@ -5,11 +5,12 @@
 .DESCRIPTION
     Creates two Dev Drives on the disk containing C:, when they do not already exist:
       - DevCache: 60 GB mounted at C:\DevCache
-      - DevCode:  10 GB mounted at C:\Users\<username>\code
+      - DevCode:  50 GB mounted at C:\Users\<username>\code
 
-    Existing DevCache/DevCode volumes are reused rather than recreated.
-    New Dev Drives are formatted with -DevDrive and explicitly trusted so Microsoft
-    Defender can use Dev Drive Performance Mode while keeping antivirus protection on.
+    A Windows Dev Drive must be at least 50 GB. Existing DevCache/DevCode volumes are
+    reused rather than recreated. New Dev Drives are formatted with -DevDrive and
+    explicitly trusted so Microsoft Defender can use Dev Drive Performance Mode while
+    keeping antivirus protection on.
 
     IMPORTANT: Dev Drive Performance Mode is preferred over broad Defender exclusions.
 #>
@@ -19,11 +20,11 @@
 
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact='High')]
 param(
-    [ValidateRange(10, 500)]
+    [ValidateRange(50, 500)]
     [int]$CacheGB = 60,
 
-    [ValidateRange(10, 100)]
-    [int]$CodeGB = 10
+    [ValidateRange(50, 500)]
+    [int]$CodeGB = 50
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,6 +37,38 @@ function Get-DevVolumeByLabel {
     Get-Volume -ErrorAction SilentlyContinue |
         Where-Object { $_.FileSystem -eq 'ReFS' -and $_.FileSystemLabel -eq $Label } |
         Select-Object -First 1
+}
+
+function Get-PartitionForDevVolume {
+    param($Volume)
+    if (-not $Volume) { return $null }
+
+    if ($Volume.DriveLetter) {
+        return Get-Partition -DriveLetter $Volume.DriveLetter -ErrorAction SilentlyContinue
+    }
+
+    $partitions = Get-Partition -DiskNumber $disk.Number -ErrorAction SilentlyContinue
+    foreach ($candidate in $partitions) {
+        $candidateVolume = Get-Volume -Partition $candidate -ErrorAction SilentlyContinue
+        if ($candidateVolume -and $candidateVolume.FileSystemLabel -eq $Volume.FileSystemLabel) {
+            return $candidate
+        }
+    }
+    return $null
+}
+
+function Test-DevMount {
+    param([string]$MountPoint)
+    if (-not (Test-Path $MountPoint)) { return $false }
+
+    try {
+        $mountvol = Join-Path $env:SystemRoot 'System32\mountvol.exe'
+        if (-not (Test-Path $mountvol)) { return $false }
+        $output = & $mountvol $MountPoint /L 2>$null
+        return ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace(($output | Out-String)))
+    } catch {
+        return $false
+    }
 }
 
 function Ensure-DevDriveTrusted {
@@ -57,6 +90,11 @@ function Mount-DevVolume {
         [Parameter(Mandatory)][string]$Label
     )
 
+    if (Test-DevMount $MountPoint) {
+        Write-Host "   ✅ $Label already mounted at $MountPoint" -ForegroundColor Green
+        return
+    }
+
     if (Test-Path $MountPoint) {
         $items = @(Get-ChildItem -LiteralPath $MountPoint -Force -ErrorAction SilentlyContinue)
         if ($items.Count -gt 0) {
@@ -72,7 +110,7 @@ function Mount-DevVolume {
         Remove-PartitionAccessPath -DiskNumber $Partition.DiskNumber -PartitionNumber $Partition.PartitionNumber -AccessPath $drivePath -ErrorAction Stop
     }
 
-    Add-PartitionAccessPath -DiskNumber $Partition.DiskNumber -PartitionNumber $Partition.PartitionNumber -AccessPath "$MountPoint\" -ErrorAction Stop
+    Add-PartitionAccessPath -DiskNumber $Partition.DiskNumber -PartitionNumber $Partition.PartitionNumber -AccessPath $MountPoint -ErrorAction Stop
     Write-Host "   ✅ $Label mounted at $MountPoint" -ForegroundColor Green
 }
 
@@ -105,17 +143,29 @@ Write-Host "━━━━━━━━━━━━━━━━━━━━━━�
 $cacheVolume = Get-DevVolumeByLabel 'DevCache'
 $codeVolume  = Get-DevVolumeByLabel 'DevCode'
 
-if ($cacheVolume) { Write-Host "   Found existing DevCache: $([math]::Round($cacheVolume.Size / 1GB, 1)) GB" -ForegroundColor Gray }
-if ($codeVolume)  { Write-Host "   Found existing DevCode:  $([math]::Round($codeVolume.Size / 1GB, 1)) GB" -ForegroundColor Gray }
-
-if ($cacheVolume -and $codeVolume) {
-    Write-Host "✅ Both Dev Drive volumes already exist. No partition changes required." -ForegroundColor Green
-    exit 0
-}
-
 $partition = Get-Partition -DriveLetter C
 $disk = Get-Disk -Number $partition.DiskNumber
 $cVolume = Get-Volume -DriveLetter C
+
+if ($cacheVolume) { Write-Host "   Found existing DevCache: $([math]::Round($cacheVolume.Size / 1GB, 1)) GB" -ForegroundColor Gray }
+if ($codeVolume)  { Write-Host "   Found existing DevCode:  $([math]::Round($codeVolume.Size / 1GB, 1)) GB" -ForegroundColor Gray }
+
+# Reuse existing volumes, including volumes that survived an OS reinstall but lost their mount points.
+if ($cacheVolume -and $codeVolume) {
+    $cachePartition = Get-PartitionForDevVolume $cacheVolume
+    $codePartition = Get-PartitionForDevVolume $codeVolume
+    if (-not $cachePartition -or -not $codePartition) {
+        throw "Existing DevCache/DevCode volume was found but its partition could not be resolved safely."
+    }
+
+    if (-not $PSCmdlet.ShouldProcess("Existing Dev Drive volumes", "Mount DevCache and DevCode")) { exit 0 }
+    Mount-DevVolume -Partition $cachePartition -MountPoint $cacheMountPoint -Label 'DevCache'
+    Mount-DevVolume -Partition $codePartition -MountPoint $codeMountPoint -Label 'DevCode'
+    Ensure-DevDriveTrusted -VolumePath $(if ($cachePartition.DriveLetter) { "$($cachePartition.DriveLetter):" } else { $cacheMountPoint })
+    Ensure-DevDriveTrusted -VolumePath $(if ($codePartition.DriveLetter) { "$($codePartition.DriveLetter):" } else { $codeMountPoint })
+    Write-Host "`n🎉 Existing Dev Drives mounted and trusted." -ForegroundColor Green
+    exit 0
+}
 
 $missingCache = -not $cacheVolume
 $missingCode = -not $codeVolume
@@ -169,8 +219,7 @@ foreach ($check in @(
 )) {
     $volume = Get-DevVolumeByLabel $check.Label
     if (-not $volume) { throw "$($check.Label) volume was not found after creation." }
-    $mounted = Get-Volume | Where-Object { $_.Path -eq "$($check.Path)\" }
-    if (-not $mounted) { throw "$($check.Label) is not mounted at $($check.Path)." }
+    if (-not (Test-DevMount $check.Path)) { throw "$($check.Label) is not mounted at $($check.Path)." }
     Write-Host "   ✅ $($check.Label): $([math]::Round($volume.Size / 1GB, 1)) GB ReFS at $($check.Path)" -ForegroundColor Green
 }
 
