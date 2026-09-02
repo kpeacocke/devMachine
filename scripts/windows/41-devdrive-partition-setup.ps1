@@ -7,10 +7,12 @@
       - DevCache: 60 GB mounted at C:\DevCache
       - DevCode:  50 GB mounted at C:\Users\<username>\code
 
-    A Windows Dev Drive must be at least 50 GB. Existing DevCache/DevCode volumes are
-    reused rather than recreated. New Dev Drives are formatted with -DevDrive and
-    explicitly trusted so Microsoft Defender can use Dev Drive Performance Mode while
-    keeping antivirus protection on.
+    A Windows Dev Drive must be at least 50 GB. Existing valid DevCache/DevCode volumes are
+    reused rather than recreated. Undersized legacy volumes are never reused or deleted
+    automatically; the script stops and requires explicit cleanup before proceeding.
+
+    New Dev Drives are formatted with -DevDrive and explicitly trusted so Microsoft Defender
+    can use Dev Drive Performance Mode while keeping antivirus protection on.
 
     IMPORTANT: Dev Drive Performance Mode is preferred over broad Defender exclusions.
 #>
@@ -28,6 +30,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$minimumDevDriveGB = 50
+$minimumDevDriveBytes = [uint64]$minimumDevDriveGB * 1GB
 
 $cacheMountPoint = 'C:\DevCache'
 $codeMountPoint  = Join-Path $env:USERPROFILE 'code'
@@ -43,18 +47,16 @@ function Get-PartitionForDevVolume {
     param($Volume)
     if (-not $Volume) { return $null }
 
-    # Prefer the volume's drive letter when one exists.
     if ($Volume.DriveLetter) {
         return Get-Partition -DriveLetter $Volume.DriveLetter -ErrorAction SilentlyContinue
     }
 
-    # Otherwise resolve the partition by matching the volume label. Do not rely on
-    # the global $disk variable because this function is also used before $disk is set.
     foreach ($candidate in @(Get-Partition -ErrorAction SilentlyContinue)) {
         $candidateVolume = Get-Volume -Partition $candidate -ErrorAction SilentlyContinue
         if ($candidateVolume -and
             $candidateVolume.FileSystem -eq 'ReFS' -and
-            $candidateVolume.FileSystemLabel -eq $Volume.FileSystemLabel) {
+            $candidateVolume.FileSystemLabel -eq $Volume.FileSystemLabel -and
+            $candidateVolume.Size -eq $Volume.Size) {
             return $candidate
         }
     }
@@ -145,17 +147,40 @@ function New-DevPartition {
 Write-Host "🔧 Dev Drive Partition Setup" -ForegroundColor Cyan
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 
-$cacheVolume = Get-DevVolumeByLabel 'DevCache'
-$codeVolume  = Get-DevVolumeByLabel 'DevCode'
+$cacheVolumeCandidate = Get-DevVolumeByLabel 'DevCache'
+$codeVolumeCandidate  = Get-DevVolumeByLabel 'DevCode'
 
 $partition = Get-Partition -DriveLetter C
 $disk = Get-Disk -Number $partition.DiskNumber
 $cVolume = Get-Volume -DriveLetter C
 
-if ($cacheVolume) { Write-Host "   Found existing DevCache: $([math]::Round($cacheVolume.Size / 1GB, 1)) GB" -ForegroundColor Gray }
-if ($codeVolume)  { Write-Host "   Found existing DevCode:  $([math]::Round($codeVolume.Size / 1GB, 1)) GB" -ForegroundColor Gray }
+# Do not mistake a ReFS volume with our label for a valid Dev Drive. Windows requires
+# a minimum 50 GB allocation at creation time. Older versions of this script could
+# have created smaller ReFS volumes; they must be cleaned up explicitly.
+$invalidVolumes = @(
+    @($cacheVolumeCandidate, 'DevCache')
+    @($codeVolumeCandidate, 'DevCode')
+) | Where-Object { $_[0] -and $_[0].Size -lt $minimumDevDriveBytes }
 
-# Reuse existing volumes, including volumes that survived an OS reinstall but lost their mount points.
+if ($invalidVolumes.Count -gt 0) {
+    Write-Host "`n❌ Undersized legacy Dev Drive volumes detected:" -ForegroundColor Red
+    foreach ($entry in $invalidVolumes) {
+        $volume = $entry[0]
+        $label = $entry[1]
+        Write-Host "   • $label: $([math]::Round($volume.Size / 1GB, 1)) GB (minimum is $minimumDevDriveGB GB)" -ForegroundColor Red
+    }
+    Write-Host "`n   These volumes will NOT be reused or deleted automatically." -ForegroundColor Yellow
+    Write-Host "   Run 99-repair-partial-setup.ps1 to inspect them before removal." -ForegroundColor Yellow
+    throw "Undersized legacy Dev Drive volumes require explicit cleanup before Dev Drive setup can continue."
+}
+
+$cacheVolume = $cacheVolumeCandidate
+$codeVolume  = $codeVolumeCandidate
+
+if ($cacheVolume) { Write-Host "   Found existing valid DevCache: $([math]::Round($cacheVolume.Size / 1GB, 1)) GB" -ForegroundColor Gray }
+if ($codeVolume)  { Write-Host "   Found existing valid DevCode:  $([math]::Round($codeVolume.Size / 1GB, 1)) GB" -ForegroundColor Gray }
+
+# Reuse existing valid volumes, including volumes that survived an OS reinstall but lost their mount points.
 if ($cacheVolume -and $codeVolume) {
     $cachePartition = Get-PartitionForDevVolume $cacheVolume
     $codePartition = Get-PartitionForDevVolume $codeVolume
@@ -224,6 +249,7 @@ foreach ($check in @(
 )) {
     $volume = Get-DevVolumeByLabel $check.Label
     if (-not $volume) { throw "$($check.Label) volume was not found after creation." }
+    if ($volume.Size -lt $minimumDevDriveBytes) { throw "$($check.Label) is below the $minimumDevDriveGB GB Dev Drive minimum." }
     if (-not (Test-DevMount $check.Path)) { throw "$($check.Label) is not mounted at $($check.Path)." }
     Write-Host "   ✅ $($check.Label): $([math]::Round($volume.Size / 1GB, 1)) GB ReFS at $($check.Path)" -ForegroundColor Green
 }
