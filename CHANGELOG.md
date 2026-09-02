@@ -1,3 +1,11 @@
+## [1.16.4](https://github.com/kpeacocke/devMachine/compare/v1.16.3...v1.16.4) (2026-09-02)
+
+
+### 🐛 Bug Fixes
+
+* restore Windows system PATH before hardening ([6c27f3e](https://github.com/kpeacocke/devMachine/commit/6c27f3e831580b72ad17d4dac43ab7f37963560c))
+* use absolute Windows registry executable path ([9ec5f17](https://github.com/kpeacocke/devMachine/commit/9ec5f174bfc2c39fe43b82296945f85e354e581e))
+
 ## [1.16.3](https://github.com/kpeacocke/devMachine/compare/v1.16.2...v1.16.3) (2026-08-28)
 
 
