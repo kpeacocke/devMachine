@@ -13,9 +13,18 @@ Write-Host "`n🔥 Firewall: Enable on all profiles (block inbound, allow outbou
 Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True -DefaultInboundAction Block -DefaultOutboundAction Allow
 Write-Host "   ✅ Firewall enabled - all inbound connections blocked by default" -ForegroundColor Green
 
+# PowerShell 7 on this Surface can inherit a PATH without the Windows System32
+# directory. Do not rely on PATH for Windows servicing executables.
+$regExe = Join-Path $env:SystemRoot 'System32\reg.exe'
+if (-not (Test-Path $regExe)) {
+    throw "Windows Registry utility not found at $regExe"
+}
+
 Write-Host "`n🛡️ UAC: Set to maximum security (always notify)"
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 2 /f | Out-Null
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v PromptOnSecureDesktop /t REG_DWORD /d 1 /f | Out-Null
+& $regExe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 2 /f | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Failed to set ConsentPromptBehaviorAdmin (reg.exe exit code $LASTEXITCODE)" }
+& $regExe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v PromptOnSecureDesktop /t REG_DWORD /d 1 /f | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Failed to set PromptOnSecureDesktop (reg.exe exit code $LASTEXITCODE)" }
 Write-Host "   ✅ UAC set to always notify on secure desktop" -ForegroundColor Green
 
 Write-Host "`n🦠 Windows Defender: Enable core protections"
@@ -26,8 +35,7 @@ Write-Host "`n🚫 Disable legacy/risky protocols"
 # Disable SMBv1 (WannaCry vulnerability).
 # Current Windows 11 builds can throw "Class not registered" when the DISM
 # PowerShell cmdlets are invoked from PowerShell 7. Run this Windows servicing
-# operation in the inbox Windows PowerShell 5.1 host, where Microsoft confirms
-# the cmdlet continues to work.
+# operation in the inbox Windows PowerShell 5.1 host.
 Write-Host "   Disabling SMBv1..."
 $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 if (-not (Test-Path $windowsPowerShell)) {
@@ -47,7 +55,8 @@ Disable-NetFirewallRule -DisplayGroup "Remote Desktop" -ErrorAction SilentlyCont
 
 # Disable LLMNR (Link-Local Multicast Name Resolution - spoofing risk)
 Write-Host "   Disabling LLMNR..."
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" /v EnableMulticast /t REG_DWORD /d 0 /f | Out-Null
+& $regExe add "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" /v EnableMulticast /t REG_DWORD /d 0 /f | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Failed to disable LLMNR (reg.exe exit code $LASTEXITCODE)" }
 
 # Disable NetBIOS over TCP/IP (legacy protocol, spoofing risk)
 Write-Host "   Disabling NetBIOS over TCP/IP..."
@@ -60,9 +69,11 @@ Write-Host "   ✅ SMBv1, RDP, LLMNR, and NetBIOS disabled" -ForegroundColor Gre
 
 Write-Host "`n🔧 Enable developer-friendly settings"
 # Enable NTFS long paths (needed for node_modules, etc.)
-reg add HKLM\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1 /f | Out-Null
+& $regExe add HKLM\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1 /f | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Failed to enable long paths (reg.exe exit code $LASTEXITCODE)" }
 # Enable Developer Mode (sideloading, etc.)
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" /v AllowDevelopmentWithoutDevLicense /t REG_DWORD /d 1 /f | Out-Null
+& $regExe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" /v AllowDevelopmentWithoutDevLicense /t REG_DWORD /d 1 /f | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Failed to enable Developer Mode (reg.exe exit code $LASTEXITCODE)" }
 Write-Host "   ✅ NTFS long paths and Developer Mode enabled" -ForegroundColor Green
 
 Write-Host "`n[OK] Early hardening complete!" -ForegroundColor Green
