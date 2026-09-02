@@ -1,3 +1,10 @@
+## [1.16.5](https://github.com/kpeacocke/devMachine/compare/v1.16.4...v1.16.5) (2026-09-02)
+
+
+### 🐛 Bug Fixes
+
+* correct Windows root path construction in early hardening ([bd7bca9](https://github.com/kpeacocke/devMachine/commit/bd7bca979dfddf422ed9b4aea73e8ecec1c65df0))
+
 ## [1.16.4](https://github.com/kpeacocke/devMachine/compare/v1.16.3...v1.16.4) (2026-09-02)
 
 
