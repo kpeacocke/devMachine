@@ -15,6 +15,21 @@ if (-not (Test-Path $PROFILE)) {
 # Read existing profile
 $existingContent = Get-Content $PROFILE -Raw -ErrorAction SilentlyContinue
 
+# Install the devMachine Oh My Posh theme to a stable per-user location.
+# Do not depend on POSH_THEMES_PATH: packaged Oh My Posh installs may not expose it.
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$themeSource = Join-Path $repoRoot "config\oh-my-posh\devmachine.omp.json"
+$themeDirectory = Join-Path $HOME ".config\oh-my-posh"
+$themePath = Join-Path $themeDirectory "devmachine.omp.json"
+
+if (-not (Test-Path $themeSource)) {
+    throw "devMachine Oh My Posh theme not found: $themeSource"
+}
+
+New-Item -ItemType Directory -Path $themeDirectory -Force | Out-Null
+Copy-Item -Path $themeSource -Destination $themePath -Force
+Write-Host "  Installed Oh My Posh theme: $themePath" -ForegroundColor Green
+
 # Build comprehensive profile
 $profileContent = @'
 # ============================================================================
@@ -38,13 +53,14 @@ if (Get-Command "Microsoft.PowerShell.PSConsoleReadLine" -ErrorAction SilentlyCo
 }
 
 # Oh My Posh - Enhanced prompt
+# devMachine ships a local theme so prompt behaviour does not change when Oh My Posh defaults change.
+# Elevated shells get an explicit high-contrast ADMIN segment rather than an icon-only root marker.
 if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
-    $poshTheme = "$env:POSH_THEMES_PATH\paradox.omp.json"
+    $poshTheme = Join-Path $HOME ".config\oh-my-posh\devmachine.omp.json"
     if (Test-Path $poshTheme) {
         oh-my-posh init pwsh --config $poshTheme | Invoke-Expression
     } else {
-        # Fallback to default theme
-        oh-my-posh init pwsh | Invoke-Expression
+        Write-Warning "devMachine Oh My Posh theme is missing: $poshTheme. Re-run scripts/windows/06-powershell-profile.ps1."
     }
 }
 
@@ -399,6 +415,7 @@ Write-Host "━━━━━━━━━━━━━━━━━━━━━━�
 Write-Host "Profile location: $PROFILE" -ForegroundColor Yellow
 Write-Host "Reload profile: Update-Profile" -ForegroundColor Yellow
 Write-Host "Edit profile: Edit-Profile" -ForegroundColor Yellow
+Write-Host "Oh My Posh theme: $themePath" -ForegroundColor Yellow
 Write-Host "Console font: JetBrainsMono NF (for Git icons)" -ForegroundColor Yellow
 Write-Host "Shell integration: Enabled for VS Code terminals" -ForegroundColor Yellow
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
