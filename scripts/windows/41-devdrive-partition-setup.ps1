@@ -1,26 +1,29 @@
 <#
 .SYNOPSIS
-    Create and mount a single ReFS Dev Drive for development workloads.
+    Create and mount the DevMachine development drive.
 
 .DESCRIPTION
-    Creates one Dev Drive on the disk containing C: when one does not already exist.
+    Creates ONE Windows Dev Drive on the disk containing C:.
 
-      - DevCache: 90 GB mounted at C:\DevCache
-      - C:\Users\<username>\code is a directory junction to C:\DevCache\code
+      DevCache: 90 GB, mounted at C:\DevCache
+      Code:     C:\Users\<username>\code -> C:\DevCache\code
 
-    A single 90 GB Dev Drive is used because this Surface has enough space for one
-    useful Dev Drive but not two independent 50 GB minimum Dev Drives.
+    The Surface configuration has ~98 GB available to this purpose, so one 90 GB
+    Dev Drive is used. Windows requires a minimum 50 GB Dev Drive.
 
-    The script never shrinks C: below Windows' reported supported minimum and never
-    assumes that nominal free space is shrinkable. It calculates the actual supported
-    shrink boundary before changing the partition table.
+    Safety properties:
+      - Uses Windows' actual supported C: shrink boundary.
+      - Requires enough contiguous free space for the requested volume.
+      - Never shrinks C: below the reported supported minimum.
+      - Never deletes or reformats an existing DevCache/DevCode volume.
+      - Refuses to replace an existing non-empty code directory.
+      - Uses -WhatIf via SupportsShouldProcess; no duplicate WhatIf parameter.
+      - Creates a real Dev Drive using Format-Volume -DevDrive.
+      - Trusts the Dev Drive so Microsoft Defender can use Performance Mode.
 
-    New Dev Drives are formatted with -DevDrive and explicitly trusted. Microsoft
-    Defender remains enabled and can use Dev Drive Performance Mode.
-
-    Existing undersized legacy DevCache/DevCode volumes are never deleted automatically.
-    They must be explicitly cleaned up before this script will proceed.
-
+    This script deliberately does NOT disable Defender or add a Defender exclusion
+    for the Dev Drive. Microsoft recommends trusted Dev Drives with Defender
+    Performance Mode instead.
 #>
 
 #Requires -Version 5.1
@@ -35,26 +38,15 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $minimumDevDriveGB = 50
-$minimumDevDriveBytes = [uint64]$minimumDevDriveGB * 1GB
 $devDriveMountPoint = 'C:\DevCache'
 $codePath = Join-Path $env:USERPROFILE 'code'
 $codeTarget = Join-Path $devDriveMountPoint 'code'
 
-function Get-DevCacheVolume {
-    Get-Volume -ErrorAction SilentlyContinue |
-        Where-Object {
-            $_.FileSystem -eq 'ReFS' -and
-            $_.FileSystemLabel -eq 'DevCache'
-        } |
-        Select-Object -First 1
-}
+function Get-VolumeByLabel {
+    param([Parameter(Mandatory)][string]$Label)
 
-function Get-DevCodeVolume {
     Get-Volume -ErrorAction SilentlyContinue |
-        Where-Object {
-            $_.FileSystem -eq 'ReFS' -and
-            $_.FileSystemLabel -eq 'DevCode'
-        } |
+        Where-Object { $_.FileSystem -eq 'ReFS' -and $_.FileSystemLabel -eq $Label } |
         Select-Object -First 1
 }
 
@@ -65,11 +57,11 @@ function Get-PartitionForVolume {
         return Get-Partition -DriveLetter $Volume.DriveLetter -ErrorAction Stop
     }
 
-    foreach ($candidate in @(Get-Partition -ErrorAction SilentlyContinue)) {
+    foreach ($candidate in @(Get-Partition -ErrorAction Stop)) {
         $candidateVolume = Get-Volume -Partition $candidate -ErrorAction SilentlyContinue
         if ($candidateVolume -and
-            $candidateVolume.FileSystemLabel -eq $Volume.FileSystemLabel -and
             $candidateVolume.FileSystem -eq 'ReFS' -and
+            $candidateVolume.FileSystemLabel -eq $Volume.FileSystemLabel -and
             $candidateVolume.Size -eq $Volume.Size) {
             return $candidate
         }
@@ -78,42 +70,65 @@ function Get-PartitionForVolume {
     return $null
 }
 
-function Test-DevDrive {
-    param([Parameter(Mandatory)][string]$Path)
+function Invoke-FsUtil {
+    param(
+        [Parameter(Mandatory)][string[]]$Arguments,
+        [Parameter(Mandatory)][string]$Operation
+    )
 
     $fsutil = Join-Path $env:SystemRoot 'System32\fsutil.exe'
-    if (-not (Test-Path $fsutil)) {
+    if (-not (Test-Path -LiteralPath $fsutil)) {
         throw "fsutil.exe not found at $fsutil"
     }
 
-    $output = & $fsutil devdrv query $Path 2>&1
-    return ($LASTEXITCODE -eq 0 -and
-        (($output | Out-String) -match 'developer volume|developer volumes are enabled'))
+    $output = & $fsutil @Arguments 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Operation failed with fsutil exit code $LASTEXITCODE.`n$(($output | Out-String).Trim())"
+    }
+    return $output
 }
 
-function Ensure-DevDriveTrusted {
+function Test-IsDevDrive {
     param([Parameter(Mandatory)][string]$Path)
 
     $fsutil = Join-Path $env:SystemRoot 'System32\fsutil.exe'
-    & $fsutil devdrv trust $Path 2>&1 | Out-Null
+    $output = & $fsutil devdrv query $Path 2>&1
+    if ($LASTEXITCODE -ne 0) { return $false }
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "Could not trust Dev Drive $Path (fsutil exit code $LASTEXITCODE)"
-    }
+    $text = ($output | Out-String)
+    return $text -match '(?i)(trusted )?developer volume|developer volumes are enabled'
 }
 
-function Ensure-CodeJunction {
-    if (Test-Path $codePath) {
-        $item = Get-Item -LiteralPath $codePath -Force
+function Ensure-TrustedDevDrive {
+    param([Parameter(Mandatory)][string]$Path)
 
+    if (-not (Test-IsDevDrive -Path $Path)) {
+        throw "$Path is not recognised as a Windows Dev Drive."
+    }
+
+    Invoke-FsUtil -Arguments @('devdrv', 'trust', $Path) -Operation "Trust Dev Drive $Path" | Out-Null
+}
+
+function Test-MountPoint {
+    param([Parameter(Mandatory)][string]$Path)
+
+    $mountvol = Join-Path $env:SystemRoot 'System32\mountvol.exe'
+    if (-not (Test-Path -LiteralPath $mountvol)) { return $false }
+
+    $output = & $mountvol $Path /L 2>&1
+    return ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace(($output | Out-String)))
+}
+
+function Ensure-CodePath {
+    if (Test-Path -LiteralPath $codePath) {
+        $item = Get-Item -LiteralPath $codePath -Force
         if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
-            $target = $item.Target
-            if ($target -and (($target -join ';') -ieq $codeTarget)) {
+            $target = @($item.Target) -join ';'
+            if ($target -ieq $codeTarget) {
                 Write-Host "   ✅ Code path already linked to $codeTarget" -ForegroundColor Green
                 return
             }
-
-            throw "$codePath is an existing reparse point with an unexpected target. Refusing to modify it."
+            throw "$codePath is an existing reparse point with an unexpected target. Refusing to change it."
         }
 
         $items = @(Get-ChildItem -LiteralPath $codePath -Force -ErrorAction Stop)
@@ -128,53 +143,21 @@ function Ensure-CodeJunction {
     Write-Host "   ✅ Code path linked: $codePath → $codeTarget" -ForegroundColor Green
 }
 
-function Mount-DevCache {
-    param([Parameter(Mandatory)]$Partition)
+function Get-ContiguousFreeSpaceAfterC {
+    param(
+        [Parameter(Mandatory)]$Disk,
+        [Parameter(Mandatory)]$CPartition
+    )
 
-    if (-not (Test-Path $devDriveMountPoint)) {
-        New-Item -ItemType Directory -Path $devDriveMountPoint -Force | Out-Null
-    }
+    $partitions = @(Get-Partition -DiskNumber $Disk.Number -ErrorAction Stop | Sort-Object Offset)
+    $cEnd = [uint64]$CPartition.Offset + [uint64]$CPartition.Size
+    $next = $partitions |
+        Where-Object { [uint64]$_.Offset -gt $cEnd } |
+        Select-Object -First 1
 
-    $existingItems = @(Get-ChildItem -LiteralPath $devDriveMountPoint -Force -ErrorAction SilentlyContinue)
-    if ($existingItems.Count -gt 0 -and -not (Test-DevDrive $devDriveMountPoint)) {
-        throw "$devDriveMountPoint exists and is not an empty Dev Drive mount point."
-    }
-
-    if ($Partition.DriveLetter) {
-        $drivePath = "$($Partition.DriveLetter):\"
-        Ensure-DevDriveTrusted -Path $drivePath
-
-        $mounted = Test-DevDrive $devDriveMountPoint
-        if (-not $mounted) {
-            Add-PartitionAccessPath `
-                -DiskNumber $Partition.DiskNumber `
-                -PartitionNumber $Partition.PartitionNumber `
-                -AccessPath $devDriveMountPoint `
-                -ErrorAction Stop
-        }
-
-        # Remove the temporary drive letter after the directory mount exists.
-        Remove-PartitionAccessPath `
-            -DiskNumber $Partition.DiskNumber `
-            -PartitionNumber $Partition.PartitionNumber `
-            -AccessPath $drivePath `
-            -ErrorAction SilentlyContinue
-
-        Ensure-DevDriveTrusted -Path $devDriveMountPoint
-    }
-    elseif (-not (Test-DevDrive $devDriveMountPoint)) {
-        Add-PartitionAccessPath `
-            -DiskNumber $Partition.DiskNumber `
-            -PartitionNumber $Partition.PartitionNumber `
-            -AccessPath $devDriveMountPoint `
-            -ErrorAction Stop
-
-        Ensure-DevDriveTrusted -Path $devDriveMountPoint
-    }
-
-    if (-not (Test-DevDrive $devDriveMountPoint)) {
-        throw "C:\DevCache is not recognised by Windows as a Dev Drive after mounting."
-    }
+    $boundary = if ($next) { [uint64]$next.Offset } else { [uint64]$Disk.Size }
+    if ($boundary -le $cEnd) { return [uint64]0 }
+    return $boundary - $cEnd
 }
 
 Write-Host "🔧 Dev Drive Setup" -ForegroundColor Cyan
@@ -184,89 +167,81 @@ if ($DevDriveGB -lt $minimumDevDriveGB) {
     throw "Dev Drive must be at least $minimumDevDriveGB GB."
 }
 
-$cacheVolume = Get-DevCacheVolume
-$legacyCodeVolume = Get-DevCodeVolume
+$requestedBytes = [uint64]$DevDriveGB * 1GB
 
-if ($legacyCodeVolume) {
-    $sizeGB = [math]::Round($legacyCodeVolume.Size / 1GB, 1)
-    throw "Legacy DevCode volume detected ($sizeGB GB). It is not a valid Dev Drive and will not be deleted automatically. Remove it explicitly before continuing."
+$existingCache = Get-VolumeByLabel -Label 'DevCache'
+$existingCode = Get-VolumeByLabel -Label 'DevCode'
+
+if ($existingCode) {
+    throw "A legacy DevCode volume exists ($([math]::Round($existingCode.Size / 1GB, 1)) GB). This layout now uses one Dev Drive. Remove the legacy volume explicitly before continuing."
 }
 
-if ($cacheVolume -and $cacheVolume.Size -lt $minimumDevDriveBytes) {
-    $sizeGB = [math]::Round($cacheVolume.Size / 1GB, 1)
-    throw "Legacy undersized DevCache volume detected ($sizeGB GB). It is not a valid Dev Drive and will not be deleted automatically. Remove it explicitly before continuing."
-}
-
-# Existing valid Dev Drive: mount/trust it and create the code junction.
-if ($cacheVolume) {
-    if ($cacheVolume.Size -lt ([uint64]$DevDriveGB * 1GB)) {
-        Write-Host "   Existing DevCache is $([math]::Round($cacheVolume.Size / 1GB,1)) GB; reusing it because it is a valid Dev Drive." -ForegroundColor Yellow
-    } else {
-        Write-Host "   Existing DevCache found: $([math]::Round($cacheVolume.Size / 1GB,1)) GB" -ForegroundColor Green
+if ($existingCache) {
+    if ($existingCache.Size -lt ([uint64]$minimumDevDriveGB * 1GB)) {
+        throw "An undersized legacy DevCache volume exists ($([math]::Round($existingCache.Size / 1GB, 1)) GB). Remove it explicitly before continuing."
     }
 
-    $cachePartition = Get-PartitionForVolume -Volume $cacheVolume
-    if (-not $cachePartition) {
-        throw "Could not safely resolve the DevCache partition."
+    $partition = Get-PartitionForVolume -Volume $existingCache
+    if (-not $partition) {
+        throw 'Could not safely resolve the existing DevCache partition.'
     }
 
-    if ($PSCmdlet.ShouldProcess($devDriveMountPoint, 'Mount and trust existing DevCache Dev Drive')) {
-        Mount-DevCache -Partition $cachePartition
+    Write-Host "   Existing DevCache found: $([math]::Round($existingCache.Size / 1GB, 1)) GB" -ForegroundColor Green
+    if ($PSCmdlet.ShouldProcess($devDriveMountPoint, 'Mount and trust existing DevCache')) {
+        if (-not (Test-MountPoint -Path $devDriveMountPoint)) {
+            if (Test-Path -LiteralPath $devDriveMountPoint) {
+                $items = @(Get-ChildItem -LiteralPath $devDriveMountPoint -Force -ErrorAction Stop)
+                if ($items.Count -gt 0) {
+                    throw "$devDriveMountPoint exists and is not an empty mount-point directory."
+                }
+            }
+            else {
+                New-Item -ItemType Directory -Path $devDriveMountPoint -Force | Out-Null
+            }
+
+            if ($partition.DriveLetter) {
+                Add-PartitionAccessPath -DiskNumber $partition.DiskNumber -PartitionNumber $partition.PartitionNumber -AccessPath $devDriveMountPoint -ErrorAction Stop
+            }
+            else {
+                Add-PartitionAccessPath -DiskNumber $partition.DiskNumber -PartitionNumber $partition.PartitionNumber -AccessPath $devDriveMountPoint -ErrorAction Stop
+            }
+        }
+
+        Ensure-TrustedDevDrive -Path $devDriveMountPoint
         New-Item -ItemType Directory -Path $codeTarget -Force | Out-Null
-        Ensure-CodeJunction
-
+        Ensure-CodePath
         Write-Host "`n🎉 Existing Dev Drive configured successfully." -ForegroundColor Green
-        exit 0
     }
-
-    exit 0
+    return
 }
 
 $partition = Get-Partition -DriveLetter C -ErrorAction Stop
 $disk = Get-Disk -Number $partition.DiskNumber -ErrorAction Stop
 $cVolume = Get-Volume -DriveLetter C -ErrorAction Stop
 
-$unallocatedBytes = [uint64]0
-foreach ($p in @(Get-Partition -DiskNumber $disk.Number -ErrorAction Stop | Sort-Object Offset)) {
-    $end = [uint64]$p.Offset + [uint64]$p.Size
-    $next = @(Get-Partition -DiskNumber $disk.Number -ErrorAction Stop |
-        Where-Object { [uint64]$_.Offset -gt $end } |
-        Sort-Object Offset |
-        Select-Object -First 1)
-
-    if ($next.Count -eq 0) {
-        $diskEnd = [uint64]$disk.Size
-        if ($diskEnd -gt $end) {
-            $unallocatedBytes += $diskEnd - $end
-        }
-    } else {
-        $gap = [uint64]$next[0].Offset - $end
-        if ($gap -gt 0) { $unallocatedBytes += $gap }
-    }
+if ($disk.PartitionStyle -ne 'GPT') {
+    throw "Disk $($disk.Number) is not GPT. DevMachine requires a GPT system disk."
 }
 
-$requiredBytes = [uint64]$DevDriveGB * 1GB
+if ($disk.IsReadOnly) {
+    throw "Disk $($disk.Number) is read-only."
+}
 
-# Windows reports the actual supported C: shrink boundary. Use it rather than
-# assuming all nominally-free C: space is movable.
 $supported = Get-PartitionSupportedSize -DriveLetter C -ErrorAction Stop
 $maxShrinkBytes = [uint64]$partition.Size - [uint64]$supported.SizeMin
 $maxShrinkGB = [math]::Floor($maxShrinkBytes / 1GB)
+$existingGapBytes = Get-ContiguousFreeSpaceAfterC -Disk $disk -CPartition $partition
+$spaceNeededFromC = [uint64][math]::Max([int64]0, [int64]$requestedBytes - [int64]$existingGapBytes)
 
-$spaceNeededFromC = [math]::Max([int64]0, [int64]$requiredBytes - [int64]$unallocatedBytes)
-
-$projectedCSize = [uint64]$partition.Size - [uint64]$spaceNeededFromC
-$projectedCFree = [uint64]$cVolume.SizeRemaining - [uint64]$spaceNeededFromC
-
-# Keep at least 30% free on C: after the shrink.
-$projectedFreePercent = if ($projectedCSize -gt 0) {
-    ($projectedCFree / $projectedCSize) * 100
-} else { 0 }
+$projectedCSize = [uint64]$partition.Size - $spaceNeededFromC
+$projectedCFree = [uint64]$cVolume.SizeRemaining - $spaceNeededFromC
+$projectedFreePercent = if ($projectedCSize -gt 0) { ($projectedCFree / $projectedCSize) * 100 } else { 0 }
 
 Write-Host "`n📊 Dev Drive preflight" -ForegroundColor Cyan
+Write-Host "   Disk:                    $($disk.Number) ($([math]::Round($disk.Size / 1GB, 1)) GB)" -ForegroundColor Gray
 Write-Host "   C: size:                 $([math]::Round($partition.Size / 1GB, 1)) GB" -ForegroundColor Gray
 Write-Host "   C: free:                 $([math]::Round($cVolume.SizeRemaining / 1GB, 1)) GB" -ForegroundColor Gray
-Write-Host "   Existing unallocated:   $([math]::Round($unallocatedBytes / 1GB, 1)) GB" -ForegroundColor Gray
+Write-Host "   Contiguous free after C: $([math]::Round($existingGapBytes / 1GB, 1)) GB" -ForegroundColor Gray
 Write-Host "   Requested Dev Drive:     $DevDriveGB GB" -ForegroundColor Yellow
 Write-Host "   Max C: shrinkable:       $maxShrinkGB GB" -ForegroundColor Gray
 Write-Host "   Required C: shrink:      $([math]::Round($spaceNeededFromC / 1GB, 1)) GB" -ForegroundColor Gray
@@ -280,69 +255,43 @@ if ($projectedFreePercent -lt 30) {
     throw "Refusing to shrink C: below 30% free space. Projected free space: $([math]::Round($projectedFreePercent,1))%."
 }
 
-if (-not $PSCmdlet.ShouldProcess("Disk $($disk.Number)", "Create a $DevDriveGB GB Dev Drive mounted at $devDriveMountPoint")) {
-    exit 0
+if (-not $PSCmdlet.ShouldProcess("Disk $($disk.Number)", "Create a $DevDriveGB GB Dev Drive at $devDriveMountPoint")) {
+    return
 }
+
+$newCSize = [uint64]$partition.Size - $spaceNeededFromC
 
 if ($spaceNeededFromC -gt 0) {
     Write-Host "`n[1/3] Shrinking C: by $([math]::Round($spaceNeededFromC / 1GB, 1)) GB..." -ForegroundColor Yellow
-    $newCSize = [uint64]$partition.Size - [uint64]$spaceNeededFromC
     Resize-Partition -DriveLetter C -Size $newCSize -ErrorAction Stop
     Write-Host "   ✅ C: resized to $([math]::Round($newCSize / 1GB, 1)) GB" -ForegroundColor Green
 }
+else {
+    Write-Host "`n[1/3] Existing unallocated space is sufficient; C: will not be resized." -ForegroundColor Green
+}
 
 Write-Host "`n[2/3] Creating $DevDriveGB GB Dev Drive..." -ForegroundColor Yellow
-$newPartition = New-Partition `
-    -DiskNumber $disk.Number `
-    -Size $requiredBytes `
-    -AssignDriveLetter `
-    -ErrorAction Stop
+$newPartition = New-Partition -DiskNumber $disk.Number -Size $requestedBytes -AssignDriveLetter -ErrorAction Stop
 
 if (-not $newPartition.DriveLetter) {
     throw 'Windows did not assign a temporary drive letter to the new Dev Drive.'
 }
 
-$temporaryLetter = $newPartition.DriveLetter
+$temporaryPath = "$($newPartition.DriveLetter):\"
 
 try {
-    Format-Volume `
-        -DriveLetter $temporaryLetter `
-        -FileSystem ReFS `
-        -NewFileSystemLabel 'DevCache' `
-        -DevDrive `
-        -Confirm:$false `
-        -ErrorAction Stop | Out-Null
+    Format-Volume -DriveLetter $newPartition.DriveLetter -FileSystem ReFS -NewFileSystemLabel 'DevCache' -DevDrive -Confirm:$false -ErrorAction Stop | Out-Null
+    Ensure-TrustedDevDrive -Path $temporaryPath
 
-    Ensure-DevDriveTrusted -Path "$temporaryLetter`:\"
+    if (-not (Test-Path -LiteralPath $devDriveMountPoint)) {
+        New-Item -ItemType Directory -Path $devDriveMountPoint -Force | Out-Null
+    }
+    else {
+        $items = @(Get-ChildItem -LiteralPath $devDriveMountPoint -Force -ErrorAction Stop)
+        if ($items.Count -gt 0) {
+            throw "$devDriveMountPoint exists and is not empty."
+        }
+    }
 
-    $newPartition = Get-Partition -DriveLetter $temporaryLetter -ErrorAction Stop
-    Mount-DevCache -Partition $newPartition
-
-    New-Item -ItemType Directory -Path $codeTarget -Force | Out-Null
-    Ensure-CodeJunction
-}
-catch {
-    throw "Dev Drive creation failed: $($_.Exception.Message)"
-}
-
-Write-Host "`n[3/3] Verifying..." -ForegroundColor Cyan
-
-$finalVolume = Get-DevCacheVolume
-if (-not $finalVolume) {
-    throw 'DevCache volume was not found after creation.'
-}
-if ($finalVolume.Size -lt $minimumDevDriveBytes) {
-    throw "DevCache is below the $minimumDevDriveGB GB Dev Drive minimum."
-}
-if (-not (Test-DevDrive $devDriveMountPoint)) {
-    throw 'C:\DevCache is not recognised as a Dev Drive.'
-}
-if (-not (Test-Path $codePath)) {
-    throw "Code path was not created: $codePath"
-}
-
-Write-Host "   ✅ DevCache: $([math]::Round($finalVolume.Size / 1GB, 1)) GB ReFS Dev Drive" -ForegroundColor Green
-Write-Host "   ✅ DevCache mount: $devDriveMountPoint" -ForegroundColor Green
-Write-Host "   ✅ Code path: $codePath → $codeTarget" -ForegroundColor Green
-Write-Host "   ✅ Dev Drive trusted; Defender Performance Mode can remain enabled" -ForegroundColor Green
-Write-Host "`n🎉 Dev Drive setup complete." -ForegroundColor Green
+    Add-PartitionAccessPath -DiskNumber $newPartition.DiskNumber -PartitionNumber $newPartition.PartitionNumber -AccessPath $devDriveMountPoint -ErrorAction Stop
+    Remove-PartitionAccessPath -DiskNumber $newPartition.DiskNumber -
