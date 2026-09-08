@@ -1,220 +1,131 @@
 <#
-Move build/tool caches to a Dev Drive to save C: space and improve performance.
-Default: C:\DevCache (mounted Dev Drive partition)
-Alternative: Specify custom path like D:\dev\caches if using external drive
-Run in pwsh (non-Admin is fine).
+.SYNOPSIS
+    Configure development package caches on the DevMachine Dev Drive.
 
-NOTE: Run 41-devdrive-partition-setup.ps1 first to create the C:\DevCache partition.
+.DESCRIPTION
+    Uses C:\DevCache by default. The script is idempotent and only changes cache
+    locations that have an explicit package-manager environment/configuration setting.
+
+    It deliberately does NOT move TEMP/TMP or overwrite Docker Desktop daemon.json.
+    Microsoft documents additional filter requirements and side effects for TEMP/TMP
+    on a Dev Drive, and Docker Desktop manages its own data-root configuration.
 #>
 
-param([string]$DevCacheRoot = "C:\DevCache")
+#Requires -Version 5.1
+
+[CmdletBinding()]
+param(
+    [string]$DevCacheRoot = 'C:\DevCache'
+)
 
 $ErrorActionPreference = 'Stop'
 
-# Support unattended mode
-$unattendedMode = $env:UNATTENDED_MODE
-$devDrivePath = $env:DEVDRIVE_PATH
-$skipCacheConfig = $env:SKIP_CACHE_CONFIG
-
-Write-Host "[DEVCACHE] Configuring development tool caches on Dev Drive..." -ForegroundColor Cyan
-Write-Host "  Target location: $DevCacheRoot" -ForegroundColor Gray
-
-# Ensure Dev Drive exists
-if (-not (Test-Path $DevCacheRoot)) {
-    Write-Host "  ❌ Dev Drive not found at $DevCacheRoot" -ForegroundColor Red
-    Write-Host "     Run 41-devdrive-partition-setup.ps1 first to create the Dev Drive" -ForegroundColor Yellow
-    exit 1
+if (-not (Test-Path -LiteralPath $DevCacheRoot)) {
+    throw "Dev Drive not found at $DevCacheRoot. Run 41-devdrive-partition-setup.ps1 first."
 }
 
-# Set proper ownership if this is an existing Dev Drive partition
-Write-Host "  Verifying ownership permissions..." -ForegroundColor Gray
-try {
-    $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-
-    # Check if we can write to the Dev Drive root
-    $testFile = Join-Path $DevCacheRoot "access_test.tmp"
-    "test" | Out-File -FilePath $testFile -ErrorAction Stop
-    Remove-Item $testFile -ErrorAction SilentlyContinue
-
-    Write-Host "  ✅ Dev Drive permissions verified" -ForegroundColor Green
-} catch {
-    Write-Host "  ⚠️  Setting ownership for existing Dev Drive..." -ForegroundColor Yellow
-    try {
-        # Set ownership to current user
-        $acl = Get-Acl $DevCacheRoot
-        $acl.SetOwner([System.Security.Principal.NTAccount]$currentUser)
-
-        # Grant full control to current user
-        $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-            $currentUser,
-            "FullControl",
-            "ContainerInherit,ObjectInherit",
-            "None",
-            "Allow"
-        )
-        $acl.SetAccessRule($accessRule)
-        Set-Acl -Path $DevCacheRoot -AclObject $acl
-
-        Write-Host "  ✅ Ownership set to: $currentUser" -ForegroundColor Green
-    } catch {
-        Write-Host "  ⚠️  Could not set ownership automatically: $_" -ForegroundColor Yellow
-        Write-Host "     If you encounter permission issues, run: takeown /f `"$DevCacheRoot`" /r" -ForegroundColor Gray
-    }
+$volume = Get-Volume -Path $DevCacheRoot -ErrorAction Stop
+if ($volume.FileSystem -ne 'ReFS') {
+    throw "$DevCacheRoot is not ReFS. Refusing to configure development caches on a non-Dev Drive."
 }
 
-# Create cache subdirectories
-Write-Host "`n📦 Creating cache directories..." -ForegroundColor Cyan
+$fsutil = Join-Path $env:SystemRoot 'System32\fsutil.exe'
+if (-not (Test-Path -LiteralPath $fsutil)) { throw "fsutil.exe not found at $fsutil" }
+$devStatus = & $fsutil devdrv query $DevCacheRoot 2>&1
+if ($LASTEXITCODE -ne 0 -or (($devStatus | Out-String) -notmatch '(?i)developer volume')) {
+    throw "$DevCacheRoot is not recognised as a Windows Dev Drive."
+}
+
+Write-Host "[DEVCACHE] Configuring development caches on $DevCacheRoot" -ForegroundColor Cyan
+
 $cacheDirs = @(
-    'npm', 'pnpm', 'yarn', 'bun',                    # Node package managers
-    'pip', 'pipx', 'poetry', 'uv',                   # Python package managers
-    'cargo', 'rustup',                               # Rust
-    'go',                                            # Go
-    'gradle', 'maven',                               # Java build tools
-    'nuget',                                         # .NET
-    'composer',                                      # PHP
-    'vcpkg',                                         # C++ package manager
-    'docker',                                        # Docker
-    'temp', 'ccache'                                 # Build caches
+    'npm','pnpm','yarn','bun',
+    'pip','pipx','poetry','uv',
+    'cargo','rustup',
+    'go',
+    'gradle','maven',
+    'nuget',
+    'composer',
+    'vcpkg',
+    'ccache'
 )
 
-foreach($sub in $cacheDirs){
-  $path = Join-Path $DevCacheRoot $sub
-  New-Item -Force -ItemType Directory -Path $path | Out-Null
-  Write-Host "  ✅ $sub" -ForegroundColor Green
+foreach ($name in $cacheDirs) {
+    New-Item -ItemType Directory -Path (Join-Path $DevCacheRoot $name) -Force | Out-Null
+}
+
+function Set-UserEnvironmentPath {
+    param([Parameter(Mandatory)][string]$Name,[Parameter(Mandatory)][string]$Value)
+    [Environment]::SetEnvironmentVariable($Name, $Value, 'User')
+    Set-Item -Path "Env:$Name" -Value $Value
+    Write-Host "  ✅ $Name → $Value" -ForegroundColor Green
 }
 
 # Node
-Write-Host "`n📦 Node.js package managers..." -ForegroundColor Cyan
-npm config set cache "$DevCacheRoot\npm" --location=global 2>$null
-Write-Host "  ✅ npm cache → $DevCacheRoot\npm" -ForegroundColor Green
-
-if (Get-Command pnpm -ErrorAction SilentlyContinue) {
-    pnpm config set store-dir "$DevCacheRoot\pnpm" 2>$null
-    Write-Host "  ✅ pnpm store → $DevCacheRoot\pnpm" -ForegroundColor Green
+if (Get-Command npm -ErrorAction SilentlyContinue) {
+    & npm config set cache (Join-Path $DevCacheRoot 'npm') --location=global
+    if ($LASTEXITCODE -ne 0) { throw 'npm cache configuration failed.' }
+    Write-Host "  ✅ npm cache → $(Join-Path $DevCacheRoot 'npm')" -ForegroundColor Green
 }
-
-[Environment]::SetEnvironmentVariable("YARN_CACHE_FOLDER","$DevCacheRoot\yarn","User")
-Write-Host "  ✅ yarn cache → $DevCacheRoot\yarn" -ForegroundColor Green
-
+if (Get-Command pnpm -ErrorAction SilentlyContinue) {
+    & pnpm config set store-dir (Join-Path $DevCacheRoot 'pnpm')
+    if ($LASTEXITCODE -ne 0) { throw 'pnpm store configuration failed.' }
+    Write-Host "  ✅ pnpm store → $(Join-Path $DevCacheRoot 'pnpm')" -ForegroundColor Green
+}
+Set-UserEnvironmentPath 'YARN_CACHE_FOLDER' (Join-Path $DevCacheRoot 'yarn')
 if (Get-Command bun -ErrorAction SilentlyContinue) {
-    [Environment]::SetEnvironmentVariable("BUN_INSTALL_CACHE_DIR","$DevCacheRoot\bun","User")
-    Write-Host "  ✅ bun cache → $DevCacheRoot\bun" -ForegroundColor Green
+    Set-UserEnvironmentPath 'BUN_INSTALL_CACHE_DIR' (Join-Path $DevCacheRoot 'bun')
 }
 
 # Python
-Write-Host "`n🐍 Python package managers..." -ForegroundColor Cyan
-[Environment]::SetEnvironmentVariable("PIP_CACHE_DIR","$DevCacheRoot\pip","User")
-Write-Host "  ✅ pip cache → $DevCacheRoot\pip" -ForegroundColor Green
-
-[Environment]::SetEnvironmentVariable("PIPX_HOME","$DevCacheRoot\pipx","User")
-[Environment]::SetEnvironmentVariable("PIPX_BIN_DIR","$DevCacheRoot\pipx\bin","User")
-Write-Host "  ✅ pipx home → $DevCacheRoot\pipx" -ForegroundColor Green
-
-[Environment]::SetEnvironmentVariable("POETRY_CACHE_DIR","$DevCacheRoot\poetry","User")
-Write-Host "  ✅ poetry cache → $DevCacheRoot\poetry" -ForegroundColor Green
-
+Set-UserEnvironmentPath 'PIP_CACHE_DIR' (Join-Path $DevCacheRoot 'pip')
+Set-UserEnvironmentPath 'PIPX_HOME' (Join-Path $DevCacheRoot 'pipx')
+Set-UserEnvironmentPath 'PIPX_BIN_DIR' (Join-Path $DevCacheRoot 'pipx\bin')
+New-Item -ItemType Directory -Path (Join-Path $DevCacheRoot 'pipx\bin') -Force | Out-Null
+Set-UserEnvironmentPath 'POETRY_CACHE_DIR' (Join-Path $DevCacheRoot 'poetry')
 if (Get-Command uv -ErrorAction SilentlyContinue) {
-    [Environment]::SetEnvironmentVariable("UV_CACHE_DIR","$DevCacheRoot\uv","User")
-    Write-Host "  ✅ uv cache → $DevCacheRoot\uv" -ForegroundColor Green
+    Set-UserEnvironmentPath 'UV_CACHE_DIR' (Join-Path $DevCacheRoot 'uv')
 }
 
 # Rust
-Write-Host "`n🦀 Rust..." -ForegroundColor Cyan
-[Environment]::SetEnvironmentVariable("CARGO_HOME","$DevCacheRoot\cargo","User")
-[Environment]::SetEnvironmentVariable("RUSTUP_HOME","$DevCacheRoot\rustup","User")
-Write-Host "  ✅ cargo home → $DevCacheRoot\cargo" -ForegroundColor Green
-Write-Host "  ✅ rustup home → $DevCacheRoot\rustup" -ForegroundColor Green
+Set-UserEnvironmentPath 'CARGO_HOME' (Join-Path $DevCacheRoot 'cargo')
+Set-UserEnvironmentPath 'RUSTUP_HOME' (Join-Path $DevCacheRoot 'rustup')
 
 # Go
-Write-Host "`n🐹 Go..." -ForegroundColor Cyan
-[Environment]::SetEnvironmentVariable("GOPATH","$DevCacheRoot\go","User")
-[Environment]::SetEnvironmentVariable("GOMODCACHE","$DevCacheRoot\go\pkg\mod","User")
-Write-Host "  ✅ GOPATH → $DevCacheRoot\go" -ForegroundColor Green
-Write-Host "  ✅ GOMODCACHE → $DevCacheRoot\go\pkg\mod" -ForegroundColor Green
-
-$up = [Environment]::GetEnvironmentVariable("Path","User")
-if ($up -notlike "*$DevCacheRoot\go\bin*"){
-    [Environment]::SetEnvironmentVariable("Path", ($up + ";$DevCacheRoot\go\bin"), "User")
-    Write-Host "  ✅ Added Go bin to PATH" -ForegroundColor Green
+Set-UserEnvironmentPath 'GOPATH' (Join-Path $DevCacheRoot 'go')
+Set-UserEnvironmentPath 'GOMODCACHE' (Join-Path $DevCacheRoot 'go\pkg\mod')
+New-Item -ItemType Directory -Path (Join-Path $DevCacheRoot 'go\pkg\mod') -Force | Out-Null
+$goBin = Join-Path $DevCacheRoot 'go\bin'
+New-Item -ItemType Directory -Path $goBin -Force | Out-Null
+$userPath = [Environment]::GetEnvironmentVariable('Path','User')
+$entries = @($userPath -split ';' | Where-Object { $_ })
+if ($entries -notcontains $goBin) {
+    [Environment]::SetEnvironmentVariable('Path', (($entries + $goBin) -join ';'), 'User')
 }
 
-# Gradle/Maven
-Write-Host "`n☕ Java build tools..." -ForegroundColor Cyan
-[Environment]::SetEnvironmentVariable("GRADLE_USER_HOME","$DevCacheRoot\gradle","User")
-Write-Host "  ✅ Gradle home → $DevCacheRoot\gradle" -ForegroundColor Green
-
-$mvndir = "$HOME\.m2"
-New-Item -Force -ItemType Directory -Path $mvndir | Out-Null
-$settings = @"
-<settings xmlns='http://maven.apache.org/SETTINGS/1.0.0'
-          xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
-          xsi:schemaLocation='http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd'>
-  <localRepository>$DevCacheRoot\maven</localRepository>
+# Java
+Set-UserEnvironmentPath 'GRADLE_USER_HOME' (Join-Path $DevCacheRoot 'gradle')
+$m2 = Join-Path $env:USERPROFILE '.m2'
+New-Item -ItemType Directory -Path $m2 -Force | Out-Null
+$settings = Join-Path $m2 'settings.xml'
+$repoPath = (Join-Path $DevCacheRoot 'maven').Replace('\','/')
+@"
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <localRepository>$repoPath</localRepository>
 </settings>
-"@
-$settings | Out-File -Encoding utf8 "$mvndir\settings.xml"
-Write-Host "  ✅ Maven local repo → $DevCacheRoot\maven" -ForegroundColor Green
+"@ | Set-Content -LiteralPath $settings -Encoding utf8
+Write-Host "  ✅ Maven local repository → $(Join-Path $DevCacheRoot 'maven')" -ForegroundColor Green
 
-# .NET NuGet
-Write-Host "`n💎 .NET NuGet..." -ForegroundColor Cyan
-[Environment]::SetEnvironmentVariable("NUGET_PACKAGES","$DevCacheRoot\nuget","User")
-Write-Host "  ✅ NuGet packages → $DevCacheRoot\nuget" -ForegroundColor Green
+# .NET / PHP / C++
+Set-UserEnvironmentPath 'NUGET_PACKAGES' (Join-Path $DevCacheRoot 'nuget')
+Set-UserEnvironmentPath 'COMPOSER_HOME' (Join-Path $DevCacheRoot 'composer')
+Set-UserEnvironmentPath 'COMPOSER_CACHE_DIR' (Join-Path $DevCacheRoot 'composer\cache')
+Set-UserEnvironmentPath 'VCPKG_DEFAULT_BINARY_CACHE' (Join-Path $DevCacheRoot 'vcpkg')
+Set-UserEnvironmentPath 'CCACHE_DIR' (Join-Path $DevCacheRoot 'ccache')
 
-# Composer
-Write-Host "`n🎼 PHP Composer..." -ForegroundColor Cyan
-[Environment]::SetEnvironmentVariable("COMPOSER_HOME","$DevCacheRoot\composer","User")
-[Environment]::SetEnvironmentVariable("COMPOSER_CACHE_DIR","$DevCacheRoot\composer\cache","User")
-Write-Host "  ✅ Composer home → $DevCacheRoot\composer" -ForegroundColor Green
-
-# vcpkg (C++ package manager)
-Write-Host "`n📦 C++ vcpkg..." -ForegroundColor Cyan
-[Environment]::SetEnvironmentVariable("VCPKG_DEFAULT_BINARY_CACHE","$DevCacheRoot\vcpkg","User")
-Write-Host "  ✅ vcpkg cache → $DevCacheRoot\vcpkg" -ForegroundColor Green
-
-# Build cache tools
-Write-Host "`n🔨 Build caches..." -ForegroundColor Cyan
-[Environment]::SetEnvironmentVariable("CCACHE_DIR","$DevCacheRoot\ccache","User")
-Write-Host "  ✅ ccache → $DevCacheRoot\ccache" -ForegroundColor Green
-
-[Environment]::SetEnvironmentVariable("TEMP","$DevCacheRoot\temp","User")
-[Environment]::SetEnvironmentVariable("TMP","$DevCacheRoot\temp","User")
-Write-Host "  ✅ TEMP/TMP → $DevCacheRoot\temp" -ForegroundColor Green
-
-Write-Host "`n🐳 Docker data-root..." -ForegroundColor Cyan
-$dockerConfigDir = "$env:ProgramData\Docker\config"
-$dockerConfig = Join-Path $dockerConfigDir "daemon.json"
-$dockerData = Join-Path $DevCacheRoot "docker"
-New-Item -Force -ItemType Directory -Path $dockerData | Out-Null
-New-Item -Force -ItemType Directory -Path $dockerConfigDir | Out-Null
-
-# Create or update daemon.json
-$daemonSettings = @{
-  "data-root" = $dockerData
-  "storage-driver" = "windowsfilter"
-  "dns" = @("8.8.8.8", "1.1.1.1")
-}
-
-if (Test-Path $dockerConfig) {
-  try {
-    $existing = Get-Content $dockerConfig -Raw | ConvertFrom-Json
-    $existing.'data-root' = $dockerData
-    $existing | ConvertTo-Json -Depth 10 | Set-Content $dockerConfig -Encoding utf8
-    Write-Host "  ✅ Updated Docker data-root → $dockerData" -ForegroundColor Green
-  } catch {
-    $daemonSettings | ConvertTo-Json -Depth 10 | Set-Content $dockerConfig -Encoding utf8
-    Write-Host "  ✅ Created Docker config → $dockerData" -ForegroundColor Green
-  }
-} else {
-  $daemonSettings | ConvertTo-Json -Depth 10 | Set-Content $dockerConfig -Encoding utf8
-  Write-Host "  ✅ Created Docker config → $dockerData" -ForegroundColor Green
-}
-
-Write-Host "  ⚠️  Restart Docker Desktop to apply changes" -ForegroundColor Yellow
-
-Write-Host "`n[OK] Dev Drive cache configuration complete!" -ForegroundColor Green
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-Write-Host "✅ All caches configured to use: $DevCacheRoot" -ForegroundColor Green
-Write-Host "✅ Benefits: Faster builds, less C: drive usage, better performance" -ForegroundColor Green
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-Write-Host "`n💡 IMPORTANT: Open a NEW terminal to pick up environment changes!" -ForegroundColor Yellow
-Write-Host "   Or run: refreshenv (requires chocolatey)" -ForegroundColor Gray
+Write-Host "`n[DEVCACHE] Cache configuration complete." -ForegroundColor Green
+Write-Host "  TEMP/TMP were intentionally left unchanged." -ForegroundColor Gray
+Write-Host "  Docker Desktop daemon.json was intentionally left unchanged." -ForegroundColor Gray
+Write-Host "  Open a new terminal for persistent environment variables." -ForegroundColor Yellow
