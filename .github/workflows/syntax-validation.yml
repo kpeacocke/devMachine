@@ -14,20 +14,14 @@ jobs:
   powershell-syntax:
     runs-on: windows-latest
     name: PowerShell Syntax and Regression Validation
-
     steps:
     - uses: actions/checkout@v4
-
     - name: Setup PowerShell 7
       shell: pwsh
-      run: |
-        Write-Host "PowerShell version: $($PSVersionTable.PSVersion)"
-
+      run: Write-Host "PowerShell version: $($PSVersionTable.PSVersion)"
     - name: Install Pester
       shell: pwsh
-      run: |
-        Install-Module -Name Pester -Force -Scope CurrentUser -SkipPublisherCheck -MinimumVersion 5.0
-
+      run: Install-Module -Name Pester -Force -Scope CurrentUser -SkipPublisherCheck -MinimumVersion 5.0
     - name: Run Syntax Validation Tests
       shell: pwsh
       run: |
@@ -37,7 +31,6 @@ jobs:
         $config.Output.Verbosity = 'Detailed'
         $result = Invoke-Pester -Configuration $config
         if ($result.FailedCount -gt 0) { throw "$($result.FailedCount) syntax test(s) failed" }
-
     - name: Run Bootstrap Regression Tests
       shell: pwsh
       run: |
@@ -53,30 +46,22 @@ jobs:
   bash-syntax:
     runs-on: ubuntu-latest
     name: Bash Syntax Validation
-
     steps:
     - uses: actions/checkout@v4
-
     - name: Install shellcheck
       run: |
         sudo apt-get update
         sudo apt-get install -y shellcheck
-
     - name: Run shellcheck on bash scripts
-      run: |
-        find . -name "*.sh" -type f | xargs shellcheck
-
+      run: find . -name "*.sh" -type f -print0 | xargs -0 shellcheck
     - name: Validate bash syntax
-      run: |
-        find . -name "*.sh" -type f -exec bash -n {} \;
+      run: find . -name "*.sh" -type f -exec bash -n {} \;
 
   security-scan:
     runs-on: ubuntu-latest
     name: Security Scan
-
     steps:
     - uses: actions/checkout@v4
-
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
@@ -84,7 +69,6 @@ jobs:
         scan-ref: '.'
         format: 'sarif'
         output: 'trivy-results.sarif'
-
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
       with:
@@ -93,10 +77,8 @@ jobs:
   markdown-validation:
     runs-on: ubuntu-latest
     name: Markdown Validation
-
     steps:
     - uses: actions/checkout@v4
-
     - name: Validate Markdown files
       uses: DavidAnson/markdownlint-cli2-action@v16
       with:
