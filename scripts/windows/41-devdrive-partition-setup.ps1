@@ -6,21 +6,19 @@
     Creates one 90 GB Windows Dev Drive on the disk containing C:, mounted at
     C:\DevCache. C:\Users\<user>\code is a junction to C:\DevCache\code.
 
-    A Dev Drive requires at least 50 GB. The script uses Windows'
-    Get-PartitionSupportedSize result and refuses to reduce C: below 30% free.
+    A Dev Drive requires at least 50 GB. The script uses Windows' actual
+    Get-PartitionSupportedSize boundary and refuses to reduce C: below 30% free.
     Existing undersized DevCache/DevCode volumes are never deleted automatically.
 
-    WhatIf is provided by SupportsShouldProcess; it is not redeclared.
+    SupportsShouldProcess provides the common -WhatIf parameter; no duplicate
+    WhatIf parameter is declared.
 #>
 
 #Requires -Version 5.1
 #Requires -RunAsAdministrator
 
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact='High')]
-param(
-    [ValidateRange(50,500)]
-    [int]$DevDriveGB = 90
-)
+param([ValidateRange(50,500)][int]$DevDriveGB = 90)
 
 $ErrorActionPreference = 'Stop'
 $MinimumGB = 50
@@ -29,13 +27,13 @@ $CodePath = Join-Path $env:USERPROFILE 'code'
 $CodeTarget = Join-Path $MountPoint 'code'
 $FsUtil = Join-Path $env:SystemRoot 'System32\fsutil.exe'
 
-# Regression contract: Test-Path C:\DevCache; Get-Volume DevCache; existing partition.
+# Test-Path C:\DevCache; Get-Volume DevCache; existing partition are part of the regression contract.
 
 function Get-LabeledVolume {
     param([Parameter(Mandatory)][string]$Label)
-    Get-Volume -ErrorAction SilentlyContinue |
-        Where-Object { $_.FileSystem -eq 'ReFS' -and $_.FileSystemLabel -eq $Label } |
-        Select-Object -First 1
+    Get-Volume -ErrorAction SilentlyContinue | Where-Object {
+        $_.FileSystem -eq 'ReFS' -and $_.FileSystemLabel -eq $Label
+    } | Select-Object -First 1
 }
 
 function Get-VolumePartition {
@@ -50,7 +48,6 @@ function Get-VolumePartition {
 
 function Test-DevDrive {
     param([Parameter(Mandatory)][string]$Path)
-    if (-not (Test-Path -LiteralPath $FsUtil)) { throw "fsutil.exe not found: $FsUtil" }
     $output = & $FsUtil devdrv query $Path 2>&1
     return ($LASTEXITCODE -eq 0 -and (($output | Out-String) -match '(?i)developer volume'))
 }
@@ -84,37 +81,31 @@ function Ensure-MountPoint {
         if (@(Get-ChildItem -LiteralPath $MountPoint -Force -ErrorAction Stop).Count -gt 0) {
             throw "$MountPoint exists and is not an empty mount-point directory."
         }
-    } else {
-        New-Item -ItemType Directory -Path $MountPoint -Force | Out-Null
-    }
+    } else { New-Item -ItemType Directory -Path $MountPoint -Force | Out-Null }
     Add-PartitionAccessPath -DiskNumber $Partition.DiskNumber -PartitionNumber $Partition.PartitionNumber -AccessPath $MountPoint -ErrorAction Stop
 }
 
 function Get-ContiguousFreeAfterC {
     param([Parameter(Mandatory)]$Disk,[Parameter(Mandatory)]$CPartition)
-    $cEnd = [uint64]$CPartition.Offset + [uint64]$CPartition.Size
-    $next = @(Get-Partition -DiskNumber $Disk.Number -ErrorAction Stop |
-        Where-Object { [uint64]$_.Offset -gt $cEnd } | Sort-Object Offset | Select-Object -First 1)
+    $end = [uint64]$CPartition.Offset + [uint64]$CPartition.Size
+    $next = @(Get-Partition -DiskNumber $Disk.Number -ErrorAction Stop | Where-Object { [uint64]$_.Offset -gt $end } | Sort-Object Offset | Select-Object -First 1)
     $boundary = if ($next.Count) { [uint64]$next[0].Offset } else { [uint64]$Disk.Size }
-    if ($boundary -le $cEnd) { return [uint64]0 }
-    return $boundary - $cEnd
+    return [uint64][Math]::Max([int64]0,[int64]$boundary-[int64]$end)
 }
 
 Write-Host '🔧 Dev Drive Setup' -ForegroundColor Cyan
 Write-Host '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' -ForegroundColor Cyan
-
 if ($DevDriveGB -lt $MinimumGB) { throw "Dev Drive must be at least $MinimumGB GB." }
 if (-not (Test-Path -LiteralPath $FsUtil)) { throw "fsutil.exe not found: $FsUtil" }
 
 $legacyCode = Get-LabeledVolume 'DevCode'
 $cache = Get-LabeledVolume 'DevCache'
 if ($legacyCode) { throw "Legacy DevCode volume detected ($([math]::Round($legacyCode.Size/1GB,1)) GB). Remove it explicitly before continuing." }
-if ($cache -and $cache.Size -lt ([uint64]$MinimumGB * 1GB)) { throw "Undersized legacy DevCache volume detected ($([math]::Round($cache.Size/1GB,1)) GB). Remove it explicitly before continuing." }
+if ($cache -and $cache.Size -lt ([uint64]$MinimumGB*1GB)) { throw "Undersized legacy DevCache volume detected ($([math]::Round($cache.Size/1GB,1)) GB). Remove it explicitly before continuing." }
 
 if ($cache) {
     $p = Get-VolumePartition $cache
     if (-not $p) { throw 'Could not safely resolve the existing DevCache partition.' }
-    Write-Host "   Existing DevCache: $([math]::Round($cache.Size/1GB,1)) GB" -ForegroundColor Green
     if ($PSCmdlet.ShouldProcess($MountPoint,'Mount and trust existing DevCache')) {
         Ensure-MountPoint $p
         Trust-DevDrive $MountPoint
@@ -172,9 +163,7 @@ try {
     New-Item -ItemType Directory -Path $CodeTarget -Force | Out-Null
     Ensure-CodeJunction
 }
-catch {
-    throw "Dev Drive creation failed: $($_.Exception.Message)"
-}
+catch { throw "Dev Drive creation failed: $($_.Exception.Message)" }
 
 Write-Host "`n[3/3] Verifying..." -ForegroundColor Cyan
 $final = Get-LabeledVolume 'DevCache'
