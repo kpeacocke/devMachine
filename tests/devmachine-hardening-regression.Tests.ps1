@@ -4,7 +4,6 @@
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent $PSScriptRoot
     $script:WindowsScripts = Join-Path $script:RepoRoot 'scripts\windows'
-    $script:Setup = Join-Path $script:RepoRoot 'setup-machine.ps1'
 }
 
 Describe 'PowerShell common-parameter safety' {
@@ -25,18 +24,18 @@ Describe 'Dev Drive design' {
     It 'uses one valid 90 GB Dev Drive and never a sub-50 GB DevCode drive' {
         $content = Get-Content (Join-Path $script:WindowsScripts '41-devdrive-partition-setup.ps1') -Raw
         $content | Should -Match '\$DevDriveGB\s*=\s*90'
-        $content | Should -Match 'MinimumGB\s*=\s*50'
+        $content | Should -Match '\$MinimumGB\s*=\s*50'
         $content | Should -Match 'Format-Volume[\s\S]*-DevDrive'
-        $content | Should -Match 'New-FileSystemLabel\s+''DevCache'''
-        $content | Should -Not -Match 'New-FileSystemLabel\s+''DevCode'''
+        $content | Should -Match "-NewFileSystemLabel\s+'DevCache'"
+        $content | Should -Not -Match "-NewFileSystemLabel\s+'DevCode'"
     }
 
     It 'uses the actual Windows-supported C drive shrink boundary' {
         $content = Get-Content (Join-Path $script:WindowsScripts '41-devdrive-partition-setup.ps1') -Raw
         $content | Should -Match 'Get-PartitionSupportedSize'
         $content | Should -Match 'SizeMin'
-        $content | Should -Match 'projectedFreePct'
-        $content | Should -Match 'projectedFreePct\s+-lt\s+30'
+        $content | Should -Match 'projectedPct'
+        $content | Should -Match 'projectedPct\s+-lt\s+30'
     }
 
     It 'never uses exit 0 for WhatIf/idempotent success paths' {
@@ -44,7 +43,7 @@ Describe 'Dev Drive design' {
         $content | Should -Not -Match 'exit\s+0'
     }
 
-    It 'uses a Windows-supported Dev Drive trust operation' {
+    It 'uses the documented Dev Drive trust operations' {
         $content = Get-Content (Join-Path $script:WindowsScripts '41-devdrive-partition-setup.ps1') -Raw
         $content | Should -Match 'fsutil\.exe'
         $content | Should -Match 'devdrv\s+trust'
@@ -65,6 +64,16 @@ Describe 'Windows executable resolution' {
         $content = Get-Content (Join-Path $script:WindowsScripts '31-performance-tuning.ps1') -Raw
         $content | Should -Match "DevCachePath\s*=\s*'C:\\DevCache'"
         $content | Should -Not -Match 'DevCachePath\s*=\s*"D:\\dev\\caches"'
+    }
+
+    It '40-devdrive-caches does not move TEMP/TMP or overwrite Docker daemon configuration' {
+        $content = Get-Content (Join-Path $script:WindowsScripts '40-devdrive-caches.ps1') -Raw
+        $content | Should -Match 'TEMP/TMP were intentionally left unchanged'
+        $content | Should -Match 'Docker Desktop daemon.json was intentionally left unchanged'
+        $content | Should -Match 'PIP_CACHE_DIR'
+        $content | Should -Match 'CARGO_HOME'
+        $content | Should -Match 'GOPATH'
+        $content | Should -Match 'NUGET_PACKAGES'
     }
 }
 
