@@ -310,39 +310,70 @@ if (-not (Get-Module -ListAvailable -Name PSReadLine)) {
     }
 }
 
+# Repair default-host registration in this PowerShell installation's registry view.
+# Store PowerShell can retain virtualized values that differ from an MSI/standalone
+# process, so script 06 must also repair these when run inside Store PowerShell.
+try {
+    if ((Get-Command Get-AppxPackage -ErrorAction SilentlyContinue) -and
+        (Get-AppxPackage Microsoft.WindowsTerminal)) {
+        New-Item -Path 'HKCU:\Console\%%Startup' -Force | Out-Null
+        New-ItemProperty -Path 'HKCU:\Console\%%Startup' -Name DelegationConsole -PropertyType String -Value '{2EACA947-7F5F-4CFA-BA87-8F7FBEEFBE69}' -Force -ErrorAction Stop | Out-Null
+        New-ItemProperty -Path 'HKCU:\Console\%%Startup' -Name DelegationTerminal -PropertyType String -Value '{E12CFF52-A866-4C77-9A90-F570A7AA2C6B}' -Force -ErrorAction Stop | Out-Null
+        Write-Host '  Windows Terminal default host registration repaired' -ForegroundColor Green
+    }
+} catch {
+    Write-Warning "Default terminal configuration failed: $_"
+}
 # Configure console font for Nerd Font icons (PowerShell console)
 Write-Host "`n[CONSOLE] Configuring console font for Nerd Font support..."
 try {
-    # Registry paths for PowerShell console configurations
+    # Configure defaults as well as executable-specific overrides. Store installs
+    # use a versioned WindowsApps path, unlike the MSI installation.
     $consolePaths = @(
+        "HKCU:\Console",
         "HKCU:\Console\%SystemRoot%_System32_WindowsPowerShell_v1.0_powershell.exe",
-        "HKCU:\Console\C:_Program Files_PowerShell_7_pwsh.exe"
+        "HKCU:\Console\C:_Program Files_PowerShell_7_pwsh.exe",
+        "HKCU:\Console\pwsh.exe",
+        "HKCU:\Console\PowerShell",
+        "HKCU:\Console\PowerShell_7"
     )
-
-    # Create registry paths if they don't exist
+    $pwshPaths = @((Get-Process -Id $PID).Path)
+    if (Get-Command Get-AppxPackage -ErrorAction SilentlyContinue) {
+        $pwshPaths += Get-AppxPackage Microsoft.PowerShell | ForEach-Object {
+            Join-Path $_.InstallLocation 'pwsh.exe'
+        }
+    }
+    foreach ($executable in $pwshPaths) {
+        $consolePaths += "HKCU:\Console\$($executable.Replace('\', '_'))"
+    }
+    $consolePaths = $consolePaths | Select-Object -Unique
     foreach ($path in $consolePaths) {
         if (-not (Test-Path $path)) {
             New-Item -Path $path -Force | Out-Null
         }
     }
 
-    # Font settings for JetBrains Mono Nerd Font with auto-detection
-    $installedJetBrainsFonts = Get-ChildItem "$env:windir\Fonts" -Filter "*JetBrains*" -ErrorAction SilentlyContinue | Where-Object {
-        $_.Name -match "NF.*Regular\.ttf$|Nerd.*Font.*Regular\.ttf$"
+    # GDI family names are not font filenames. Conhost needs the installed
+    # family name (and has a 32-character face-name limit).
+    Add-Type -AssemblyName System.Drawing
+    $fontCollection = New-Object System.Drawing.Text.InstalledFontCollection
+    try {
+        $installedFamilies = @($fontCollection.Families | ForEach-Object { $_.Name })
+        $fontName = @('JetBrainsMono NFM', 'JetBrainsMono Nerd Font Mono',
+                      'JetBrainsMono NF', 'JetBrainsMono Nerd Font') |
+            Where-Object { $_ -in $installedFamilies } | Select-Object -First 1
+    } finally {
+        $fontCollection.Dispose()
     }
-
-    $fontName = if ($installedJetBrainsFonts) {
-        $installedJetBrainsFonts[0].BaseName
-    } else {
-        "JetBrainsMono NF"  # Fallback
+    if (-not $fontName) {
+        throw "JetBrains Mono Nerd Font is not installed. Install it before configuring the console."
     }
-
     Write-Host "    Using font: $fontName" -ForegroundColor Gray
 
     $fontSettings = @{
         "FaceName" = $fontName
         "FontFamily" = 54  # Modern font family
-        "FontSize" = 0x000C0000  # Size 12 (high word = height, low word = width)
+        "FontSize" = 0x00160000  # 22 pixels high; console font sizes are pixels, not points
         "FontWeight" = 400  # Normal weight
     }
 
@@ -357,7 +388,8 @@ try {
     # Apply font and console settings
     foreach ($path in $consolePaths) {
         foreach ($setting in ($fontSettings + $consoleSettings).GetEnumerator()) {
-            Set-ItemProperty -Path $path -Name $setting.Key -Value $setting.Value -Type DWord -ErrorAction SilentlyContinue
+            $valueType = if ($setting.Key -eq 'FaceName') { 'String' } else { 'DWord' }
+            New-ItemProperty -Path $path -Name $setting.Key -Value $setting.Value -PropertyType $valueType -Force -ErrorAction Stop | Out-Null
         }
     }
 

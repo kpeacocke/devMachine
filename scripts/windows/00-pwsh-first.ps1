@@ -58,8 +58,9 @@ try { winget install --id Microsoft.WindowsTerminal --exact --source winget --si
 
 # Make Windows Terminal the default terminal application (Windows 11 setting)
 try {
-  reg add "HKCU\Console\%%Startup" /v DelegationConsole /t REG_DWORD /d 1 /f | Out-Null
-  reg add "HKCU\Console\%%Startup" /v DelegationTerminal /t REG_DWORD /d 1 /f | Out-Null
+  New-Item -Path "HKCU:\Console\%%Startup" -Force | Out-Null
+  New-ItemProperty -Path "HKCU:\Console\%%Startup" -Name DelegationConsole -PropertyType String -Value "{2EACA947-7F5F-4CFA-BA87-8F7FBEEFBE69}" -Force -ErrorAction Stop | Out-Null
+  New-ItemProperty -Path "HKCU:\Console\%%Startup" -Name DelegationTerminal -PropertyType String -Value "{E12CFF52-A866-4C77-9A90-F570A7AA2C6B}" -Force -ErrorAction Stop | Out-Null
   Write-Host "[OK] Windows Terminal set as default terminal host"
 } catch { Write-Warning "Could not set Windows Terminal as default terminal host: $_" }
 
