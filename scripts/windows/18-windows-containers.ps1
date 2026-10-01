@@ -1,24 +1,16 @@
 <#
 .SYNOPSIS
-    Configure Windows Containers and container development features
+    Configure Windows container development features.
 
 .DESCRIPTION
-    This script configures Windows container features including:
-    - Windows container feature enablement
-    - Hyper-V container isolation support
-    - Container management tools
-    - Windows Subsystem for Linux integration
-    - Container development optimizations
+    Enables Windows features required for Windows containers and Hyper-V isolation,
+    installs optional container tooling, and validates the result.
 
-.EXAMPLE
-    .\scripts\windows\18-windows-containers.ps1
+    Windows feature servicing runs through the inbox Windows PowerShell 5.1 host.
+    This avoids the current Windows 11 / PowerShell 7 DISM provider failure:
+    "Class not registered".
 
-.EXAMPLE
-    .\scripts\windows\18-windows-containers.ps1 -WhatIf
-
-.NOTES
-    Requires Administrator privileges and may require a reboot
-    Run after Docker Desktop installation
+    WhatIf is the PowerShell common parameter supplied by SupportsShouldProcess.
 #>
 
 #Requires -Version 5.1
@@ -26,361 +18,99 @@
 
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [Parameter(HelpMessage = "Show what would be done without making changes")]
-    [switch]$WhatIf,
-
-    [Parameter(HelpMessage = "Skip Hyper-V container isolation setup")]
     [switch]$SkipHyperV,
-
-    [Parameter(HelpMessage = "Enable Windows container base image pre-caching")]
     [switch]$EnableBaseCaching
 )
 
 $ErrorActionPreference = 'Stop'
-
-function Test-Command($n){ $null -ne (Get-Command $n -ErrorAction SilentlyContinue) }
-
-# Current Windows 11 builds can fail with "Class not registered" when the DISM
-# PowerShell cmdlets run inside PowerShell 7. Keep this script usable from pwsh,
-# but execute Windows feature servicing in the inbox Windows PowerShell 5.1 host.
 $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-if (-not (Test-Path $windowsPowerShell)) {
+if (-not (Test-Path -LiteralPath $windowsPowerShell)) {
     throw "Windows PowerShell 5.1 not found at $windowsPowerShell"
 }
 
-function Test-ContainerFeature {
-    param([string]$FeatureName)
-    try {
-        $escapedFeatureName = $FeatureName.Replace("'", "''")
-        $state = (& $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command `
-            "(Get-WindowsOptionalFeature -Online -FeatureName '$escapedFeatureName' -ErrorAction Stop).State" | Out-String).Trim()
-        if ($LASTEXITCODE -ne 0) {
-            throw "Windows PowerShell exited with code $LASTEXITCODE"
-        }
-        return $state -eq 'Enabled'
-    } catch {
-        Write-Host "  ⚠️  Could not query Windows feature '$FeatureName': $_" -ForegroundColor Yellow
-        return $false
+function Invoke-WindowsPowerShell51 {
+    param([Parameter(Mandatory)][string]$Command)
+    $output = & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command $Command 2>&1
+    $code = $LASTEXITCODE
+    if ($code -ne 0) {
+        throw "Windows PowerShell 5.1 exited with code $code.`n$(($output | Out-String).Trim())"
     }
+    $output
 }
 
-function Enable-ContainerFeature {
-    [CmdletBinding(SupportsShouldProcess)]
-    param(
-        [string]$FeatureName,
-        [string]$DisplayName
-    )
+function Get-WindowsFeatureState {
+    param([Parameter(Mandatory)][string]$FeatureName)
+    $name = $FeatureName.Replace("'", "''")
+    (Invoke-WindowsPowerShell51 "(Get-WindowsOptionalFeature -Online -FeatureName '$name' -ErrorAction Stop).State" | Out-String).Trim()
+}
 
-    if (Test-ContainerFeature -FeatureName $FeatureName) {
+function Enable-WindowsFeature51 {
+    param([Parameter(Mandatory)][string]$FeatureName,[Parameter(Mandatory)][string]$DisplayName)
+    if ((Get-WindowsFeatureState $FeatureName) -eq 'Enabled') {
         Write-Host "  → $DisplayName already enabled" -ForegroundColor Green
         return $false
     }
-
-    if ($WhatIf) {
+    if ($WhatIfPreference) {
         Write-Host "  🔍 Would enable $DisplayName" -ForegroundColor Cyan
         return $false
     }
-
-    if ($PSCmdlet.ShouldProcess($DisplayName, "Enable Windows Feature")) {
-        try {
-            $escapedFeatureName = $FeatureName.Replace("'", "''")
-            & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command `
-                "Enable-WindowsOptionalFeature -Online -FeatureName '$escapedFeatureName' -All -NoRestart -ErrorAction Stop | Out-Null"
-            if ($LASTEXITCODE -ne 0) {
-                throw "Windows PowerShell exited with code $LASTEXITCODE"
-            }
-            Write-Host "  ✅ $DisplayName enabled" -ForegroundColor Green
-            return $true
-        } catch {
-            Write-Host "  ❌ Failed to enable $DisplayName`: $_" -ForegroundColor Red
-            return $false
-        }
-    }
-    return $false
+    if (-not $PSCmdlet.ShouldProcess($DisplayName,'Enable Windows feature')) { return $false }
+    $name = $FeatureName.Replace("'", "''")
+    Invoke-WindowsPowerShell51 "Enable-WindowsOptionalFeature -Online -FeatureName '$name' -All -NoRestart -ErrorAction Stop | Out-Null"
+    Write-Host "  ✅ $DisplayName enabled" -ForegroundColor Green
+    $true
 }
 
-Write-Host "🐳 Windows Container Features Configuration" -ForegroundColor Cyan
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-# Check if running in WhatIf mode
-if ($WhatIf) {
-    Write-Host "`n🔍 WHAT-IF MODE: No changes will be made" -ForegroundColor Cyan
-    Write-Host "   This would configure Windows container features and optimizations." -ForegroundColor Gray
-}
-
+Write-Host '🐳 Windows Container Features Configuration' -ForegroundColor Cyan
 $rebootRequired = $false
-
-Write-Host "`n📦 Windows Container Features"
-Write-Host "   Enabling core container functionality..."
-
-# Enable Windows Subsystem for Linux (if not already enabled)
-if (-not (Test-ContainerFeature -FeatureName "Microsoft-Windows-Subsystem-Linux")) {
-    $rebootRequired = Enable-ContainerFeature -FeatureName "Microsoft-Windows-Subsystem-Linux" -DisplayName "Windows Subsystem for Linux" -or $rebootRequired
-}
-
-# Enable Virtual Machine Platform (required for WSL2 and Hyper-V containers)
-if (-not (Test-ContainerFeature -FeatureName "VirtualMachinePlatform")) {
-    $rebootRequired = Enable-ContainerFeature -FeatureName "VirtualMachinePlatform" -DisplayName "Virtual Machine Platform" -or $rebootRequired
-}
-
-# Enable Windows Hypervisor Platform (for container isolation)
-if (-not $SkipHyperV) {
-    if (-not (Test-ContainerFeature -FeatureName "HypervisorPlatform")) {
-        $rebootRequired = Enable-ContainerFeature -FeatureName "HypervisorPlatform" -DisplayName "Windows Hypervisor Platform" -or $rebootRequired
-    }
-}
-
-# Enable Containers feature (Windows containers)
-if (-not (Test-ContainerFeature -FeatureName "Containers")) {
-    $rebootRequired = Enable-ContainerFeature -FeatureName "Containers" -DisplayName "Windows Containers" -or $rebootRequired
-}
-
-# Enable Hyper-V (if not skipped and supported)
-if (-not $SkipHyperV) {
-    if (-not (Test-ContainerFeature -FeatureName "Microsoft-Hyper-V-All")) {
-        Write-Host "   Checking Hyper-V compatibility..."
-        try {
-            $hyperVInfo = Get-ComputerInfo -Property "HyperV*" -ErrorAction Stop
-            if ($hyperVInfo.HyperVRequirementDataExecutionPreventionAvailable -and
-                $hyperVInfo.HyperVRequirementSecondLevelAddressTranslation -and
-                $hyperVInfo.HyperVRequirementVirtualizationFirmwareEnabled -and
-                $hyperVInfo.HyperVRequirementVMMonitorModeExtensions) {
-
-                $rebootRequired = Enable-ContainerFeature -FeatureName "Microsoft-Hyper-V-All" -DisplayName "Hyper-V Platform" -or $rebootRequired
-            } else {
-                Write-Host "  ⚠️  Hyper-V requirements not met (virtualization disabled or unsupported)" -ForegroundColor Yellow
-            }
-        } catch {
-            Write-Host "  ⚠️  Could not check Hyper-V compatibility: $_" -ForegroundColor Yellow
-        }
-    }
-}
-
-Write-Host "`n🔧 Container Development Tools"
-Write-Host "   Installing container management tools..."
-
-# Install Windows container tools
-if (Test-Command "docker") {
-    Write-Host "  → Docker already available" -ForegroundColor Green
-} else {
-    Write-Host "  ⚠️  Docker not found - install Docker Desktop first" -ForegroundColor Yellow
-}
-
-# Install container build tools
-$containerTools = @(
-    @{ Name = "hadolint"; Package = "hadolint"; Description = "Dockerfile linter" },
-    @{ Name = "trivy"; Package = "AquaSecurity.Trivy"; Description = "Container vulnerability scanner" },
-    @{ Name = "dive"; Package = "wagoodman.dive"; Description = "Docker image layer analyzer" }
-)
-
-foreach ($tool in $containerTools) {
-    if (Test-Command $tool.Name) {
-        Write-Host "  → $($tool.Description) already installed" -ForegroundColor Green
-    } else {
-        if (-not $WhatIf) {
-            try {
-                Write-Host "  Installing $($tool.Description)..." -ForegroundColor Gray
-                winget install $tool.Package --source winget --silent --accept-package-agreements --accept-source-agreements
-                Write-Host "  ✅ $($tool.Description) installed" -ForegroundColor Green
-            } catch {
-                Write-Host "  ⚠️  Failed to install $($tool.Description): $_" -ForegroundColor Yellow
-            }
-        } else {
-            Write-Host "  🔍 Would install $($tool.Description)" -ForegroundColor Cyan
-        }
-    }
-}
-
-Write-Host "`n🛡️  Container Security Configuration"
-Write-Host "   Configuring security settings for containers..."
-
-if (-not $WhatIf) {
-    # Configure Windows Defender exclusions for container workloads
-    try {
-        if (Get-Command "Get-MpPreference" -ErrorAction SilentlyContinue) {
-            $containerPaths = @(
-                "$env:ProgramData\Docker",
-                "$env:USERPROFILE\.docker",
-                "$env:LOCALAPPDATA\Docker"
-            )
-
-            foreach ($path in $containerPaths) {
-                if (Test-Path $path) {
-                    try {
-                        Add-MpPreference -ExclusionPath $path -ErrorAction Stop
-                        Write-Host "  ✅ Added Defender exclusion: $path" -ForegroundColor Green
-                    } catch {
-                        Write-Host "  ⚠️  Could not add exclusion for: $path" -ForegroundColor Yellow
-                    }
-                }
-            }
-
-            # Exclude container processes
-            $containerProcesses = @("dockerd.exe", "docker.exe", "containerd.exe", "runc.exe")
-            foreach ($process in $containerProcesses) {
-                try {
-                    Add-MpPreference -ExclusionProcess $process -ErrorAction Stop
-                    Write-Host "  ✅ Added Defender exclusion for process: $process" -ForegroundColor Green
-                } catch {
-                    Write-Host "  ⚠️  Could not add process exclusion: $process" -ForegroundColor Yellow
-                }
-            }
-        } else {
-            Write-Host "  ⚠️  Windows Defender cmdlets not available" -ForegroundColor Yellow
-        }
-    } catch {
-        Write-Host "  ⚠️  Could not configure Defender exclusions: $_" -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "  🔍 Would configure Windows Defender exclusions for containers" -ForegroundColor Cyan
-}
-
-Write-Host "`n⚙️ Container Runtime Optimization"
-Write-Host "   Optimizing container performance settings..."
-
-if (-not $WhatIf) {
-    # Configure Windows container storage optimization
-    try {
-        $containerStorageRoot = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Virtualization\Containers"
-        if (-not (Test-Path $containerStorageRoot)) {
-            New-Item -Path $containerStorageRoot -Force | Out-Null
-        }
-
-        # Enable container layer compression
-        Set-ItemProperty -Path $containerStorageRoot -Name "EnableLayerCompression" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-        Write-Host "  ✅ Container layer compression enabled" -ForegroundColor Green
-
-        # Optimize container memory usage
-        Set-ItemProperty -Path $containerStorageRoot -Name "OptimizeMemoryUsage" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-        Write-Host "  ✅ Container memory optimization enabled" -ForegroundColor Green
-
-    } catch {
-        Write-Host "  ⚠️  Could not apply container storage optimizations: $_" -ForegroundColor Yellow
-    }
-
-    # Configure network optimizations for containers
-    try {
-        $networkOptPath = "HKLM:\SYSTEM\CurrentControlSet\Services\hns\Parameters"
-        if (Test-Path $networkOptPath) {
-            Set-ItemProperty -Path $networkOptPath -Name "EnableRSC" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-            Write-Host "  ✅ Container network receive side coalescing enabled" -ForegroundColor Green
-        }
-    } catch {
-        Write-Host "  ⚠️  Could not apply network optimizations: $_" -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "  🔍 Would configure container storage and network optimizations" -ForegroundColor Cyan
-}
-
-# Base image caching (if requested)
-if ($EnableBaseCaching) {
-    Write-Host "`n📥 Container Base Image Pre-caching"
-    Write-Host "   Downloading common Windows container base images..."
-
-    $baseImages = @(
-        "mcr.microsoft.com/windows/nanoserver:ltsc2022",
-        "mcr.microsoft.com/windows/servercore:ltsc2022",
-        "mcr.microsoft.com/dotnet/runtime:8.0-nanoserver-ltsc2022",
-        "mcr.microsoft.com/dotnet/aspnet:8.0-nanoserver-ltsc2022"
-    )
-
-    if (Test-Command "docker" -and -not $WhatIf) {
-        foreach ($image in $baseImages) {
-            try {
-                Write-Host "  Pulling $image..." -ForegroundColor Gray
-                docker pull $image 2>$null | Out-Null
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Host "  ✅ Cached: $image" -ForegroundColor Green
-                } else {
-                    Write-Host "  ⚠️  Failed to pull: $image" -ForegroundColor Yellow
-                }
-            } catch {
-                Write-Host "  ⚠️  Error pulling $image`: $_" -ForegroundColor Yellow
-            }
-        }
-    } else {
-        if ($WhatIf) {
-            Write-Host "  🔍 Would pre-cache Windows container base images" -ForegroundColor Cyan
-        } else {
-            Write-Host "  ⚠️  Docker not available for base image caching" -ForegroundColor Yellow
-        }
-    }
-}
-
-Write-Host "`n🔍 Container Environment Validation"
-Write-Host "   Validating container features and tools..."
-
-# Validate enabled features
 $features = @(
-    @{ Name = "Microsoft-Windows-Subsystem-Linux"; Display = "WSL" },
-    @{ Name = "VirtualMachinePlatform"; Display = "Virtual Machine Platform" },
-    @{ Name = "Containers"; Display = "Windows Containers" }
+    @{Name='Microsoft-Windows-Subsystem-Linux';Display='Windows Subsystem for Linux'},
+    @{Name='VirtualMachinePlatform';Display='Virtual Machine Platform'},
+    @{Name='Containers';Display='Windows Containers'}
 )
-
 if (-not $SkipHyperV) {
-    $features += @{ Name = "Microsoft-Hyper-V-All"; Display = "Hyper-V" }
-    $features += @{ Name = "HypervisorPlatform"; Display = "Hypervisor Platform" }
+    $features += @{Name='HypervisorPlatform';Display='Windows Hypervisor Platform'}
+    $features += @{Name='Microsoft-Hyper-V-All';Display='Hyper-V'}
 }
 
 foreach ($feature in $features) {
-    if (Test-ContainerFeature -FeatureName $feature.Name) {
-        Write-Host "  ✅ $($feature.Display) enabled" -ForegroundColor Green
-    } else {
-        Write-Host "  ❌ $($feature.Display) not enabled" -ForegroundColor Red
-    }
+    if (Enable-WindowsFeature51 $feature.Name $feature.Display) { $rebootRequired = $true }
 }
 
-# Validate tools
-$tools = @("docker", "hadolint", "trivy", "dive")
+$tools = @(
+    @{Name='hadolint';Package='hadolint'},
+    @{Name='trivy';Package='AquaSecurity.Trivy'},
+    @{Name='dive';Package='wagoodman.dive'}
+)
 foreach ($tool in $tools) {
-    if (Test-Command $tool) {
-        Write-Host "  ✅ $tool available" -ForegroundColor Green
-    } else {
-        Write-Host "  ⚠️  $tool not found" -ForegroundColor Yellow
+    if (Get-Command $tool.Name -ErrorAction SilentlyContinue) { continue }
+    if ($WhatIfPreference) { Write-Host "  🔍 Would install $($tool.Name)" -ForegroundColor Cyan; continue }
+    if ($PSCmdlet.ShouldProcess($tool.Name,'Install with winget')) {
+        & winget install $tool.Package --source winget --silent --accept-package-agreements --accept-source-agreements
+        if ($LASTEXITCODE -ne 0) { Write-Host "  ⚠️ winget failed for $($tool.Name): $LASTEXITCODE" -ForegroundColor Yellow }
     }
 }
 
-Write-Host "`n📖 Container Development Guidance" -ForegroundColor Cyan
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-
-Write-Host "`n🐧 Linux Containers (Default):" -ForegroundColor Yellow
-Write-Host "  • Use Docker Desktop's default Linux container mode" -ForegroundColor Gray
-Write-Host "  • Better ecosystem support and performance for most workloads" -ForegroundColor Gray
-Write-Host "  • Example: docker run --rm hello-world" -ForegroundColor Gray
-
-Write-Host "`n🪟 Windows Containers:" -ForegroundColor Yellow
-Write-Host "  • Switch Docker Desktop to Windows container mode when needed" -ForegroundColor Gray
-Write-Host "  • Required for Windows-specific applications (.NET Framework)" -ForegroundColor Gray
-Write-Host "  • Example: docker run --rm mcr.microsoft.com/windows/nanoserver:ltsc2022 cmd /c echo hello" -ForegroundColor Gray
-
-Write-Host "`n🔧 Container Development Tools:" -ForegroundColor Yellow
-Write-Host "  • hadolint: Lint Dockerfiles for best practices" -ForegroundColor Gray
-Write-Host "  • trivy: Scan images for vulnerabilities" -ForegroundColor Gray
-Write-Host "  • dive: Analyze image layers and optimize size" -ForegroundColor Gray
-
-Write-Host "`n🚀 Performance Tips:" -ForegroundColor Yellow
-Write-Host "  • Use Windows container base images only when necessary" -ForegroundColor Gray
-Write-Host "  • Prefer nano server over server core for smaller images" -ForegroundColor Gray
-Write-Host "  • Use multi-stage builds to reduce final image size" -ForegroundColor Gray
-Write-Host "  • Configure Docker Desktop data-root on Dev Drive if available" -ForegroundColor Gray
-
-# Summary and reboot notification
-Write-Host "`n✅ Windows Container Configuration Complete!" -ForegroundColor Green
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Green
-
-if ($rebootRequired) {
-    Write-Host "🔄 REBOOT REQUIRED" -ForegroundColor Red
-    Write-Host "   Some Windows features require a restart to take effect." -ForegroundColor Yellow
-    Write-Host "   Please reboot your system before using container features." -ForegroundColor Yellow
-} else {
-    Write-Host "💻 No reboot required - container features ready to use!" -ForegroundColor Green
+Write-Host '`n🔍 Container Environment Validation' -ForegroundColor Yellow
+foreach ($feature in $features) {
+    $state = Get-WindowsFeatureState $feature.Name
+    if ($state -eq 'Enabled') { Write-Host "  ✅ $($feature.Display) enabled" -ForegroundColor Green }
+    else { Write-Host "  ❌ $($feature.Display) state: $state" -ForegroundColor Red }
 }
 
-Write-Host "`n💡 Next Steps:" -ForegroundColor Cyan
-Write-Host "  1. Restart Docker Desktop to apply configuration changes" -ForegroundColor Gray
-Write-Host "  2. Test container functionality: docker run --rm hello-world" -ForegroundColor Gray
-Write-Host "  3. Consider running 40-devdrive-caches.ps1 to optimize Docker performance" -ForegroundColor Gray
-
-if ($WhatIf) {
-    Write-Host "`n🔍 Run without -WhatIf to apply these changes" -ForegroundColor Cyan
+if ($EnableBaseCaching -and (Get-Command docker -ErrorAction SilentlyContinue)) {
+    $images = @('mcr.microsoft.com/windows/nanoserver:ltsc2022','mcr.microsoft.com/windows/servercore:ltsc2022')
+    if ($WhatIfPreference) {
+        $images | ForEach-Object { Write-Host "  🔍 Would pull $_" -ForegroundColor Cyan }
+    } elseif ($PSCmdlet.ShouldProcess('Windows container base images','Pre-cache')) {
+        foreach ($image in $images) {
+            & docker pull $image
+            if ($LASTEXITCODE -eq 0) { Write-Host "  ✅ Cached: $image" -ForegroundColor Green }
+            else { Write-Host "  ⚠️ Failed: $image" -ForegroundColor Yellow }
+        }
+    }
 }
+
+if ($rebootRequired) { Write-Host '`n🔄 REBOOT REQUIRED' -ForegroundColor Yellow }
+else { Write-Host '`n💻 No reboot required by this script.' -ForegroundColor Green }
+Write-Host '`n✅ Windows Container Configuration Complete!' -ForegroundColor Green
