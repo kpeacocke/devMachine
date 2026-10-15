@@ -17,17 +17,53 @@ $existingContent = Get-Content $PROFILE -Raw -ErrorAction SilentlyContinue
 
 # Install the devMachine Oh My Posh theme to a stable per-user location.
 # Do not depend on POSH_THEMES_PATH: packaged Oh My Posh installs may not expose it.
-$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$themeSource = Join-Path $repoRoot "config\oh-my-posh\devmachine.omp.json"
-$themeDirectory = Join-Path $HOME ".config\oh-my-posh"
-$themePath = Join-Path $themeDirectory "devmachine.omp.json"
+$themeRelativePath = 'config\oh-my-posh\devmachine.omp.json'
+$themeDirectory = Join-Path $HOME '.config\oh-my-posh'
+$themePath = Join-Path $themeDirectory 'devmachine.omp.json'
 
-if (-not (Test-Path $themeSource)) {
-    throw "devMachine Oh My Posh theme not found: $themeSource"
+# Locate the repository independently of where this script was launched.
+# A standalone copy in Downloads cannot use $PSScriptRoot as the repo location.
+$searchRoots = @($PSScriptRoot, (Get-Location).Path, $HOME)
+foreach ($startingPoint in @($PSScriptRoot, (Get-Location).Path)) {
+    $directory = $startingPoint
+    while ($directory) {
+        $searchRoots += $directory
+        $parent = Split-Path -Path $directory -Parent
+        if (-not $parent -or $parent -eq $directory) { break }
+        $directory = $parent
+    }
+}
+$searchRoots += @(
+    (Join-Path $HOME 'devMachine'),
+    (Join-Path $HOME 'source\repos\devMachine'),
+    (Join-Path $HOME 'Documents\GitHub\devMachine')
+)
+$themeSource = $null
+foreach ($root in ($searchRoots | Select-Object -Unique)) {
+    $candidate = Join-Path $root $themeRelativePath
+    if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+        $themeSource = $candidate
+        break
+    }
 }
 
 New-Item -ItemType Directory -Path $themeDirectory -Force | Out-Null
-Copy-Item -Path $themeSource -Destination $themePath -Force
+if ($themeSource) {
+    Copy-Item -LiteralPath $themeSource -Destination $themePath -Force
+    Write-Host "  Found Oh My Posh theme: $themeSource" -ForegroundColor Green
+} else {
+    # The script may have been downloaded without the repository.
+    # In that case retrieve the bundled theme from this project's main branch.
+    $themeUrl = 'https://raw.githubusercontent.com/kpeacocke/devMachine/main/config/oh-my-posh/devmachine.omp.json'
+    Write-Host '  Local devMachine theme not found; retrieving theme from GitHub...' -ForegroundColor Yellow
+    try {
+        $themeJson = (Invoke-WebRequest -Uri $themeUrl -UseBasicParsing -ErrorAction Stop).Content
+        $null = $themeJson | ConvertFrom-Json -ErrorAction Stop
+        [System.IO.File]::WriteAllText($themePath, $themeJson, [System.Text.UTF8Encoding]::new($false))
+    } catch {
+        throw "devMachine Oh My Posh theme unavailable locally and download failed from $themeUrl : $_"
+    }
+}
 Write-Host "  Installed Oh My Posh theme: $themePath" -ForegroundColor Green
 
 # Build comprehensive profile
